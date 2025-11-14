@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { passwordService } from "../services/passwordService";
-import { toastService } from "../services/toastService";
+import { passwordService } from "../services/passwordService.js";
+import { toastService } from "../services/toastService.js";
 
 export const useForgotPassword = () => {
     const navigate = useNavigate();

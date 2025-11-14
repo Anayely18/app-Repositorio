@@ -1,7 +1,7 @@
 import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, UserRound, Users } from "lucide-react"
-import { Logo } from "../../shared/ui/Logo";
+import Logo from "../../shared/ui/Logo"
 
-export const StudentResearchReportRequest = () => {
+export default function StudentResearchReportRequest() {
     return (
         <div className="min-h-svh w-full">
             <div className="h-16 bg-secondary">
