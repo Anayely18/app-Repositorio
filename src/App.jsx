@@ -3,7 +3,7 @@ import { routes } from "./routes/routes"
 
 function App() {
   return (
-    <div className="font-poppins">
+    <div className="font-rubik ">
       <Routes>
         {
             routes.map((item, index) => {
