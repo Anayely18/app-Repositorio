@@ -112,7 +112,7 @@ export const useRegister = () => {
                 });
 
                 setTimeout(() => {
-                    navigate("/");
+                    navigate("/login");
                 }, 500);
             }
         } catch (error) {

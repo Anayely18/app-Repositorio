@@ -68,7 +68,7 @@ export const useLogin = () => {
                 );
 
                 setTimeout(() => {
-                    window.location.href = "/home";
+                    window.location.href = "/list-thesis-works";
                 }, 500);
             }
         } catch (error) {
