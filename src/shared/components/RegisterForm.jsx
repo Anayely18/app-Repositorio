@@ -20,7 +20,7 @@ export const RegisterForm = ({ formData, errors, isLoading, onInputChange, onSub
                 </span>
                 <form onSubmit={onSubmit} className="w-full mt-8">
                     <div className="flex flex-col items-start gap-y-4 w-full">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 w-full">
                             <div className="flex flex-col gap-y-1 w-full">
                                 <label htmlFor="name" className="text-xs flex items-center gap-2 font-medium">
                                     <User className="text-secondary" size={14} />
@@ -166,11 +166,6 @@ export const RegisterForm = ({ formData, errors, isLoading, onInputChange, onSub
                             {errors.confirmPassword && (
                                 <span className="text-xs text-red-500 mt-1">{errors.confirmPassword}</span>
                             )}
-                        </div>
-                        <div className="flex items-center justify-end w-full">
-                            <Link to="/forgot-password" className="text-xs text-secondary hover:underline transition-all">
-                                Olvidaste tu contraseña
-                            </Link>
                         </div>
                         <button
                             type="submit"

@@ -1,3 +1,4 @@
+import { ForgotPassword } from "../pages/auth/ForgotPassword";
 import { Login } from "../pages/auth/Login";
 import { Register } from "../pages/auth/Register";
 import { Home } from "../pages/home/Home";
@@ -12,6 +13,10 @@ export const routes = [
     {
         path: '/register',
         element: <Register />
+    },
+    {
+        path: '/forgot-password',
+        element: <ForgotPassword />
     },
     {
         path: '/student-research-report-request',
