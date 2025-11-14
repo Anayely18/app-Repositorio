@@ -7,7 +7,7 @@ export const Home = () => {
         <div className="h-svh overflow-hidden">
             <div className="h-16 bg-secondary flex m-auto items-center justify-around">
                 <Logo />
-                <Link to="/login" className="py-2 px-4 rounded bg-white text-secondary">Administrador</Link>
+                <Link to="/login" className="py-2 px-4 rounded bg-white text-secondary text-xs">Administrador</Link>
             </div>
             <main className="max-w-6xl mx-auto px-6 py-12">
                 <div className="text-center mb-12">
