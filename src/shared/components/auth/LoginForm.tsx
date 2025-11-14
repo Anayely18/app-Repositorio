@@ -1,7 +1,7 @@
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useState } from "react";
 
-export const LoginForm = ({ formData, errors, isLoading, onInputChange, onSubmit }) => {
+export default function LoginForm({ formData, errors, isLoading, onInputChange, onSubmit }){
     const [showPassword, setShowPassword] = useState(false);
     const handleShowPassword = () => setShowPassword(!showPassword);
     return (

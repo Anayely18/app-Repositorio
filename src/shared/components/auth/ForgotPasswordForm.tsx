@@ -1,7 +1,7 @@
 import { ArrowLeft, Eye, EyeOff, KeyRound, LockKeyhole, Mail } from "lucide-react";
 import { useState } from "react";
 
-export const ForgotPasswordForm = ({
+export default function ForgotPasswordForm({
     formData,
     errors,
     isLoading,
@@ -11,7 +11,7 @@ export const ForgotPasswordForm = ({
     onVerifyCode,
     onResetPassword,
     onBack
-}) => {
+}) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 

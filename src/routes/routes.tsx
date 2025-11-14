@@ -1,9 +1,9 @@
-import { ForgotPassword } from "../pages/auth/ForgotPassword";
-import { Login } from "../pages/auth/Login";
-import { Register } from "../pages/auth/Register";
-import { Home } from "../pages/home/Home";
-import { ListThesisWorks } from "../pages/list/ListThesisWorks";
-import { StudentResearchReportRequest } from "../pages/report/StudentResearchReportRequest";
+import ForgotPassword from "@/pages/auth/ForgotPassword"
+import Login from "@/pages/auth/Login"
+import Register from "@/pages/auth/Register"
+import Home from "@/pages/home/Home"
+import ListThesisWorks from "@/pages/list/ListThesisWorks"
+import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRequest"
 
 export const routes = [
     {

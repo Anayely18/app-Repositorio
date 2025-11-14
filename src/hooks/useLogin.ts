@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { authService } from "../services/authService";
-import { toastService } from "../services/toastService";
+import { authService } from "../services/authService.js";
+import { toastService } from "../services/toastService.js";
 
 export const useLogin = () => {
     const [isLoading, setIsLoading] = useState(false);

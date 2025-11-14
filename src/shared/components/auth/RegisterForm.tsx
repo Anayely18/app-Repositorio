@@ -2,7 +2,7 @@ import { Contact, CreditCard, Eye, EyeOff, LockKeyhole, Mail, User } from "lucid
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-export const RegisterForm = ({ formData, errors, isLoading, onInputChange, onSubmit }) => {
+export default function RegisterForm({ formData, errors, isLoading, onInputChange, onSubmit }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
