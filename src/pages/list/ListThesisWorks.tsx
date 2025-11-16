@@ -1,7 +1,7 @@
+import Logo from "@/shared/ui/Logo";
 import { Eye, Search } from "lucide-react";
-import { Logo } from "../../shared/ui/Logo";
 
-export const ListThesisWorks = () => {
+export default function ListThesisWorks() {
     const datos = [
         {
             id: 1,

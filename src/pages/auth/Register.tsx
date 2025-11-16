@@ -1,8 +1,8 @@
-import { Logo } from "../../shared/ui/Logo"
-import { RegisterForm } from "../../shared/components/RegisterForm";
-import { useRegister } from "../../hooks/useRegister";
+import { useRegister } from "@/hooks/useRegister";
+import RegisterForm from "@/shared/components/auth/RegisterForm";
+import Logo from "@/shared/ui/Logo";
 
-export const Register = () => {
+export default function Register() {
     const { 
         formData, 
         errors, 

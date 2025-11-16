@@ -1,35 +1,36 @@
-import { useState } from "react";
+import { IForgotPasswordErrors, IForgotPasswordForm } from '@/common/interfaces/forgotPassword.interface';
+import { passwordService } from "@/services/passwordService";
+import { toastService } from "@/services/toastService";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { passwordService } from "../services/passwordService";
-import { toastService } from "../services/toastService";
 
 export const useForgotPassword = () => {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
-    const [step, setStep] = useState(1); 
-    
-    const [formData, setFormData] = useState({
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [step, setStep] = useState<number>(1);
+
+    const [formData, setFormData] = useState<IForgotPasswordForm>({
         email: "",
         code: "",
         newPassword: "",
         confirmPassword: ""
     });
 
-    const [errors, setErrors] = useState({
+    const [errors, setErrors] = useState<IForgotPasswordErrors>({
         email: "",
         code: "",
         newPassword: "",
         confirmPassword: ""
     });
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
-        
-        if (errors[name]) {
+
+        if (errors[name as keyof IForgotPasswordErrors]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: ""
@@ -37,7 +38,7 @@ export const useForgotPassword = () => {
         }
     };
 
-    const handleRequestCode = async (e) => {
+    const handleRequestCode = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,18 +55,18 @@ export const useForgotPassword = () => {
 
         try {
             const data = await passwordService.requestCode(formData.email);
-            
+
             if (data.success) {
                 toastService.success("Código enviado a tu correo. Revisa tu bandeja de entrada.");
-                setStep(2); 
+                setStep(2);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error al solicitar código:", error);
-            
+
             if (error.status === 404) {
-                setErrors(prev => ({ 
-                    ...prev, 
-                    email: "No existe una cuenta con este correo" 
+                setErrors(prev => ({
+                    ...prev,
+                    email: "No existe una cuenta con este correo"
                 }));
             }
 
@@ -75,7 +76,7 @@ export const useForgotPassword = () => {
         }
     };
 
-    const handleVerifyCode = async (e) => {
+    const handleVerifyCode = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
 
         if (!formData.code.trim()) {
@@ -91,18 +92,18 @@ export const useForgotPassword = () => {
 
         try {
             const data = await passwordService.verifyCode(formData.email, formData.code);
-            
+
             if (data.success) {
                 toastService.success("Código verificado correctamente");
-                setStep(3); 
+                setStep(3);
             }
         } catch (error) {
             console.error("Error al verificar código:", error);
-            
+
             if (error.status === 400) {
-                setErrors(prev => ({ 
-                    ...prev, 
-                    code: "Código inválido o expirado" 
+                setErrors(prev => ({
+                    ...prev,
+                    code: "Código inválido o expirado"
                 }));
             }
 
@@ -112,10 +113,10 @@ export const useForgotPassword = () => {
         }
     };
 
-    const handleResetPassword = async (e) => {
+    const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const newErrors = {};
+        const newErrors: IForgotPasswordErrors = {};
 
         if (!formData.newPassword) {
             newErrors.newPassword = "La contraseña es obligatoria";
@@ -138,14 +139,14 @@ export const useForgotPassword = () => {
 
         try {
             const data = await passwordService.resetPassword(
-                formData.email, 
-                formData.code, 
+                formData.email,
+                formData.code,
                 formData.newPassword
             );
-            
+
             if (data.success) {
                 await toastService.success("Contraseña actualizada exitosamente");
-                
+
                 setTimeout(() => {
                     navigate("/login");
                 }, 1500);
@@ -155,7 +156,7 @@ export const useForgotPassword = () => {
 
             if (error.status === 400) {
                 toastService.error("El código ha expirado. Por favor, solicita uno nuevo.");
-                setStep(1); 
+                setStep(1);
                 setFormData({
                     email: formData.email,
                     code: "",

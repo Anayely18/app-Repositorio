@@ -1,7 +1,8 @@
-import { API_URL } from "../utils/api";
+import { ApiError, ApiResponse, LoginCredentials, RegisterData } from "@/common/interfaces/authService.interface";
+import { API_URL } from "@/utils/api";
 
 export const authService = {
-    async login(credentials) {
+    async login(credentials: LoginCredentials): Promise<ApiResponse> {
         try {
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: "POST",
@@ -14,18 +15,18 @@ export const authService = {
                 })
             });
 
-            const data = await response.json();
+            const data: ApiResponse = await response.json();
 
             if (!response.ok) {
                 throw {
                     status: response.status,
                     message: data.message || "Error al iniciar sesión",
                     data
-                };
+                } as ApiError;
             }
 
             return data;
-        } catch (error) {
+        } catch (error: any) {
             if (error.status) {
                 throw error;
             }
@@ -33,11 +34,11 @@ export const authService = {
                 status: 0,
                 message: "No se pudo conectar con el servidor. Por favor, intente más tarde.",
                 error
-            };
+            } as ApiError;
         }
     },
 
-    async register(userData) {
+    async register(userData: RegisterData): Promise<ApiResponse> {
         try {
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
@@ -53,18 +54,18 @@ export const authService = {
                 })
             });
 
-            const data = await response.json();
+            const data: ApiResponse = await response.json();
 
             if (!response.ok) {
                 throw {
                     status: response.status,
                     message: data.message || "Error al registrar usuario",
                     data
-                };
+                } as ApiError;
             }
 
             return data;
-        } catch (error) {
+        } catch (error: any) {
             if (error.status) {
                 throw error;
             }
@@ -72,11 +73,11 @@ export const authService = {
                 status: 0,
                 message: "No se pudo conectar con el servidor. Por favor, intente más tarde.",
                 error
-            };
+            } as ApiError;
         }
     },
 
-    saveSession(token, user) {
+    saveSession(token: string, user): any {
         if (token) {
             localStorage.setItem("token", token);
         }
@@ -90,11 +91,11 @@ export const authService = {
         localStorage.removeItem("user");
     },
 
-    getToken() {
+    getToken(): string | null {
         return localStorage.getItem("token");
     },
 
-    getUser() {
+    getUser(): any | null {
         const user = localStorage.getItem("user");
         return user ? JSON.parse(user) : null;
     }

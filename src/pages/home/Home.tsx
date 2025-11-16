@@ -1,8 +1,8 @@
+import Logo from "@/shared/ui/Logo"
 import { BookOpen, ClipboardCheck, FileText } from "lucide-react"
-import { Logo } from "../../shared/ui/Logo"
 import { Link } from "react-router-dom"
 
-export const Home = () => {
+export default function Home() {
     return (
         <div className="h-svh overflow-hidden">
             <div className="h-16 bg-secondary flex m-auto items-center justify-around">

@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { IRegisterErrors, IRegisterForm, IRegisterResponse } from "@/common/interfaces/register.interface";
+import { authService } from "@/services/authService";
+import { toastService } from "@/services/toastService";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../services/authService";
-import { toastService } from "../services/toastService";
 
 export const useRegister = () => {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<IRegisterForm>({
         name: "",
         surname: "",
         dni: "",
@@ -16,7 +17,7 @@ export const useRegister = () => {
         confirmPassword: ""
     });
 
-    const [errors, setErrors] = useState({
+    const [errors, setErrors] = useState<IRegisterErrors>({
         name: "",
         surname: "",
         dni: "",
@@ -25,7 +26,7 @@ export const useRegister = () => {
         confirmPassword: ""
     });
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -41,7 +42,7 @@ export const useRegister = () => {
     };
 
     const validateForm = () => {
-        const newErrors = {};
+        const newErrors: IRegisterErrors = {};
 
         if (!formData.name.trim()) {
             newErrors.name = "Los nombres son obligatorios";
@@ -85,7 +86,7 @@ export const useRegister = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
 
         if (!validateForm()) {
@@ -95,7 +96,7 @@ export const useRegister = () => {
         setIsLoading(true);
 
         try {
-            const data = await authService.register(formData);
+            const data: IRegisterResponse = await authService.register(formData);
 
             if (data.success) {
                 await toastService.success(
@@ -115,7 +116,7 @@ export const useRegister = () => {
                     navigate("/login");
                 }, 500);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error en registro:", error);
 
             if (error.status === 409) {

@@ -1,8 +1,8 @@
-import { Logo } from "../../shared/ui/Logo";
-import { useLogin } from "../../hooks/useLogin";
-import { LoginForm } from "../../shared/components/LoginForm";
+import { useLogin } from "@/hooks/useLogin";
+import LoginForm from "@/shared/components/auth/LoginForm";
+import Logo from "@/shared/ui/Logo";
 
-export const Login = () => {
+export default function Login() {
     const {
         formData,
         errors,
