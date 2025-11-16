@@ -1,6 +1,6 @@
+import Logo from "@/shared/ui/Logo"
 import { BookOpen, ClipboardCheck, FileText } from "lucide-react"
 import { Link } from "react-router-dom"
-import Logo from "../../shared/ui/Logo"
 
 export default function Home() {
     return (

@@ -1,26 +1,27 @@
-import { useState } from "react";
-import { authService } from "../services/authService.js";
-import { toastService } from "../services/toastService.js";
+import { ILoginErrors, ILoginForm, ILoginResponse } from "@/common/interfaces/login.interface";
+import { authService } from "@/services/authService";
+import { toastService } from "@/services/toastService";
+import React, { useState } from "react";
 
 export const useLogin = () => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [formData, setFormData] = useState<ILoginForm>({
         email: "",
         password: ""
     });
-    const [errors, setErrors] = useState({
+    const [errors, setErrors] = useState<ILoginErrors>({
         email: "",
         password: ""
     });
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
 
-        if (errors[name]) {
+        if (errors[name as keyof ILoginErrors]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: ""
@@ -29,7 +30,7 @@ export const useLogin = () => {
     };
 
     const validateForm = () => {
-        const newErrors = {};
+        const newErrors: ILoginErrors = {};
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!formData.email.trim()) {
@@ -58,7 +59,7 @@ export const useLogin = () => {
         setIsLoading(true);
 
         try {
-            const data = await authService.login(formData);
+            const data: ILoginResponse = await authService.login(formData);
 
             if (data.success) {
                 authService.saveSession(data.data?.token, data.data?.user);
@@ -71,7 +72,7 @@ export const useLogin = () => {
                     window.location.href = "/list-thesis-works";
                 }, 500);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error en login:", error);
 
             if (error.status === 401) {

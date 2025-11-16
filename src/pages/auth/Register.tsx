@@ -1,6 +1,6 @@
-import { useRegister } from "../../hooks/useRegister";
-import RegisterForm from "../../shared/components/auth/RegisterForm";
-import Logo from "../../shared/ui/Logo";
+import { useRegister } from "@/hooks/useRegister";
+import RegisterForm from "@/shared/components/auth/RegisterForm";
+import Logo from "@/shared/ui/Logo";
 
 export default function Register() {
     const { 

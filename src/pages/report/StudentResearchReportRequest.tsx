@@ -1,5 +1,5 @@
+import Logo from "@/shared/ui/Logo"
 import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, UserRound, Users } from "lucide-react"
-import Logo from "../../shared/ui/Logo"
 
 export default function StudentResearchReportRequest() {
     return (

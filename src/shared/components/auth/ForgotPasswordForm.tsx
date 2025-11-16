@@ -1,5 +1,34 @@
-import { ArrowLeft, Eye, EyeOff, KeyRound, LockKeyhole, Mail } from "lucide-react";
-import { useState } from "react";
+import {
+    ArrowLeft,
+    Eye,
+    EyeOff,
+    KeyRound,
+    LockKeyhole,
+    Mail
+} from "lucide-react";
+import { ChangeEvent, FormEvent, useState } from "react";
+
+interface ForgotPasswordFormProps {
+    formData: {
+        email: string;
+        code: string;
+        newPassword: string;
+        confirmPassword: string;
+    };
+    errors: {
+        email?: string;
+        code?: string;
+        newPassword?: string;
+        confirmPassword?: string;
+    };
+    isLoading: boolean;
+    step: 1 | 2 | 3;
+    onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
+    onRequestCode: (e: FormEvent) => void;
+    onVerifyCode: (e: FormEvent) => void;
+    onResetPassword: (e: FormEvent) => void;
+    onBack: () => void;
+}
 
 export default function ForgotPasswordForm({
     formData,
@@ -11,24 +40,21 @@ export default function ForgotPasswordForm({
     onVerifyCode,
     onResetPassword,
     onBack
-}) {
+}: ForgotPasswordFormProps) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const handleShowPassword = () => setShowPassword(!showPassword);
-    const handleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
-
-    const handleSubmitStep1 = (e) => {
+    const handleSubmitStep1 = (e: FormEvent) => {
         e.preventDefault();
         onRequestCode(e);
     };
 
-    const handleSubmitStep2 = (e) => {
+    const handleSubmitStep2 = (e: FormEvent) => {
         e.preventDefault();
         onVerifyCode(e);
     };
 
-    const handleSubmitStep3 = (e) => {
+    const handleSubmitStep3 = (e: FormEvent) => {
         e.preventDefault();
         onResetPassword(e);
     };
@@ -40,9 +66,12 @@ export default function ForgotPasswordForm({
                     <h2 className="text-center text-secondary font-medium text-2xl">
                         Recuperar Contraseña
                     </h2>
+
                     <span className="text-center text-xs block mt-2">
-                        {step === 1 && "Ingresa tu correo electrónico para recibir el código de verificación"}
-                        {step === 2 && "Ingresa el código de 6 dígitos que enviamos a tu correo"}
+                        {step === 1 &&
+                            "Ingresa tu correo electrónico para recibir el código de verificación"}
+                        {step === 2 &&
+                            "Ingresa el código de 6 dígitos que enviamos a tu correo"}
                         {step === 3 && "Ingresa tu nueva contraseña"}
                     </span>
                 </div>
@@ -52,10 +81,10 @@ export default function ForgotPasswordForm({
                         <div
                             key={s}
                             className={`h-2 rounded-full transition-all ${s === step
-                                    ? 'w-8 bg-secondary'
-                                    : s < step
-                                        ? 'w-2 bg-secondary/50'
-                                        : 'w-2 bg-gray-300'
+                                ? "w-8 bg-secondary"
+                                : s < step
+                                    ? "w-2 bg-secondary/50"
+                                    : "w-2 bg-gray-300"
                                 }`}
                         />
                     ))}
@@ -79,7 +108,9 @@ export default function ForgotPasswordForm({
                                     value={formData.email}
                                     onChange={onInputChange}
                                     placeholder="tu_correo@ejemplo.com"
-                                    className={`border w-full py-2 px-4 rounded outline-none text-xs ${errors.email ? 'border-red-500' : 'border-secondary'
+                                    className={`border w-full py-2 px-4 rounded outline-none text-xs ${errors.email
+                                        ? "border-red-500"
+                                        : "border-secondary"
                                         }`}
                                     disabled={isLoading}
                                     autoFocus
@@ -106,61 +137,58 @@ export default function ForgotPasswordForm({
                     <div className="w-full mt-8">
                         <div className="flex flex-col items-start gap-y-4 w-full">
                             <div className="flex flex-col gap-y-1 w-full">
-                                <label
-                                    className="text-xs flex items-center gap-2 font-medium justify-center mb-3"
-                                >
+                                <label className="text-xs flex items-center gap-2 font-medium justify-center mb-3">
                                     <KeyRound size={14} className="text-secondary" />
                                     <span>Código de Verificación</span>
                                 </label>
+
                                 <div className="flex gap-2 justify-center">
                                     {[0, 1, 2, 3, 4, 5].map((index) => (
                                         <input
                                             key={index}
                                             type="text"
                                             maxLength={1}
-                                            value={formData.code[index] || ''}
+                                            value={formData.code[index] || ""}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                if (value.match(/^[0-9]$/)) {
-                                                    const newCode = formData.code.split('');
+                                                if (value.match(/^[0-9]$/) || value === "") {
+                                                    const newCode = formData.code.split("");
                                                     newCode[index] = value;
                                                     onInputChange({
                                                         target: {
-                                                            name: 'code',
-                                                            value: newCode.join('')
+                                                            name: "code",
+                                                            value: newCode.join("")
                                                         }
-                                                    });
-                                                    if (e.target.nextElementSibling) {
-                                                        e.target.nextElementSibling.focus();
-                                                    }
-                                                } else if (value === '') {
-                                                    const newCode = formData.code.split('');
-                                                    newCode[index] = '';
-                                                    onInputChange({
-                                                        target: {
-                                                            name: 'code',
-                                                            value: newCode.join('')
-                                                        }
-                                                    });
+                                                    } as ChangeEvent<HTMLInputElement>);
                                                 }
                                             }}
                                             onKeyDown={(e) => {
-                                                if (e.key === 'Backspace' && !formData.code[index] && e.target.previousElementSibling) {
-                                                    e.target.previousElementSibling.focus();
+                                                const target = e.target as HTMLInputElement;
+
+                                                if (
+                                                    e.key === "Backspace" &&
+                                                    !formData.code[index] &&
+                                                    target.previousElementSibling
+                                                ) {
+                                                    (target.previousElementSibling as HTMLInputElement).focus();
                                                 }
                                             }}
-                                            className={`border w-12 h-12 text-center text-lg font-mono rounded outline-none ${errors.code ? 'border-red-500' : 'border-secondary'
+                                            className={`border w-12 h-12 text-center text-lg font-mono rounded outline-none ${errors.code
+                                                ? "border-red-500"
+                                                : "border-secondary"
                                                 } focus:ring-2 focus:ring-secondary`}
                                             disabled={isLoading}
                                             autoFocus={index === 0}
                                         />
                                     ))}
                                 </div>
+
                                 {errors.code && (
                                     <span className="text-xs text-red-500 mt-2 text-center w-full block">
                                         {errors.code}
                                     </span>
                                 )}
+
                                 <span className="text-xs text-gray-500 mt-2 text-center w-full block">
                                     El código expira en 10 minutos
                                 </span>
@@ -199,32 +227,37 @@ export default function ForgotPasswordForm({
                                     <LockKeyhole size={14} className="text-secondary" />
                                     <span>Nueva Contraseña</span>
                                 </label>
+
                                 <div className="relative">
                                     <input
-                                        type={showPassword ? 'text' : 'password'}
+                                        type={showPassword ? "text" : "password"}
                                         id="newPassword"
                                         name="newPassword"
                                         value={formData.newPassword}
                                         onChange={onInputChange}
-                                        className={`border w-full py-2 pl-4 pr-8 rounded outline-none text-xs ${errors.newPassword ? 'border-red-500' : 'border-secondary'
+                                        className={`border w-full py-2 pl-4 pr-8 rounded outline-none text-xs ${errors.newPassword
+                                            ? "border-red-500"
+                                            : "border-secondary"
                                             }`}
                                         disabled={isLoading}
                                         autoFocus
                                     />
+
                                     {showPassword ? (
                                         <EyeOff
                                             className="absolute top-2 right-2 cursor-pointer text-secondary"
                                             size={16}
-                                            onClick={handleShowPassword}
+                                            onClick={() => setShowPassword(false)}
                                         />
                                     ) : (
                                         <Eye
                                             className="absolute top-2 right-2 cursor-pointer text-secondary"
                                             size={16}
-                                            onClick={handleShowPassword}
+                                            onClick={() => setShowPassword(true)}
                                         />
                                     )}
                                 </div>
+
                                 {errors.newPassword && (
                                     <span className="text-xs text-red-500 mt-1">
                                         {errors.newPassword}
@@ -240,31 +273,40 @@ export default function ForgotPasswordForm({
                                     <LockKeyhole size={14} className="text-secondary" />
                                     <span>Confirmar Contraseña</span>
                                 </label>
+
                                 <div className="relative">
                                     <input
-                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        type={showConfirmPassword ? "text" : "password"}
                                         id="confirmPassword"
                                         name="confirmPassword"
                                         value={formData.confirmPassword}
                                         onChange={onInputChange}
-                                        className={`border w-full py-2 pl-4 pr-8 rounded outline-none text-xs ${errors.confirmPassword ? 'border-red-500' : 'border-secondary'
+                                        className={`border w-full py-2 pl-4 pr-8 rounded outline-none text-xs ${errors.confirmPassword
+                                            ? "border-red-500"
+                                            : "border-secondary"
                                             }`}
                                         disabled={isLoading}
                                     />
+
                                     {showConfirmPassword ? (
                                         <EyeOff
                                             className="absolute top-2 right-2 cursor-pointer text-secondary"
                                             size={16}
-                                            onClick={handleShowConfirmPassword}
+                                            onClick={() =>
+                                                setShowConfirmPassword(false)
+                                            }
                                         />
                                     ) : (
                                         <Eye
                                             className="absolute top-2 right-2 cursor-pointer text-secondary"
                                             size={16}
-                                            onClick={handleShowConfirmPassword}
+                                            onClick={() =>
+                                                setShowConfirmPassword(true)
+                                            }
                                         />
                                     )}
                                 </div>
+
                                 {errors.confirmPassword && (
                                     <span className="text-xs text-red-500 mt-1">
                                         {errors.confirmPassword}
@@ -286,7 +328,7 @@ export default function ForgotPasswordForm({
                 <span className="block text-center text-xs">
                     ¿Recordaste tu contraseña?
                     <button
-                        onClick={() => window.location.href = "/login"}
+                        onClick={() => (window.location.href = "/login")}
                         className="text-secondary underline ml-1 cursor-pointer"
                     >
                         Inicia sesión
@@ -295,4 +337,4 @@ export default function ForgotPasswordForm({
             </div>
         </div>
     );
-};
+}

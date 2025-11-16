@@ -1,6 +1,6 @@
-import { useForgotPassword } from "../../hooks/useForgotPassword";
-import ForgotPasswordForm from "../../shared/components/auth/ForgotPasswordForm";
-import Logo from "../../shared/ui/Logo";
+import { useForgotPassword } from "@/hooks/useForgotPassword";
+import ForgotPasswordForm from "@/shared/components/auth/ForgotPasswordForm";
+import Logo from "@/shared/ui/Logo";
 
 export default function ForgotPassword() {
     const {
