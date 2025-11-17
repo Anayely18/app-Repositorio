@@ -1,5 +1,6 @@
 import { FormInput } from "./FormInput";
 import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react";
+import { FormSelect } from "./FormSelect";
 
 export function StudentForm({ number, canRemove, onRemove }){
   return (
@@ -49,14 +50,19 @@ export function StudentForm({ number, canRemove, onRemove }){
           type="tel"
           placeholder="987654321"
         />
-        <div className="md:col-span-2">
-          <FormInput
+        <FormSelect
             icon={Building2}
             label="Escuela Profesional"
-            type="text"
-            placeholder="Ej: Ingeniería de Sistemas"
+            options={[
+              "Ingeniería de Sistemas",
+              "Ingeniería Civil",
+              "Ingeniería Ambiental",
+              "Administración",
+              "Contabilidad",
+              "Derecho",
+              "Educación",
+            ]}
           />
-        </div>
       </div>
     </div>
   );
