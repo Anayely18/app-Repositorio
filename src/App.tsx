@@ -1,22 +1,32 @@
-import { Route, Routes } from "react-router-dom"
-import { AnimatePresence } from "framer-motion"
-import { routes } from "./routes/routes.js"
-import PageWrapper from "./shared/components/PageWrapper"
+import { Route, Routes } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { routes } from "./routes/routes.js";
+import PageWrapper from "./shared/components/PageWrapper";
 
 export default function App() {
     return (
         <div className="font-rubik ">
             <AnimatePresence mode="wait">
                 <Routes>
-                    {
-                        routes.map((item, index) => {
-                            return (
-                                <Route key={index} path={`${item.path}`} element={<PageWrapper>{item.element}</PageWrapper>}></Route>
-                            )
-                        })
-                    }
+                    {routes.map((item, index) => (
+                        <Route
+                            key={index}
+                            path={item.path}
+                            element={<PageWrapper>{item.element}</PageWrapper>}
+                        >
+                            {item.children &&
+                                item.children.map((child, j) => (
+                                    <Route
+                                        key={`child-${j}`}
+                                        path={child.path}
+                                        element={child.element}
+                                    />
+                                ))
+                            }
+                        </Route>
+                    ))}
                 </Routes>
             </AnimatePresence>
         </div>
-    )
+    );
 }
