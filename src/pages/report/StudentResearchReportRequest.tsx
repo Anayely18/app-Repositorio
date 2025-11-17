@@ -1,4 +1,5 @@
 import { AsesorForm } from "@/shared/components/forms/AsesorForm"
+import { StudentForm } from "@/shared/components/forms/StudentForm";
 import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
@@ -6,13 +7,22 @@ import Logo from "@/shared/ui/Logo"
 import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, Users, Plus} from "lucide-react"
 import { useState } from "react"
 export default function StudentResearchReportRequest() {
+    const [student, setStudent] = useState([1])
+
+    const addStudent = () => {
+        setStudent([...student, student.length + 1])
+    }
+
+    const removeStudent = (index) => {
+        setStudent(student.filter((_, i) => i !== index))
+    }
     const [advisor, setAdvisor] = useState([1])
 
-    const agregarAsesor = () => {
+    const addAdvisor = () => {
         setAdvisor([...advisor, advisor.length + 1])
     }
 
-    const eliminarAsesor = (index) => {
+    const removeAdvisor = (index) => {
         setAdvisor(advisor.filter((_, i) => i !== index))
     }
 
@@ -72,21 +82,33 @@ export default function StudentResearchReportRequest() {
                                 checkboxLabel="Sí, estoy informado"
                             />
                         </div>
+                        
                         <div className="border-t-2 border-gray-100 pt-8">
-                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <User className="w-5 h-5 text-blue-600" />
-                                </div>
-                                Información personal
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormInput icon={User} label="Nombres" type="text" placeholder="Ingresa tus nombres" />
-                                <FormInput icon={User} label="Apellidos" type="text" placeholder="Ingresa tus apellidos" />
-                                <FormInput icon={CreditCard} label="Número de DNI" type="text" placeholder="12345678" maxLength={8} />
-                                <FormInput icon={Phone} label="Número de contacto" type="tel" placeholder="987654321" />
-                                <div className="md:col-span-2">
-                                    <FormInput icon={Building2} label="Escuela Profesional" type="text" placeholder="Ej: Ingeniería de Sistemas" />
-                                </div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <User className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    Información personal
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={addStudent}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Agregar estudiante
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {student.map((num, index) => (
+                                    <StudentForm
+                                    key={index}
+                                    number={num}
+                                    onRemove={() => removeStudent(index)}
+                                    canRemove={student.length > 1}
+                                    />
+                                ))}
                             </div>
                         </div>
                         <div className="border-t-2 border-gray-100 pt-8">
@@ -99,7 +121,7 @@ export default function StudentResearchReportRequest() {
                                 </h3>
                                 <button
                                     type="button"
-                                    onClick={agregarAsesor}
+                                    onClick={addAdvisor}
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
                                 >
                                     <Plus className="w-4 h-4" />
@@ -111,12 +133,13 @@ export default function StudentResearchReportRequest() {
                                     <AsesorForm
                                         key={index}
                                         number={num}
-                                        onRemove={() => eliminarAsesor(index)}
+                                        onRemove={() => removeAdvisor(index)}
                                         canRemove={advisor.length > 1}
                                     />
                                 ))}
                             </div>
                         </div>
+                        
                         <div className="border-t-2 border-gray-100 pt-8">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
