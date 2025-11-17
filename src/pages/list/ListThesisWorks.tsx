@@ -42,10 +42,7 @@ export default function ListThesisWorks() {
     ];
 
     return (
-        <div className="min-h-screen">
-            <div className="h-16 bg-secondary flex m-auto items-center justify-around">
-                <Logo />
-            </div>
+        <div className="">
             <div className="max-w-7xl mx-auto flex flex-col gap-y-8 pt-8">
                 <div className="flex items-center justify-center gap-x-8">
                     <button className="bg-secondary text-white py-2 px-4 rounded hover:bg-white hover:border hover:border-secondary hover:text-secondary transition-all">Estudiantes</button>
