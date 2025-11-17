@@ -23,7 +23,7 @@ export default function Home() {
                         href="#"
                         className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary"
                     >
-                        <div className="p-8 flex flex-col items-center gap-6">
+                        <Link to="/student-research-report-request" className="p-8 flex flex-col items-center gap-6">
                             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
                                 <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
                             </div>
@@ -33,7 +33,7 @@ export default function Home() {
                             <p className="text-gray-600 text-center text-sm">
                                 Registra y gestiona tu proyecto de tesis
                             </p>
-                        </div>
+                        </Link>
                     </a>
                     <a
                         href="#"

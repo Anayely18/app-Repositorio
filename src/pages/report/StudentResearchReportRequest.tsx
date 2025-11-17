@@ -1,253 +1,170 @@
+import { AsesorForm } from "@/shared/components/forms/AsesorForm"
+import { FileUpload } from "@/shared/components/forms/FileUpload"
+import { FormInput } from "@/shared/components/forms/FormInput"
+import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, UserRound, Users } from "lucide-react"
-
+import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, Users, Plus} from "lucide-react"
+import { useState } from "react"
 export default function StudentResearchReportRequest() {
+    const [advisor, setAdvisor] = useState([1])
+
+    const agregarAsesor = () => {
+        setAdvisor([...advisor, advisor.length + 1])
+    }
+
+    const eliminarAsesor = (index) => {
+        setAdvisor(advisor.filter((_, i) => i !== index))
+    }
+
+    const handleSubmit = () => {
+        alert('Formulario enviado!')
+    }
+
     return (
-        <div className="min-h-svh w-full">
-            <div className="h-16 bg-secondary">
+        <div className="min-h-screen w-full bg-linear-to-br from-gray-50 to-blue-50">
+            <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
                 <Logo />
             </div>
-            <main className="max-w-4xl mx-auto p-6 md:p-8">
-                <div className="bg-white rounded-lg shadow-sm p-6 md:p-8">
-                    <div className="text-center mb-8">
-                        <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
-                            Solicitud para Publicar Informe de Investigación
+            <main className="max-w-5xl mx-auto p-6 md:p-8">
+                <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
+                    <div className="text-center mb-10 pb-6 border-b-2 border-gray-100">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                            <FileText className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                            Solicitud para publicar informe de investigación
                         </h2>
-                        <p className="text-sm text-gray-500 mt-2">Estudiantes</p>
+                        <p className="text-sm text-gray-500 font-medium">Estudiantes</p>
                     </div>
-                    <form className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <Mail className="w-4 h-4 text-blue-600" />
-                                Correo Electrónico
-                            </label>
-                            <input
+                    <div className="space-y-8">
+                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                            <FormInput
+                                icon={Mail}
+                                label="Correo Electrónico"
                                 type="email"
                                 placeholder="tu.correo@unamba.edu.pe"
-                                className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
                             />
                         </div>
                         <div className="space-y-4">
-                            <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-amber-500 mt-1" />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                            No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación, esa es responsabilidad de usted, equipo de trabajo, revisores o la Dirección de Institutos de Investigación. Sin embargo, a pesar de estos filtros a la fecha existen trabajos rechazados. Esta oficina verifica aleatoriamente el formato o esquema, caso no esté bien será rechazado y si reincide se aplica el reglamento.
-                                        </p>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                            <span className="group-hover:text-blue-600 transition-colors">Sí, estoy de acuerdo</span>
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <FileText className="w-5 h-5 text-blue-500 mt-1" />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                            He leído y ajustado el informe de investigación al formato oficial del reglamento de Investigación de la UNAMBA.
-                                        </p>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                            <span className="group-hover:text-blue-600 transition-colors">Sí, he ajustado</span>
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-red-500 mt-1" />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                            He leído los errores más comunes que se presentan a la hora de presentar los informes de investigación cuyo link está aquí:{" "}
-                                            <a href="#" className="text-blue-600 hover:underline font-medium">
-                                                ERRORES RECURRENTES EN DIAGRAMACION.pdf
-                                            </a>
-                                        </p>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                            <span className="group-hover:text-blue-600 transition-colors">Sí, he leído</span>
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-1" />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                            Estoy informado que el trámite es virtual, existe una página de seguimiento para ver mi trámite, que el procedimiento para otorgar la constancia es de 5 días hábiles.
-                                        </p>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                            <span className="group-hover:text-blue-600 transition-colors">Sí, estoy informado</span>
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
+                            <InfoCheckbox
+                                icon={AlertCircle}
+                                iconColor="amber"
+                                text="No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación, esa es responsabilidad de usted, equipo de trabajo, revisores o la Dirección de Institutos de Investigación. Sin embargo, a pesar de estos filtros a la fecha existen trabajos rechazados. Esta oficina verifica aleatoriamente el formato o esquema, caso no esté bien será rechazado y si reincide se aplica el reglamento."
+                                checkboxLabel="Sí, estoy de acuerdo"
+                            />
+                            <InfoCheckbox
+                                icon={FileText}
+                                iconColor="blue"
+                                text="He leído y ajustado el informe de investigación al formato oficial del reglamento de Investigación de la UNAMBA."
+                                checkboxLabel="Sí, he ajustado"
+                            />
+                            <InfoCheckbox
+                                icon={AlertCircle}
+                                iconColor="red"
+                                text={<>He leído los errores más comunes que se presentan a la hora de presentar los informes de investigación cuyo link está aquí: <a href="#" className="text-blue-600 hover:underline font-semibold">ERRORES RECURRENTES EN DIAGRAMACION.pdf</a></>}
+                                checkboxLabel="Sí, he leído"
+                            />
+                            <InfoCheckbox
+                                icon={CheckCircle2}
+                                iconColor="green"
+                                text="Estoy informado que el trámite es virtual, existe una página de seguimiento para ver mi trámite, que el procedimiento para otorgar la constancia es de 5 días hábiles."
+                                checkboxLabel="Sí, estoy informado"
+                            />
                         </div>
-                        <div className="border-t border-gray-200 pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <User className="w-5 h-5 text-blue-600" />
-                                Información Personal
+                        <div className="border-t-2 border-gray-100 pt-8">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                </div>
+                                Información personal
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                        Nombres
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ingresa tus nombres"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                        Apellidos
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ingresa tus apellidos"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <CreditCard className="w-4 h-4 text-gray-500" />
-                                        Número de DNI
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="12345678"
-                                        maxLength={8}
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <Phone className="w-4 h-4 text-gray-500" />
-                                        Número de contacto
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        placeholder="987654321"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput icon={User} label="Nombres" type="text" placeholder="Ingresa tus nombres" />
+                                <FormInput icon={User} label="Apellidos" type="text" placeholder="Ingresa tus apellidos" />
+                                <FormInput icon={CreditCard} label="Número de DNI" type="text" placeholder="12345678" maxLength={8} />
+                                <FormInput icon={Phone} label="Número de contacto" type="tel" placeholder="987654321" />
                                 <div className="md:col-span-2">
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <Building2 className="w-4 h-4 text-gray-500" />
-                                        Escuela Profesional
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: Ingeniería de Sistemas"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
+                                    <FormInput icon={Building2} label="Escuela Profesional" type="text" placeholder="Ej: Ingeniería de Sistemas" />
                                 </div>
                             </div>
                         </div>
-                        <div className="border-t border-gray-200 pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-blue-600" />
-                                Sobre los asesores
+                        <div className="border-t-2 border-gray-100 pt-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <Users className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    Asesores
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={agregarAsesor}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Agregar asesor
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {advisor.map((num, index) => (
+                                    <AsesorForm
+                                        key={index}
+                                        number={num}
+                                        onRemove={() => eliminarAsesor(index)}
+                                        canRemove={advisor.length > 1}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="border-t-2 border-gray-100 pt-8">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                </div>
+                                Información del proyecto
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                        Nombres
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ingresa tus nombres"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                        Apellidos
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ingresa tus apellidos"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <CreditCard className="w-4 h-4 text-gray-500" />
-                                        Número de DNI
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="12345678"
-                                        maxLength={8}
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <Phone className="w-4 h-4 text-gray-500" />
-                                        Número de contacto
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        placeholder="987654321"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                        <Building2 className="w-4 h-4 text-gray-500" />
-                                        Escuela Profesional
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: Ingeniería de Sistemas"
-                                        className="w-full outline-none border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 py-2 px-3 rounded-md text-sm transition-all"
-                                    />
-                                </div>
+
+                            <div className="space-y-6">
+                                <FormInput
+                                    icon={FileText}
+                                    label="Nombre del Proyecto tesis/Trabajo de investigación"
+                                    type="text"
+                                    placeholder="Ingrese el título completo"
+                                />
+                                <FileUpload
+                                    label="Hoja de autorización de publicación escaneado en formato PDF (Apellidos Nombre Hoja.pdf max 1 MB, firmado y con su huella digital)"
+                                    maxSize="1 MB"
+                                />
+                                <FileUpload
+                                    label="Constancia de entrega de empastados otorgado por la Unidad de Investigación de su Facultad (Apellidos Nombres Acta.pdf) max 1 MB"
+                                    maxSize="1 MB"
+                                />
+                                <FileUpload
+                                    label="Tesis con el mismo contenido presentado en Unidad de Investigación (apellidos Nombre Tesis.pdf), TAMAÑO A4 y máximo 10 Mb"
+                                    maxSize="10 MB"
+                                />
+                                <FileUpload
+                                    label="Constancia de originalidad de su Tesis otorgado por la Unidad de Investigación de su Facultad (apellidos Nombre Constancia.pdf), TAMAÑO A4 y máximo 1 Mb"
+                                    maxSize="1 MB"
+                                />
                             </div>
                         </div>
-                        <div className="flex gap-3 pt-4">
+                        <div className="flex flex-col sm:flex-row gap-4 pt-6">
                             <button
-                                type="submit"
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-md text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                onClick={handleSubmit}
+                                className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-8 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             >
-                                <CheckCircle2 className="w-4 h-4" />
+                                <CheckCircle2 className="w-5 h-5" />
                                 Enviar Solicitud
                             </button>
                             <button
                                 type="button"
-                                className="px-6 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md text-sm transition-colors"
+                                className="px-8 py-4 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all hover:border-gray-400"
                             >
                                 Cancelar
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </main>
         </div>
