@@ -8,7 +8,7 @@ interface RegisterFormProps {
     errors: IRegisterErrors;
     isLoading: boolean;
     onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void | Promise<void>; 
 }
 
 export default function RegisterForm({
@@ -30,11 +30,8 @@ export default function RegisterForm({
                 <span className="text-center text-xs">
                     Bienvenido registre sus credenciales para acceder al sistema del repositorio institucional de la UNAMBA.
                 </span>
-
                 <form onSubmit={onSubmit} className="w-full mt-8">
                     <div className="flex flex-col items-start gap-y-4 w-full">
-
-                        {/* Nombres / Apellidos */}
                         <div className="grid grid-cols-2 gap-4 w-full">
                             <div className="flex flex-col gap-y-1 w-full">
                                 <label htmlFor="name" className="text-xs flex items-center gap-2 font-medium">
@@ -52,7 +49,6 @@ export default function RegisterForm({
                                 />
                                 {errors.name && <span className="text-xs text-red-500 mt-1">{errors.name}</span>}
                             </div>
-
                             <div className="flex flex-col gap-y-1 w-full">
                                 <label htmlFor="surname" className="text-xs flex items-center gap-2 font-medium">
                                     <Contact className="text-secondary" size={14} />
@@ -70,8 +66,6 @@ export default function RegisterForm({
                                 {errors.surname && <span className="text-xs text-red-500 mt-1">{errors.surname}</span>}
                             </div>
                         </div>
-
-                        {/* DNI */}
                         <div className="flex flex-col gap-y-1 w-full">
                             <label htmlFor="dni" className="text-xs flex items-center gap-2 font-medium">
                                 <CreditCard className="text-secondary" size={14} />
@@ -89,8 +83,6 @@ export default function RegisterForm({
                             />
                             {errors.dni && <span className="text-xs text-red-500 mt-1">{errors.dni}</span>}
                         </div>
-
-                        {/* Email */}
                         <div className="flex flex-col gap-y-1 w-full">
                             <label htmlFor="email" className="text-xs flex items-center gap-2 font-medium">
                                 <Mail className="text-secondary" size={14} />
@@ -107,8 +99,6 @@ export default function RegisterForm({
                             />
                             {errors.email && <span className="text-xs text-red-500 mt-1">{errors.email}</span>}
                         </div>
-
-                        {/* Contraseña */}
                         <div className="flex flex-col gap-y-1 w-full">
                             <label htmlFor="password" className="text-xs flex items-center gap-2 font-medium">
                                 <LockKeyhole className="text-secondary" size={14} />
@@ -132,8 +122,6 @@ export default function RegisterForm({
                             </div>
                             {errors.password && <span className="text-xs text-red-500 mt-1">{errors.password}</span>}
                         </div>
-
-                        {/* Confirmar contraseña */}
                         <div className="flex flex-col gap-y-1 w-full">
                             <label htmlFor="confirmPassword" className="text-xs flex items-center gap-2 font-medium">
                                 <LockKeyhole className="text-secondary" size={14} />
@@ -159,8 +147,6 @@ export default function RegisterForm({
                                 <span className="text-xs text-red-500 mt-1">{errors.confirmPassword}</span>
                             )}
                         </div>
-
-                        {/* Botón */}
                         <button
                             type="submit"
                             disabled={isLoading}
