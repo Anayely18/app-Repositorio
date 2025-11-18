@@ -1,7 +1,6 @@
 import { FormInput } from "./FormInput";
-import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react";
+import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react"
 import { FormSelect } from "./FormSelect";
-
 export function StudentForm({ number, canRemove, onRemove }){
   return (
     <div className="border border-gray-200 rounded-xl p-4 md:p-5 bg-gray-50/60 space-y-4">
