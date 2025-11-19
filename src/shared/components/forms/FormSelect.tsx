@@ -11,7 +11,7 @@ import { LucideIcon } from "lucide-react"
 interface Props {
   icon: LucideIcon
   label: string
-  options: string[]
+  options: string[],
 }
 
 export function FormSelect({ icon: Icon, label, options }: Props) {

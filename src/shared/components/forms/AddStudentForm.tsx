@@ -1,9 +1,10 @@
 import { FormInput } from "./FormInput";
 import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react"
 import { FormSelect } from "./FormSelect";
-export function StudentForm({ number, canRemove, onRemove }){
+import { Select } from "@/components/ui/select";
+export function AddStudentForm({ number, canRemove, onRemove }){
   return (
-    <div className="border border-gray-200 rounded-xl p-4 md:p-5 bg-gray-50/60 space-y-4">
+    <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-base font-semibold text-gray-800 flex items-center gap-2">
            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">

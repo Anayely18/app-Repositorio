@@ -40,7 +40,7 @@ export function AsesorForm({ number, onRemove, canRemove }) {
         />
         <FormInput
           icon={FileText}
-          label="ORCID"
+          label="Url de ORCID"
           type="text"
           placeholder="0000-0000-0000-0000"
         />
