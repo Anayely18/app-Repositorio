@@ -1,7 +1,6 @@
 import { FormInput } from "./FormInput";
 import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react"
 import { FormSelect } from "./FormSelect";
-import { Select } from "@/components/ui/select";
 export function AddStudentForm({ number, canRemove, onRemove }){
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
@@ -16,7 +15,7 @@ export function AddStudentForm({ number, canRemove, onRemove }){
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
+            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600 "
           >
             <Trash2 className="w-3 h-3" />
             Quitar

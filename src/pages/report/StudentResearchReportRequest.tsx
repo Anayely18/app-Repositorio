@@ -13,26 +13,26 @@ export default function StudentResearchReportRequest() {
     const addStudent = () => {
         
         if (student.length === 2){
-            alert("Mi amigui es gay")
+            alert("maximo 2")
             return
         } else {
             setStudent([...student, student.length + 1])
         }
     }
-
     const removeStudent = (index) => {
         setStudent(student.filter((_, i) => i !== index))
     }
+
     const [advisor, setAdvisor] = useState([1])
 
     const addAdvisor = () => {
         setAdvisor([...advisor, advisor.length + 1])
 
-         if (advisor.length === 2){
-            alert("Solo se puede enviar")
+         if (advisor.length === 3){
+            alert("Maximo 3")
             return
         } else {
-            setStudent([...student, student.length + 1])
+            setStudent([...advisor, advisor.length + 1])
         }
     }
 
