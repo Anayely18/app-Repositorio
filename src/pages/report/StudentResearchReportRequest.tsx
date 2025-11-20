@@ -9,7 +9,6 @@ import { useState } from "react"
 import { toastService } from "@/services/toastService";
 
 export default function StudentResearchReportRequest() {
-    // Estados para el formulario
     const [email, setEmail] = useState<string>("")
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
@@ -18,7 +17,6 @@ export default function StudentResearchReportRequest() {
         informed: false
     })
 
-    // Estudiantes
     const [student, setStudent] = useState([1])
     const [studentData, setStudentData] = useState<any[]>([{}])
 
@@ -42,7 +40,6 @@ export default function StudentResearchReportRequest() {
         setStudentData(newData)
     }
 
-    // Asesores
     const [advisor, setAdvisor] = useState([1])
     const [advisorData, setAdvisorData] = useState<any[]>([{}])
 
@@ -66,7 +63,6 @@ export default function StudentResearchReportRequest() {
         setAdvisorData(newData)
     }
 
-    // Jurados
     const [jury, setJury] = useState([1, 2, 3])
     const [juryData, setJuryData] = useState<string[]>(["", "", ""])
 
@@ -92,7 +88,6 @@ export default function StudentResearchReportRequest() {
         setJuryData(newData)
     }
 
-    // Información del proyecto
     const [projectTitle, setProjectTitle] = useState<string>("")
     const [files, setFiles] = useState({
         authorization: null,
