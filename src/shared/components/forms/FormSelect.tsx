@@ -8,13 +8,21 @@ import {
 
 import { LucideIcon } from "lucide-react"
 
-interface Props {
+interface FormSelectProps {
   icon: LucideIcon
   label: string
-  options: string[],
+  options: string[]
+  value?: string
+  onChange?: (value: string) => void
 }
 
-export function FormSelect({ icon: Icon, label, options }: Props) {
+export function FormSelect({ 
+  icon: Icon, 
+  label, 
+  options,
+  value,
+  onChange 
+}: FormSelectProps) {
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -22,7 +30,7 @@ export function FormSelect({ icon: Icon, label, options }: Props) {
         {label}
       </label>
 
-      <Select>
+      <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} />
         </SelectTrigger>

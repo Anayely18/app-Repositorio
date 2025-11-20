@@ -1,59 +1,112 @@
 import { AsesorForm } from "@/shared/components/forms/AsesorForm"
 import { AddStudentForm } from "@/shared/components/forms/AddStudentForm";
-import { JuryForm } from "@/shared/components/forms/JuryForm";
 import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, Users, Plus} from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, Mail, User, Users, Plus } from "lucide-react"
 import { useState } from "react"
+import { toastService } from "@/services/toastService";
+
 export default function StudentResearchReportRequest() {
+    const [email, setEmail] = useState<string>("")
+    const [checkboxes, setCheckboxes] = useState({
+        agreement: false,
+        format: false,
+        errors: false,
+        informed: false
+    })
+
     const [student, setStudent] = useState([1])
+    const [studentData, setStudentData] = useState<any[]>([{}])
 
     const addStudent = () => {
-        
-        if (student.length === 2){
-            alert("maximo 2")
+        if (student.length === 2) {
+            toastService.error("Máximo dos estudiantes por informe")
             return
-        } else {
-            setStudent([...student, student.length + 1])
         }
+        setStudent([...student, student.length + 1])
+        setStudentData([...studentData, {}])
     }
     const removeStudent = (index) => {
         setStudent(student.filter((_, i) => i !== index))
+        setStudentData(studentData.filter((_, i) => i !== index))
+    }
+
+    const updateStudentData = (index: number, data: any) => {
+        const newData = [...studentData]
+        newData[index] = data
+        setStudentData(newData)
     }
 
     const [advisor, setAdvisor] = useState([1])
+    const [advisorData, setAdvisorData] = useState<any[]>([{}])
 
     const addAdvisor = () => {
-        setAdvisor([...advisor, advisor.length + 1])
-
-         if (advisor.length === 3){
-            alert("Maximo 3")
+        if (advisor.length === 2) {
+            toastService.error("Máximo dos asesores por informe")
             return
-        } else {
-            setStudent([...advisor, advisor.length + 1])
         }
+        setAdvisor([...advisor, advisor.length + 1])
+        setAdvisorData([...advisorData, {}])
     }
 
     const removeAdvisor = (index) => {
         setAdvisor(advisor.filter((_, i) => i !== index))
+        setAdvisorData(advisorData.filter((_, i) => i !== index))
     }
 
-    const [jury, setJury] = useState([1])
+    const updateAdvisorData = (index: number, data: any) => {
+        const newData = [...advisorData]
+        newData[index] = data
+        setAdvisorData(newData)
+    }
+
+    const [jury, setJury] = useState([1, 2, 3])
+    const [juryData, setJuryData] = useState<string[]>(["", "", ""])
 
     const addJury = () => {
-        
-        if (jury.length === 2){
-            alert("Mi amigui es gay")
+        if (jury.length === 4) {
+            toastService.error("Máximo cuatro jurados por informe")
             return
-        } else {
-            setJury([...jury, jury.length + 1])
+        }
+        setJury([...jury, jury.length + 1])
+        setJuryData([...juryData, ""])
+    }
+
+    const removeLastJury = () => {
+        if (jury.length > 3) {
+            setJury(jury.slice(0, -1))
+            setJuryData(juryData.slice(0, -1))
         }
     }
 
+    const updateJuryData = (index: number, value: string) => {
+        const newData = [...juryData]
+        newData[index] = value
+        setJuryData(newData)
+    }
+
+    const [projectTitle, setProjectTitle] = useState<string>("")
+    const [files, setFiles] = useState({
+        authorization: null,
+        certificate: null,
+        thesis: null,
+        originality: null
+    })
+
     const handleSubmit = () => {
-        alert('Formulario enviado!')
+        const formData = {
+            email,
+            checkboxes,
+            students: studentData,
+            advisors: advisorData,
+            jury: juryData,
+            projectTitle,
+            files
+        }
+        console.log('Datos del formulario:', formData)
+        alert('Formulario enviado! Revisa la consola para ver los datos.')
     }
 
     return (
@@ -79,6 +132,8 @@ export default function StudentResearchReportRequest() {
                                 label="Correo Electrónico"
                                 type="email"
                                 placeholder="tu.correo@unamba.edu.pe"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
                         <div className="space-y-4">
@@ -86,29 +141,37 @@ export default function StudentResearchReportRequest() {
                                 icon={AlertCircle}
                                 iconColor="amber"
                                 text={<>
-                                No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación, esa es responsabilidad de usted, equipo de trabajo, revisores o la Dirección de Institutos de Investigación. Sin embargo, a pesar de estos filtros a la fecha existen trabajos rechazados. Esta oficina verifica aleatoriamente el formato o esquema, caso no esté bien será rechazado y si reincide se aplica el <a href="https://drive.google.com/file/d/1FNXxEnW_zWmuuFhHJ7tW2AqECUwekjBc/view" target="_blank" className="text-blue-600 hover:underline font-semibold">reglamento</a>.</>}
+                                    No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación, esa es responsabilidad de usted, equipo de trabajo, revisores o la Dirección de Institutos de Investigación. Sin embargo, a pesar de estos filtros a la fecha existen trabajos rechazados. Esta oficina verifica aleatoriamente el formato o esquema, caso no esté bien será rechazado y si reincide se aplica el <a href="https://drive.google.com/file/d/1FNXxEnW_zWmuuFhHJ7tW2AqECUwekjBc/view" target="_blank" className="text-blue-600 hover:underline font-semibold">reglamento</a>.</>}
                                 checkboxLabel="Sí, estoy de acuerdo"
+                                checked={checkboxes.agreement}
+                                onChange={(e) => setCheckboxes({ ...checkboxes, agreement: e.target.checked })}
                             />
                             <InfoCheckbox
                                 icon={FileText}
                                 iconColor="blue"
                                 text="He leído y ajustado el informe de investigación al formato oficial del reglamento de Investigación de la UNAMBA."
                                 checkboxLabel="Sí, he ajustado"
+                                checked={checkboxes.format}
+                                onChange={(e) => setCheckboxes({ ...checkboxes, format: e.target.checked })}
                             />
                             <InfoCheckbox
                                 icon={AlertCircle}
                                 iconColor="red"
                                 text={<>He leído los errores más comunes que se presentan a la hora de presentar los informes de investigación cuyo link está aquí: <a href="https://drive.google.com/file/d/1yUA2CEBWBsgf1o181WaqmomqtHwkiNEK/view" target="_blank" className="text-blue-600 hover:underline font-semibold">ERRORES RECURRENTES EN DIAGRAMACION.pdf</a></>}
                                 checkboxLabel="Sí, he leído"
+                                checked={checkboxes.errors}
+                                onChange={(e) => setCheckboxes({ ...checkboxes, errors: e.target.checked })}
                             />
                             <InfoCheckbox
                                 icon={CheckCircle2}
                                 iconColor="green"
                                 text="Estoy informado que el trámite es virtual, existe una página de seguimiento para ver mi trámite, que el procedimiento para otorgar la constancia es de 5 días hábiles."
                                 checkboxLabel="Sí, estoy informado"
+                                checked={checkboxes.informed}
+                                onChange={(e) => setCheckboxes({ ...checkboxes, informed: e.target.checked })}
                             />
                         </div>
-                        
+
                         <div className="border-t-2 border-gray-100 pt-8">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
@@ -129,10 +192,12 @@ export default function StudentResearchReportRequest() {
                             <div className="space-y-4">
                                 {student.map((num, index) => (
                                     <AddStudentForm
-                                    key={index}
-                                    number={num}
-                                    onRemove={() => removeStudent(index)}
-                                    canRemove={student.length > 1}
+                                        key={index}
+                                        number={num}
+                                        onRemove={() => removeStudent(index)}
+                                        canRemove={student.length > 1}
+                                        data={studentData[index]}
+                                        onChange={(data) => updateStudentData(index, data)}
                                     />
                                 ))}
                             </div>
@@ -161,11 +226,13 @@ export default function StudentResearchReportRequest() {
                                         number={num}
                                         onRemove={() => removeAdvisor(index)}
                                         canRemove={advisor.length > 1}
+                                        data={advisorData[index]}
+                                        onChange={(data) => updateAdvisorData(index, data)}
                                     />
                                 ))}
                             </div>
                         </div>
-                        
+
                         <div className="border-t-2 border-gray-100 pt-8">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
@@ -176,20 +243,42 @@ export default function StudentResearchReportRequest() {
                                 </h3>
                             </div>
                             <div className="space-y-4">
-                                {jury.map((index) => (
-                                    <JuryForm
-                                    key={index}
-                                    />
-                                    
+                                {jury.map((num, index) => (
+                                    <div key={index} className="flex items-start gap-2">
+                                        <div className="flex-1">
+                                            <FormInput
+                                                icon={User}
+                                                label={`Nombre del ${index === 0 ? 'primer' : index === 1 ? 'segundo' : index === 2 ? 'tercer' : 'cuarto'} jurado`}
+                                                type="text"
+                                                placeholder="Ingrese el nombre completo del jurado"
+                                                value={juryData[index]}
+                                                onChange={(e) => updateJuryData(index, e.target.value)}
+                                            />
+                                        </div>
+                                        {jury.length > 3 && index === jury.length - 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={removeLastJury}
+                                                className="mt-8 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Eliminar último jurado"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
-                                 <button
-                                    type="button"
-                                    onClick={addJury}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Agregar jurado
-                                </button>
+                                {jury.length < 4 && (
+                                    <button
+                                        type="button"
+                                        onClick={addJury}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Agregar jurado
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -207,22 +296,28 @@ export default function StudentResearchReportRequest() {
                                     label="Nombre del Proyecto tesis/Trabajo de investigación"
                                     type="text"
                                     placeholder="Ingrese el título completo"
+                                    value={projectTitle}
+                                    onChange={(e) => setProjectTitle(e.target.value)}
                                 />
                                 <FileUpload
                                     label="Hoja de autorización de publicación escaneado en formato PDF (Apellidos Nombre Hoja.pdf max 1 MB, firmado y con su huella digital)"
                                     maxSize="1 MB"
+                                    onChange={(file) => setFiles({ ...files, authorization: file })}
                                 />
                                 <FileUpload
                                     label="Constancia de entrega de empastados otorgado por la Unidad de Investigación de su Facultad (Apellidos Nombres Acta.pdf) max 1 MB"
                                     maxSize="1 MB"
+                                    onChange={(file) => setFiles({ ...files, certificate: file })}
                                 />
                                 <FileUpload
                                     label="Tesis con el mismo contenido presentado en Unidad de Investigación (apellidos Nombre Tesis.pdf), TAMAÑO A4 y máximo 10 Mb"
                                     maxSize="10 MB"
+                                    onChange={(file) => setFiles({ ...files, thesis: file })}
                                 />
                                 <FileUpload
                                     label="Constancia de originalidad de su Tesis otorgado por la Unidad de Investigación de su Facultad (apellidos Nombre Constancia.pdf), TAMAÑO A4 y máximo 1 Mb"
                                     maxSize="1 MB"
+                                    onChange={(file) => setFiles({ ...files, originality: file })}
                                 />
                             </div>
                         </div>

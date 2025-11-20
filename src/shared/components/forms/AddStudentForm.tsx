@@ -1,7 +1,30 @@
 import { FormInput } from "./FormInput";
 import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react"
 import { FormSelect } from "./FormSelect";
-export function AddStudentForm({ number, canRemove, onRemove }){
+
+interface StudentData {
+  nombres?: string
+  apellidos?: string
+  dni?: string
+  telefono?: string
+  escuela?: string
+}
+
+interface AddStudentFormProps {
+  number: number
+  canRemove: boolean
+  onRemove: () => void
+  data: StudentData
+  onChange: (data: StudentData) => void
+}
+
+export function AddStudentForm({ 
+  number, 
+  canRemove, 
+  onRemove,
+  data = {},
+  onChange 
+}: AddStudentFormProps) {
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
       <div className="flex items-center justify-between mb-2">
@@ -29,12 +52,16 @@ export function AddStudentForm({ number, canRemove, onRemove }){
           label="Nombres"
           type="text"
           placeholder="Ingresa tus nombres"
+          value={data.nombres || ""}
+          onChange={(e) => onChange({ ...data, nombres: e.target.value })}
         />
         <FormInput
           icon={User}
           label="Apellidos"
           type="text"
           placeholder="Ingresa tus apellidos"
+          value={data.apellidos || ""}
+          onChange={(e) => onChange({ ...data, apellidos: e.target.value })}
         />
         <FormInput
           icon={CreditCard}
@@ -42,26 +69,32 @@ export function AddStudentForm({ number, canRemove, onRemove }){
           type="text"
           placeholder="12345678"
           maxLength={8}
+          value={data.dni || ""}
+          onChange={(e) => onChange({ ...data, dni: e.target.value })}
         />
         <FormInput
           icon={Phone}
           label="Número de contacto"
           type="tel"
           placeholder="987654321"
+          value={data.telefono || ""}
+          onChange={(e) => onChange({ ...data, telefono: e.target.value })}
         />
         <FormSelect
-            icon={Building2}
-            label="Escuela Profesional"
-            options={[
-              "Ingeniería de Sistemas",
-              "Ingeniería Civil",
-              "Ingeniería Ambiental",
-              "Administración",
-              "Contabilidad",
-              "Derecho",
-              "Educación",
-            ]}
-          />
+          icon={Building2}
+          label="Escuela Profesional"
+          options={[
+            "Ingeniería de Sistemas",
+            "Ingeniería Civil",
+            "Ingeniería Ambiental",
+            "Administración",
+            "Contabilidad",
+            "Derecho",
+            "Educación",
+          ]}
+          value={data.escuela || ""}
+          onChange={(value) => onChange({ ...data, escuela: value })}
+        />
       </div>
     </div>
   );
