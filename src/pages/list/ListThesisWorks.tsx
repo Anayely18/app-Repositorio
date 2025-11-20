@@ -7,7 +7,7 @@ interface Student {
     firstName: string;
     lastName: string;
     dni: string;
-    school: string;
+    career: string;
     observation: string;
 }
 
@@ -17,8 +17,7 @@ interface Teacher {
     firstName: string;
     lastName: string;
     dni: string;
-    department: string;
-    specialty: string;
+    school: string;
     observation: string;
 }
 
@@ -37,7 +36,7 @@ export default function ListThesisWorks() {
             firstName: 'María',
             lastName: 'González',
             dni: '72345678',
-            school: 'Systems Engineering',
+            career: 'Systems Engineering',
             observation: 'Documentos completos'
         },
         {
@@ -46,7 +45,7 @@ export default function ListThesisWorks() {
             firstName: 'Carlos',
             lastName: 'Rodríguez',
             dni: '71234567',
-            school: 'Business Administration',
+            career: 'Business Administration',
             observation: 'Falta certificado'
         },
         {
@@ -55,7 +54,7 @@ export default function ListThesisWorks() {
             firstName: 'Ana',
             lastName: 'Martínez',
             dni: '73456789',
-            school: 'Law',
+            career: 'Law',
             observation: 'En revisión'
         },
         {
@@ -64,7 +63,7 @@ export default function ListThesisWorks() {
             firstName: 'Luis',
             lastName: 'Pérez',
             dni: '70987654',
-            school: 'Medicine',
+            career: 'Medicine',
             observation: 'Aprobado'
         },
         {
@@ -73,7 +72,7 @@ export default function ListThesisWorks() {
             firstName: 'Patricia',
             lastName: 'Silva',
             dni: '72567890',
-            school: 'Architecture',
+            career: 'Architecture',
             observation: 'Documentos completos'
         },
         {
@@ -82,7 +81,7 @@ export default function ListThesisWorks() {
             firstName: 'Roberto',
             lastName: 'Díaz',
             dni: '71345678',
-            school: 'Civil Engineering',
+            career: 'Civil Engineering',
             observation: 'En proceso'
         },
         {
@@ -91,7 +90,7 @@ export default function ListThesisWorks() {
             firstName: 'Elena',
             lastName: 'Torres',
             dni: '73234567',
-            school: 'Psychology',
+            career: 'Psychology',
             observation: 'Aprobado'
         }
     ];
@@ -103,8 +102,7 @@ export default function ListThesisWorks() {
             firstName: 'Dr. Juan',
             lastName: 'Ramírez',
             dni: '40123456',
-            department: 'Engineering',
-            specialty: 'Systems',
+            school: 'Engineering',
             observation: 'Asesor principal'
         },
         {
@@ -113,8 +111,7 @@ export default function ListThesisWorks() {
             firstName: 'Dra. Carmen',
             lastName: 'López',
             dni: '40234567',
-            department: 'Social Sciences',
-            specialty: 'Administration',
+            school: 'Social Sciences',
             observation: 'Co-asesor'
         },
         {
@@ -123,8 +120,7 @@ export default function ListThesisWorks() {
             firstName: 'Mg. Ricardo',
             lastName: 'Vargas',
             dni: '40345678',
-            department: 'Law',
-            specialty: 'Civil Law',
+            school: 'Law',
             observation: 'Jurado evaluador'
         },
         {
@@ -133,8 +129,7 @@ export default function ListThesisWorks() {
             firstName: 'Dr. Fernando',
             lastName: 'Sánchez',
             dni: '40456789',
-            department: 'Medicine',
-            specialty: 'Surgery',
+            school: 'Medicine',
             observation: 'Asesor principal'
         },
         {
@@ -143,8 +138,7 @@ export default function ListThesisWorks() {
             firstName: 'Dra. Sofía',
             lastName: 'Mendoza',
             dni: '40567890',
-            department: 'Architecture',
-            specialty: 'Urban Design',
+            school: 'Architecture',
             observation: 'Revisora'
         },
         {
@@ -153,8 +147,7 @@ export default function ListThesisWorks() {
             firstName: 'Mg. Alberto',
             lastName: 'Castro',
             dni: '40678901',
-            department: 'Engineering',
-            specialty: 'Civil',
+            school: 'Engineering',
             observation: 'Asesor'
         }
     ];
@@ -163,6 +156,7 @@ export default function ListThesisWorks() {
 
     const filteredData = currentData.filter((item: Student | Teacher) =>
         item.dni.includes(searchTerm)
+        
     );
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -234,7 +228,7 @@ export default function ListThesisWorks() {
                                     setCurrentPage(1);
                                 }}
                                 className="outline-none border py-2 pl-3 pr-10 text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                                placeholder="Buscar por DNI"
+                                placeholder="Buscar"
                             />
                             <Search size={18} className="absolute top-2.5 right-3 text-slate-400" />
                         </div>
@@ -257,12 +251,12 @@ export default function ListThesisWorks() {
                                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                         DNI
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                        {activeTab === 'students' ? 'Escuela Profesional' : 'Departamento'}
+                                    <th className="px-6 py-4  text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                        {activeTab === 'students' && 'Carrera Profesional' }
                                     </th>
                                     {activeTab === 'teachers' && (
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                            Especialidad
+                                        <th className="px-1 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                            Escuela profesional
                                         </th>
                                     )}
                                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -292,17 +286,15 @@ export default function ListThesisWorks() {
                                             {item.dni}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-slate-600">
-                                            {activeTab === 'students' 
-                                                ? (item as Student).school 
-                                                : (item as Teacher).department}
+                                                {(item as Student).career}
                                         </td>
                                         {activeTab === 'teachers' && (
                                             <td className="px-6 py-4 text-sm text-slate-600">
-                                                {(item as Teacher).specialty}
+                                                {(item as Teacher).school}
                                             </td>
                                         )}
                                         <td className="px-6 py-4 text-sm text-slate-600">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getObservationStyle(item.observation)}`}>
+                                            <span className={`inline-flex px-2 py-1  text-xs font-medium ${getObservationStyle(item.observation)}`}>
                                                 {item.observation}
                                             </span>
                                         </td>

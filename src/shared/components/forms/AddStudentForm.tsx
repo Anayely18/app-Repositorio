@@ -38,7 +38,7 @@ export function AddStudentForm({
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
+            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600 "
           >
             <Trash2 className="w-3 h-3" />
             Quitar
