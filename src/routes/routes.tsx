@@ -4,6 +4,7 @@ import Register from "@/pages/auth/Register"
 import Home from "@/pages/home/Home"
 import ListThesisWorks from "@/pages/list/ListThesisWorks"
 import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRequest"
+import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
 import Layout from "@/shared/ui/layout/Layout"
 
 export const routes = [
@@ -22,6 +23,10 @@ export const routes = [
     {
         path: '/student-research-report-request',
         element: <StudentResearchReportRequest />
+    },
+    {
+        path: '/teacher-research-report-request',
+        element: <TeacherResearchReportRequest />
     },
     {
         path: '/',

@@ -6,7 +6,7 @@ interface LoginFormProps {
     errors: ILoginErrors;
     isLoading: boolean;
     onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-    onSubmit: () => void;
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
 }
 export default function LoginForm({
     formData,
@@ -26,7 +26,7 @@ export default function LoginForm({
                 <span className="text-center text-xs">
                     Bienvenido al sistema del repositorio institucional de la UNAMBA.
                 </span>
-                <div className="w-full mt-8">
+                <form onSubmit={onSubmit} className="w-full mt-8">
                     <div className="flex flex-col items-start gap-y-4 w-full">
                         <div className="flex flex-col gap-y-1 w-full">
                             <label htmlFor="email" className="text-xs flex items-center gap-2 font-medium">
@@ -93,14 +93,14 @@ export default function LoginForm({
                             </button>
                         </div>
                         <button
-                            onClick={onSubmit}
+                            type="submit"
                             disabled={isLoading}
                             className="bg-secondary hover:bg-secondary/95 mt-4 hover:-translate-y-1 transition-all duration-500 font-medium text-white rounded py-2 w-full cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                         >
                             {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
                         </button>
                     </div>
-                </div>
+                </form>
                 <span className="block text-end text-xs">
                     ¿Aun no tienes una cuenta?
                     <button

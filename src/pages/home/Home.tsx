@@ -7,7 +7,7 @@ export default function Home() {
         <div className="h-svh overflow-hidden">
             <div className="h-16 bg-secondary flex m-auto items-center justify-around">
                 <Logo />
-                <Link to="/login" className="py-2 px-4 rounded bg-white text-secondary text-xs">Administrador</Link>
+                
             </div>
             <main className="max-w-6xl mx-auto px-6 py-12">
                 <div className="text-center mb-12">
@@ -39,9 +39,9 @@ export default function Home() {
                         href="#"
                         className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary"
                     >
-                        <div className="p-8 flex flex-col items-center gap-6">
+                         <Link to="/Teacher-research-report-request" className="p-8 flex flex-col items-center gap-6">
                             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
-                                <FileText className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
+                                <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
                             </div>
                             <h3 className="text-xl font-bold text-secondary transition-colors">
                                 Informe de Docentes
@@ -49,7 +49,7 @@ export default function Home() {
                             <p className="text-gray-600 text-center text-sm">
                                 Presenta tu informe académico
                             </p>
-                        </div>
+                        </Link>
                     </a>
                 </div>
                 <div className="max-w-2xl mx-auto">
