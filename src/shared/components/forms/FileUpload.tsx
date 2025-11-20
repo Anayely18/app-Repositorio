@@ -1,15 +1,32 @@
 import { AlertCircle, Building2, CheckCircle2, CreditCard, FileText, Mail, Phone, User, Users, Plus, Trash2, Upload } from "lucide-react"
 import { useState } from "react"
 
-export function FileUpload({ label, accept = ".pdf", maxSize = "1 MB" }) {
+export function FileUpload({
+  label,
+  sublabel, 
+  accept = ".pdf",
+  maxSize = "1 MB"
+}: {
+  label: string;
+  sublabel?: string;   
+  accept?: string;
+  maxSize?: string;
+}) {
+
     const [file, setFile] = useState(null)
 
     return (
         <div className="space-y-2">
             <label className="flex items-start gap-2 text-sm font-medium text-gray-700">
                 <Upload className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                <span>{label}</span>
+                <div className="flex flex-col">
+                    <span>{label}</span>
+                    {sublabel && (
+                        <span className="text-xs text-gray-500">{sublabel}</span>
+                    )}
+                </div>
             </label>
+
             <div className="relative">
                 <input
                     type="file"
