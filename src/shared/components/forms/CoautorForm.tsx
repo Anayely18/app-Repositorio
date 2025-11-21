@@ -3,7 +3,37 @@ import { FormInput } from "./FormInput"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 
-export function CoautorForm({ number, onRemove, canRemove }) {
+interface CoautorData {
+  tipoUbicacion: 'externo' | 'interno' | ''
+  tipoRol: 'estudiante' | 'docente' | ''
+  nombre: string
+  dni: string
+  orcid: string
+}
+
+interface CoautorFormProps {
+  number: number
+  onRemove: () => void
+  canRemove: boolean
+  data?: CoautorData
+  onChange?: (data: CoautorData) => void
+}
+
+export function CoautorForm({ number, onRemove, canRemove, data, onChange }: CoautorFormProps) {
+  const formData: CoautorData = data || {
+    tipoUbicacion: '',
+    tipoRol: '',
+    nombre: '',
+    dni: '',
+    orcid: ''
+  }
+
+  const handleChange = (field: keyof CoautorData, value: string) => {
+    if (onChange) {
+      onChange({ ...formData, [field]: value })
+    }
+  }
+
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 flex flex-col gap-y-6 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
       <div className="flex items-center justify-between">
@@ -24,38 +54,61 @@ export function CoautorForm({ number, onRemove, canRemove }) {
         )}
       </div>
 
-      <div className="">
-        <RadioGroup defaultValue="comfortable">
+      <div>
+        <RadioGroup 
+          value={formData.tipoUbicacion} 
+          onValueChange={(value) => handleChange('tipoUbicacion', value)}
+        >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-gray-600">Seleccion si el coautor es externo o interno</span>
+            <span className="text-xs text-gray-600">Seleccione si el coautor es externo o interno</span>
           </div>
           <div className="grid grid-cols-2 w-full px-2">
             <div className="flex items-center gap-3">
-              <RadioGroupItem value="default" id="r1" className="data-[state=checked]:border-green-600 data-[state=checked]:bg-blue-600" />
-              <Label htmlFor="r1" className="font-normal capitalize">Estudiante</Label>
+              <RadioGroupItem 
+                value="externo" 
+                id={`ubicacion-externo-${number}`} 
+                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
+              />
+              <Label htmlFor={`ubicacion-externo-${number}`} className="font-normal capitalize">Externo</Label>
             </div>
             <div className="flex items-center gap-3">
-              <RadioGroupItem value="comfortable" id="r2" className="data-[state=checked]:border-green-600 data-[state=checked]:bg-blue-600" />
-              <Label htmlFor="r2" className="font-normal capitalize">Interno</Label>
+              <RadioGroupItem 
+                value="interno" 
+                id={`ubicacion-interno-${number}`} 
+                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
+              />
+              <Label htmlFor={`ubicacion-interno-${number}`} className="font-normal capitalize">Interno</Label>
             </div>
           </div>
         </RadioGroup>
       </div>
-      <div >
-        <RadioGroup defaultValue="comfortable">
+
+      <div>
+        <RadioGroup 
+          value={formData.tipoRol} 
+          onValueChange={(value) => handleChange('tipoRol', value)}
+        >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-gray-600">Selecciona si el coautor es estudiante o docente</span>
+            <span className="text-xs text-gray-600">Seleccione si el coautor es estudiante o docente</span>
           </div>
           <div className="grid grid-cols-2 w-full px-2">
             <div className="flex items-center gap-3">
-              <RadioGroupItem value="default" id="r1" className="data-[state=checked]:border-green-600 data-[state=checked]:bg-blue-600" />
-              <Label htmlFor="r1" className="font-normal capitalize">Estudiante</Label>
+              <RadioGroupItem 
+                value="estudiante" 
+                id={`rol-estudiante-${number}`} 
+                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
+              />
+              <Label htmlFor={`rol-estudiante-${number}`} className="font-normal capitalize">Estudiante</Label>
             </div>
             <div className="flex items-center gap-3">
-              <RadioGroupItem value="comfortable" id="r2" className="data-[state=checked]:border-green-600 data-[state=checked]:bg-blue-600" />
-              <Label htmlFor="r2" className="font-normal capitalize">Docente</Label>
+              <RadioGroupItem 
+                value="docente" 
+                id={`rol-docente-${number}`} 
+                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
+              />
+              <Label htmlFor={`rol-docente-${number}`} className="font-normal capitalize">Docente</Label>
             </div>
           </div>
         </RadioGroup>
@@ -68,6 +121,8 @@ export function CoautorForm({ number, onRemove, canRemove }) {
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Robles Rojas Gustavo"
+          value={formData.nombre}
+          onChange={(e) => handleChange('nombre', e.target.value)}
         />
         <FormInput
           icon={CreditCard}
@@ -75,12 +130,16 @@ export function CoautorForm({ number, onRemove, canRemove }) {
           type="text"
           placeholder="78345758"
           maxLength={8}
+          value={formData.dni}
+          onChange={(e) => handleChange('dni', e.target.value)}
         />
         <FormInput
           icon={FileText}
           label="Url de ORCID"
           type="text"
           placeholder="0000-0000-0000-0000"
+          value={formData.orcid}
+          onChange={(e) => handleChange('orcid', e.target.value)}
         />
       </div>
     </div>

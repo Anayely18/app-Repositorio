@@ -92,6 +92,7 @@ export const useRegister = () => {
         if (!validateForm()) {
             return;
         }
+        console.log(formData)
 
         setIsLoading(true);
 
