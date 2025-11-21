@@ -29,7 +29,6 @@ export default function StudentResearchReportRequest() {
         setStudent([...student, student.length + 1])
         setStudentData([...studentData, {}])
     }
-
     const removeStudent = (index) => {
         setStudent(student.filter((_, i) => i !== index))
         setStudentData(studentData.filter((_, i) => i !== index))

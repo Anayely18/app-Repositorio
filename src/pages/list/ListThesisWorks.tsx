@@ -16,8 +16,7 @@ interface Teacher {
     firstName: string;
     lastName: string;
     dni: string;
-    department: string;
-    specialty: string;
+    school: string;
     observation: string;
 }
 
@@ -39,8 +38,7 @@ export default function ListThesisWorks() {
             firstName: 'Dr. Juan',
             lastName: 'Ramírez',
             dni: '40123456',
-            department: 'Engineering',
-            specialty: 'Systems',
+            school: 'Engineering',
             observation: 'Asesor principal'
         },
         {
@@ -49,8 +47,7 @@ export default function ListThesisWorks() {
             firstName: 'Dra. Carmen',
             lastName: 'López',
             dni: '40234567',
-            department: 'Social Sciences',
-            specialty: 'Administration',
+            school: 'Social Sciences',
             observation: 'Co-asesor'
         },
         {
@@ -59,8 +56,7 @@ export default function ListThesisWorks() {
             firstName: 'Mg. Ricardo',
             lastName: 'Vargas',
             dni: '40345678',
-            department: 'Law',
-            specialty: 'Civil Law',
+            school: 'Law',
             observation: 'Jurado evaluador'
         },
         {
@@ -69,8 +65,7 @@ export default function ListThesisWorks() {
             firstName: 'Dr. Fernando',
             lastName: 'Sánchez',
             dni: '40456789',
-            department: 'Medicine',
-            specialty: 'Surgery',
+            school: 'Medicine',
             observation: 'Asesor principal'
         },
         {
@@ -79,8 +74,7 @@ export default function ListThesisWorks() {
             firstName: 'Dra. Sofía',
             lastName: 'Mendoza',
             dni: '40567890',
-            department: 'Architecture',
-            specialty: 'Urban Design',
+            school: 'Architecture',
             observation: 'Revisora'
         },
         {
@@ -89,8 +83,7 @@ export default function ListThesisWorks() {
             firstName: 'Mg. Alberto',
             lastName: 'Castro',
             dni: '40678901',
-            department: 'Engineering',
-            specialty: 'Civil',
+            school: 'Engineering',
             observation: 'Asesor'
         }
     ];
@@ -210,7 +203,7 @@ export default function ListThesisWorks() {
                                     setCurrentPage(1);
                                 }}
                                 className="outline-none border py-2 pl-3 pr-10 text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                                placeholder="Buscar por DNI"
+                                placeholder="Buscar"
                             />
                             <Search size={18} className="absolute top-2.5 right-3 text-slate-400" />
                         </div>
