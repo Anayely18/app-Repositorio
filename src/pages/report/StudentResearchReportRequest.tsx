@@ -7,6 +7,7 @@ import Logo from "@/shared/ui/Logo"
 import { AlertCircle, CheckCircle2, FileText, Mail, User, Users, Plus } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
+import { API_URL } from "@/utils/api";
 
 export default function StudentResearchReportRequest() {
     const [email, setEmail] = useState<string>("")
@@ -96,19 +97,79 @@ export default function StudentResearchReportRequest() {
         originality: null
     })
 
-    const handleSubmit = () => {
-        const formData = {
-            email,
-            checkboxes,
-            students: studentData,
-            advisors: advisorData,
-            jury: juryData,
-            projectTitle,
-            files
+    const handleSubmit = async () => {
+        try {
+            const formData = new FormData();
+
+            formData.append('email', email);
+            formData.append('projectTitle', projectTitle);
+            formData.append('checkboxes', JSON.stringify(checkboxes));
+            formData.append('students', JSON.stringify(studentData));
+            formData.append('advisors', JSON.stringify(advisorData));
+            formData.append('jury', JSON.stringify(juryData));
+
+            if (files.authorization) {
+                formData.append('authorization', files.authorization);
+            }
+            if (files.certificate) {
+                formData.append('certificate', files.certificate);
+            }
+            if (files.thesis) {
+                formData.append('thesis', files.thesis);
+            }
+            if (files.originality) {
+                formData.append('originality', files.originality);
+            }
+
+            const response = await fetch(`${API_URL}/applications`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toastService.success('Solicitud enviada exitosamente');
+                resetForm();
+            } else {
+                toastService.error(result.message || 'Error al enviar solicitud');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            toastService.error('Error de conexión al servidor');
         }
-        console.log('Datos del formulario:', formData)
-        alert('Formulario enviado! Revisa la consola para ver los datos.')
-    }
+    };
+
+    const resetForm = () => {
+        setEmail("");
+        setProjectTitle("");
+
+        setCheckboxes({
+            agreement: false,
+            format: false,
+            errors: false,
+            informed: false
+        });
+
+        setStudentData([
+            { nombres: "", apellidos: "", telefono: "", dni: "", escuela: "" }
+        ]);
+
+        setAdvisorData([
+            { nombre: "", dni: "", orcid: "" }
+        ]);
+
+        setJuryData(["", "", "", ""]);
+
+        setFiles({
+            authorization: null,
+            certificate: null,
+            thesis: null,
+            originality: null
+        });
+
+    };
+
 
     return (
         <div className="min-h-screen w-full bg-linear-to-br from-gray-50 to-blue-50">
