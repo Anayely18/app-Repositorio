@@ -52,6 +52,7 @@ export function AddStudentForm({
         <FormInput
           icon={User}
           label="Nombres"
+          sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Ingresa tus nombres"
           value={data.nombres || ""}
@@ -60,6 +61,7 @@ export function AddStudentForm({
         <FormInput
           icon={User}
           label="Apellidos"
+          sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Ingresa tus apellidos"
           value={data.apellidos || ""}
