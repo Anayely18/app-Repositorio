@@ -3,6 +3,7 @@ import { FormInput } from "./FormInput"
 
 interface AdvisorData {
   nombre?: string
+  apellido ?:string
   dni?: string
   orcid?: string
 }
@@ -29,7 +30,7 @@ export function AsesorForm({
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
             <User className="w-4 h-4 text-blue-600" />
           </div>
-          Asesor {number}
+          Asesores {number}
         </h4>
         {canRemove && (
           <button
@@ -42,15 +43,24 @@ export function AsesorForm({
         )}
       </div>
       
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormInput
           icon={User}
-          label="Apellidos y nombres"
+          label="nombres"
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
-          placeholder="Robles Rojas Gustavo"
+          placeholder="Ejem: Gustavo"
           value={data.nombre || ""}
           onChange={(e) => onChange({ ...data, nombre: e.target.value })}
+        />
+        <FormInput
+          icon={User}
+          label="apellidos"
+          sublabel="(En mayúsculas y minúsculas según corresponda)"
+          type="text"
+          placeholder="Robles Rojas"
+          value={data.apellido || ""}
+          onChange={(e) => onChange({ ...data, apellido: e.target.value })}
         />
         <FormInput
           icon={CreditCard}

@@ -320,12 +320,6 @@ export default function ListThesisWorks() {
                                                         {item.dni}
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-600">
-                                                        {item.department}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                                        {item.specialty}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
                                                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getObservationStyle(item.observation)}`}>
                                                             {item.observation}
                                                         </span>

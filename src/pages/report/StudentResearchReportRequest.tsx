@@ -4,13 +4,13 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, Mail, User, Users, Plus } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 
 export default function StudentResearchReportRequest() {
-    const [email, setEmail] = useState<string>("")
+
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
         format: false,
@@ -63,16 +63,20 @@ export default function StudentResearchReportRequest() {
         setAdvisorData(newData)
     }
 
-    const [jury, setJury] = useState([1, 2, 3])
-    const [juryData, setJuryData] = useState<string[]>(["", "", ""])
+    const [jury, setJury] = useState([0, 1, 2])
+    const [juryData, setJuryData] = useState<Array<{ firstName: string; lastName: string }>>([
+        { firstName: "", lastName: "" },
+        { firstName: "", lastName: "" },
+        { firstName: "", lastName: "" }
+    ])
 
     const addJury = () => {
         if (jury.length === 4) {
             toastService.error("Máximo cuatro jurados por informe")
             return
         }
-        setJury([...jury, jury.length + 1])
-        setJuryData([...juryData, ""])
+        setJury([...jury, jury.length])
+        setJuryData([...juryData, { firstName: "", lastName: "" }])
     }
 
     const removeLastJury = () => {
@@ -82,9 +86,9 @@ export default function StudentResearchReportRequest() {
         }
     }
 
-    const updateJuryData = (index: number, value: string) => {
+    const updateJuryData = (index: number, data: { firstName: string; lastName: string }) => {
         const newData = [...juryData]
-        newData[index] = value
+        newData[index] = data
         setJuryData(newData)
     }
 
@@ -100,7 +104,7 @@ export default function StudentResearchReportRequest() {
         try {
             const formData = new FormData();
 
-            formData.append('email', email);
+
             formData.append('projectTitle', projectTitle);
             formData.append('checkboxes', JSON.stringify(checkboxes));
             formData.append('students', JSON.stringify(studentData));
@@ -140,7 +144,7 @@ export default function StudentResearchReportRequest() {
     };
 
     const resetForm = () => {
-        setEmail("");
+
         setProjectTitle("");
 
         setCheckboxes({
@@ -158,7 +162,6 @@ export default function StudentResearchReportRequest() {
             { nombre: "", dni: "", orcid: "" }
         ]);
 
-        setJuryData(["", "", "", ""]);
 
         setFiles({
             authorization: null,
@@ -184,19 +187,10 @@ export default function StudentResearchReportRequest() {
                         <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                             Solicitud para publicar informe de investigación
                         </h2>
-                        <p className="text-sm text-gray-500 font-medium">Estudiantes</p>
+                        <p className="text-sm text-gray-500 font-medium">Tesis</p>
                     </div>
                     <div className="space-y-8">
-                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-                            <FormInput
-                                icon={Mail}
-                                label="Correo Electrónico"
-                                type="email"
-                                placeholder="tu.correo@unamba.edu.pe"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
+
                         <div className="space-y-4">
                             <InfoCheckbox
                                 icon={AlertCircle}
@@ -247,7 +241,7 @@ export default function StudentResearchReportRequest() {
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    Agregar estudiante
+                                    Agregar autor
                                 </button>
                             </div>
                             <div className="space-y-4">
@@ -294,42 +288,54 @@ export default function StudentResearchReportRequest() {
                             </div>
                         </div>
 
-                        <div className="border-t-2 border-gray-100 pt-8">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                                         <Users className="w-5 h-5 text-blue-600" />
                                     </div>
                                     Sobre los jurados
                                 </h3>
                             </div>
                             <div className="space-y-4">
-                                {jury.map((num, index) => (
-                                    <div key={index} className="flex items-start gap-2">
-                                        <div className="flex-1">
-                                            <FormInput
-                                                icon={User}
-                                                label={`Nombre del ${index === 0 ? 'primer' : index === 1 ? 'segundo' : index === 2 ? 'tercer' : 'cuarto'} jurado`}
-                                                type="text"
-                                                placeholder="Ingrese el nombre completo del jurado"
-                                                value={juryData[index]}
-                                                onChange={(e) => updateJuryData(index, e.target.value)}
-                                            />
+                                <div className="grid grid-cols-2 gap-6">
+                                    {jury.map((index) => (
+                                        <div key={index} className="flex items-start gap-2 col-span-2">
+                                            <div className="grid grid-cols-2 gap-4 flex-1">
+                                                <FormInput
+                                                    icon={User}
+                                                    label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                    sublabel ="(En mayúsculas y minúsculas según corresponda)"
+                                                    type="text"
+                                                    placeholder="Ejem: Luis"
+                                                    value={juryData[index]?.firstName || ''}
+                                                    onChange={(e) => updateJuryData(index, { ...juryData[index], firstName: e.target.value })}
+                                                />
+                                                <FormInput
+                                                    icon={User}
+                                                    label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                    sublabel ="(En mayúsculas y minúsculas según corresponda)"
+                                                    type="text"
+                                                    placeholder="Ejem: Robles"
+                                                    value={juryData[index]?.lastName || ''}
+                                                    onChange={(e) => updateJuryData(index, { ...juryData[index], lastName: e.target.value })}
+                                                />
+                                            </div>
+                                            {jury.length > 3 && index === jury.length - 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={removeLastJury}
+                                                    className="mt-8 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Eliminar último jurado"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        {jury.length > 3 && index === jury.length - 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={removeLastJury}
-                                                className="mt-8 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                title="Eliminar último jurado"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                                 {jury.length < 4 && (
                                     <button
                                         type="button"
@@ -337,7 +343,7 @@ export default function StudentResearchReportRequest() {
                                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Agregar jurado
+                                        Agregar jurado excepcional
                                     </button>
                                 )}
                             </div>

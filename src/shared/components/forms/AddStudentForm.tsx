@@ -1,5 +1,5 @@
 import { FormInput } from "./FormInput";
-import { User, CreditCard, Phone, Building2, Trash2 } from "lucide-react"
+import { User, CreditCard, Phone, Building2, Trash2,Mail } from "lucide-react"
 import { FormSelect } from "./FormSelect";
 
 interface StudentData {
@@ -8,6 +8,7 @@ interface StudentData {
   dni?: string
   telefono?: string
   escuela?: string
+  email?: string
 }
 
 interface AddStudentFormProps {
@@ -18,18 +19,19 @@ interface AddStudentFormProps {
   onChange: (data: StudentData) => void
 }
 
-export function AddStudentForm({ 
-  number, 
-  canRemove, 
+export function AddStudentForm({
+  number,
+  canRemove,
   onRemove,
   data = {},
-  onChange 
+  onChange
 }: AddStudentFormProps) {
+  
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
             <User className="w-4 h-4 text-blue-600" />
           </div>
           Autor {number}
@@ -94,6 +96,14 @@ export function AddStudentForm({
           ]}
           value={data.escuela || ""}
           onChange={(value) => onChange({ ...data, escuela: value })}
+        />
+        <FormInput
+          icon={Mail}
+          label="Correo Electrónico"
+          type="email"
+          placeholder="tu.correo@unamba.edu.pe"
+          value={data.email || ""}
+          onChange={(e) => onChange({ ...data, email: e.target.value })}
         />
       </div>
     </div>
