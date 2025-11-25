@@ -114,13 +114,22 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
         </RadioGroup>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormInput
           icon={User}
-          label="Apellidos y nombres"
+          label="Nombres"
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
-          placeholder="Robles Rojas Gustavo"
+          placeholder="Ejem: Gustavo"
+          value={formData.nombre}
+          onChange={(e) => handleChange('nombre', e.target.value)}
+        />
+        <FormInput
+          icon={User}
+          label="Apellidos"
+          sublabel="(En mayúsculas y minúsculas según corresponda)"
+          type="text"
+          placeholder="Ejem:vRobles Rojas"
           value={formData.nombre}
           onChange={(e) => handleChange('nombre', e.target.value)}
         />
@@ -128,7 +137,7 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
           icon={CreditCard}
           label="Número de DNI"
           type="text"
-          placeholder="78345758"
+          placeholder="Ejem: 78345758"
           maxLength={8}
           value={formData.dni}
           onChange={(e) => handleChange('dni', e.target.value)}
