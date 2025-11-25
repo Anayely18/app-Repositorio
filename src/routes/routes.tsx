@@ -9,7 +9,7 @@ import Layout from "@/shared/ui/layout/Layout"
 
 export const routes = [
     {
-        path: '/login',
+        path: '/admin',
         element: <Login />
     },
     {
@@ -33,7 +33,7 @@ export const routes = [
         element: <Home />
     },
     {
-        path: '/admin',
+        path: '/dashboard',
         element: <Layout />,
         children: [
             {

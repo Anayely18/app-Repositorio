@@ -7,7 +7,8 @@ type InfoCheckboxProps = {
   iconColor: string
   text: ReactNode
   checkboxLabel: string
-  checkboxLabel2?: string
+  checked: boolean
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
 export function InfoCheckbox({
@@ -15,11 +16,9 @@ export function InfoCheckbox({
   iconColor,
   text,
   checkboxLabel,
-  checkboxLabel2,
+  checked,
+  onChange,
 }: InfoCheckboxProps) {
-  // 👇 un solo estado que guarda cuál está seleccionado
-  const [selected, setSelected] = useState<"one" | "two" | null>(null)
-
   return (
     <div className="border border-gray-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all duration-200 bg-white">
       <div className="flex items-start gap-4">
@@ -43,42 +42,19 @@ export function InfoCheckbox({
           </p>
 
           <div className="flex items-center gap-6">
-            {/* checkbox 1 */}
             <label className="flex items-center gap-3 cursor-pointer group w-fit">
               <div className="relative">
                 <input
                   type="checkbox"
-                  checked={selected === "one"}
-                  onChange={() =>
-                    setSelected(prev => prev === "one" ? null : "one")
-                  }
+                  checked={checked}
+                  onChange={onChange}
                   className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
                 />
-                {selected === "one" && (
-                  <CheckCircle2 className="w-5 h-5 text-green-500 absolute -top-1 -right-1 animate-in zoom-in duration-200" />
-                )}
               </div>
               <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
                 {checkboxLabel}
               </span>
             </label>
-
-            {/* checkbox 2 solo si existe label */}
-            {checkboxLabel2 && (
-              <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                <input
-                  type="checkbox"
-                  checked={selected === "two"}
-                  onChange={() =>
-                    setSelected(prev => prev === "two" ? null : "two")
-                  }
-                  className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
-                />
-                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
-                  {checkboxLabel2}
-                </span>
-              </label>
-            )}
           </div>
         </div>
       </div>

@@ -53,7 +53,7 @@ export const authService = {
                     password: userData.password
                 })
             });
-
+            
             const data: ApiResponse = await response.json();
 
             if (!response.ok) {
