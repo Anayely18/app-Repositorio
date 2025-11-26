@@ -7,6 +7,7 @@ interface CoautorData {
   tipoUbicacion: 'externo' | 'interno' | ''
   tipoRol: 'estudiante' | 'docente' | ''
   nombre: string
+  apellido: string
   dni: string
   orcid: string
 }
@@ -24,6 +25,7 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
     tipoUbicacion: '',
     tipoRol: '',
     nombre: '',
+    apellido: '',
     dni: '',
     orcid: ''
   }
@@ -130,8 +132,8 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Ejem:vRobles Rojas"
-          value={formData.nombre}
-          onChange={(e) => handleChange('nombre', e.target.value)}
+          value={formData.apellido}
+          onChange={(e) => handleChange('apellido', e.target.value)}
         />
         <FormInput
           icon={CreditCard}
