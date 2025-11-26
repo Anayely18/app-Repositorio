@@ -4,12 +4,13 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 
 export default function TeacherResearchReportRequest() {
+    const [isLoading, setIsLoading] = useState(false);
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
         format: false,
@@ -73,46 +74,109 @@ export default function TeacherResearchReportRequest() {
         report: null as File | null
     })
 
-    const handleSubmit = async () => {
-    try {
-        const formData = new FormData();
+    // Validar formulario antes de enviar
+    const validateForm = (): boolean => {
+        const errors: string[] = [];
 
-        formData.append('projectTitle', projectTitle);
-        formData.append('checkboxes', JSON.stringify(checkboxes));
-        formData.append('teachers', JSON.stringify(teacherData));
-        formData.append('coauthors', JSON.stringify(coautorData));
-
-        if (files.authorization) {
-            formData.append('authorization', files.authorization);
-        }
-        if (files.document) {
-            formData.append('document', files.document);  
-        }
-        if (files.similarity) {
-            formData.append('similarity', files.similarity);
-        }
-        if (files.report) {
-            formData.append('report', files.report);
+        if (!projectTitle || projectTitle.trim().length < 5) {
+            errors.push("El título del proyecto es requerido (mínimo 5 caracteres)");
         }
 
-        const response = await fetch(`${API_URL}/applications/teacher`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            toastService.success('Solicitud enviada exitosamente');
-            resetForm();
-        } else {
-            toastService.error(result.message || 'Error al enviar solicitud');
+        if (!checkboxes.agreement || !checkboxes.format || !checkboxes.errors || !checkboxes.informed) {
+            errors.push("Debe aceptar todos los términos requeridos");
         }
-    } catch (error) {
-        console.error('Error:', error);
-        toastService.error('Error de conexión al servidor');
+
+        if (!checkboxes.truthful) {
+            errors.push("Debe declarar que la información es verídica");
+        }
+
+        if (!checkboxes.funding) {
+            errors.push("Debe especificar el tipo de financiamiento");
+        }
+
+        if (teacherData.length === 0 || !teacherData[0].nombres || !teacherData[0].apellidos || !teacherData[0].dni) {
+            errors.push("El primer autor debe tener nombres, apellidos y DNI completos");
+        }
+
+        if (!files.authorization) {
+            errors.push("Debe adjuntar la hoja de autorización");
+        }
+
+        if (!files.document) {
+            errors.push("Debe adjuntar el documento de investigación");
+        }
+
+        if (!files.report) {
+            errors.push("Debe adjuntar el informe de investigación");
+        }
+
+        if (errors.length > 0) {
+            errors.forEach(error => toastService.error(error));
+            return false;
+        }
+
+        return true;
     }
-};
+
+    const handleSubmit = async () => {
+        if (!validateForm()) {
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const formData = new FormData();
+
+            formData.append('projectTitle', projectTitle);
+            formData.append('checkboxes', JSON.stringify(checkboxes));
+            formData.append('teachers', JSON.stringify(teacherData));
+            formData.append('coauthors', JSON.stringify(coautorData));
+
+            // Agregar archivos
+            if (files.authorization) {
+                formData.append('authorization', files.authorization);
+            }
+            if (files.document) {
+                formData.append('document', files.document);
+            }
+            if (files.similarity) {
+                formData.append('similarity', files.similarity);
+            }
+            if (files.report) {
+                formData.append('report', files.report);
+            }
+
+            const response = await fetch(`${API_URL}/api/applications/teacher`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toastService.success('Solicitud enviada exitosamente');
+                
+                // Guardar ID para referencia
+                const applicationId = result.data.applicationId;
+                sessionStorage.setItem('lastApplicationId', applicationId);
+                
+                resetForm();
+                
+                // Redirigir después de 1.5 segundos
+                setTimeout(() => {
+                    window.location.href = `/dashboard?tab=pendientes&ref=${applicationId}`;
+                }, 1500);
+            } else {
+                toastService.error(result.message || 'Error al enviar solicitud');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            toastService.error('Error de conexión al servidor');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const resetForm = () => {
         setProjectTitle("");
@@ -200,7 +264,8 @@ export default function TeacherResearchReportRequest() {
                                 <button
                                     type="button"
                                     onClick={addAutorTeacher}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                    disabled={isLoading}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Agregar autor
@@ -232,7 +297,8 @@ export default function TeacherResearchReportRequest() {
                                 <button
                                     type="button"
                                     onClick={addCoautor}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                    disabled={isLoading}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Agregar coautor
@@ -272,6 +338,7 @@ export default function TeacherResearchReportRequest() {
                                     placeholder="Ingrese el título completo"
                                     value={projectTitle}
                                     onChange={(e) => setProjectTitle(e.target.value)}
+                                    disabled={isLoading}
                                 />
                                 <FileUpload
                                     label="Adjuntar hoja de autorización de publicación"
@@ -324,6 +391,7 @@ export default function TeacherResearchReportRequest() {
                                                             checked={checkboxes.funding === 'public'}
                                                             onChange={() => setCheckboxes({ ...checkboxes, funding: 'public' })}
                                                             className="w-4 h-4 text-blue-600"
+                                                            disabled={isLoading}
                                                         />
                                                         <span className="text-sm text-gray-700">Sí, doy conformidad a esta afirmación.</span>
                                                     </label>
@@ -334,6 +402,7 @@ export default function TeacherResearchReportRequest() {
                                                             checked={checkboxes.funding === 'self'}
                                                             onChange={() => setCheckboxes({ ...checkboxes, funding: 'self' })}
                                                             className="w-4 h-4 text-blue-600"
+                                                            disabled={isLoading}
                                                         />
                                                         <span className="text-sm text-gray-700">No, es un trabajo de investigación autofinanciado.</span>
                                                     </label>
@@ -345,20 +414,31 @@ export default function TeacherResearchReportRequest() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                    <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
                         <button
                             onClick={handleSubmit}
-                            className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-8 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            disabled={isLoading}
+                            className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-blue-400 disabled:to-blue-500 text-white font-semibold py-4 px-8 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                         >
-                            <CheckCircle2 className="w-5 h-5" />
-                            Enviar Solicitud
+                            {isLoading ? (
+                                <>
+                                    <Loader className="w-5 h-5 animate-spin" />
+                                    Enviando...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Enviar Solicitud
+                                </>
+                            )}
                         </button>
                         <button
                             type="button"
                             onClick={resetForm}
-                            className="px-8 py-4 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all hover:border-gray-400"
+                            disabled={isLoading}
+                            className="px-8 py-4 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Cancelar
+                            Limpiar Formulario
                         </button>
                     </div>
                 </div>
