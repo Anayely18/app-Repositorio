@@ -5,6 +5,7 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     
     "jsx": "react-jsx",
+    "types": ["vite/client", "react", "react-dom"],
     
     "allowJs": true,
     "skipLibCheck": true,
