@@ -147,7 +147,7 @@ export default function TeacherResearchReportRequest() {
                 formData.append('report', files.report);
             }
 
-            const response = await fetch(`${API_URL}/api/applications/teacher`, {
+            const response = await fetch(`${API_URL}/api/applications/teachers`, {
                 method: 'POST',
                 body: formData
             });
