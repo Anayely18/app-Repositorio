@@ -124,7 +124,7 @@ export default function StudentResearchReportRequest() {
                 formData.append('originality', files.originality);
             }
 
-            const response = await fetch(`${API_URL}/applications`, {
+            const response = await fetch(`${API_URL}/applications/students`, {
                 method: 'POST',
                 body: formData
             });
