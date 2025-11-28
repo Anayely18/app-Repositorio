@@ -296,7 +296,7 @@ export default function ListThesisWorks() {
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
                                                         <button
-                                                            onClick={() => navigate(`/details/${item.id_solicitud}`)}
+                                                            onClick={() => navigate(`/dashboard/details/${item.id_solicitud}`)}
                                                             className="inline-flex items-center gap-2 px-2 py-2 rounded-lg transition-all transform hover:scale-105 shadow-sm bg-blue-600 hover:bg-blue-700"
                                                         >
                                                             <Eye size={16} className="text-white" />
@@ -337,7 +337,7 @@ export default function ListThesisWorks() {
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
                                                         <button
-                                                            onClick={() => navigate(`/details/${item.id_solicitud}`)}
+                                                            onClick={() => navigate(`/dashboard/details/${item.id_solicitud}`)}
                                                             className="inline-flex items-center gap-2 px-2 py-2 rounded-lg transition-all transform hover:scale-105 shadow-sm bg-emerald-600 hover:bg-emerald-700"
                                                         >
                                                             <Eye size={16} className="text-white" />

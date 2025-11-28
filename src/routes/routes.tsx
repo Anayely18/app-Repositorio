@@ -6,6 +6,7 @@ import ListThesisWorks from "@/pages/list/ListThesisWorks"
 import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRequest"
 import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
 import Layout from "@/shared/ui/layout/Layout"
+import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage"; 
 
 export const routes = [
     {
@@ -39,6 +40,10 @@ export const routes = [
             {
                 path: "",
                 element: <ListThesisWorks />
+            },
+            {
+            path: "details/:id", 
+            element: <RequestDetailsPage />
             }
         ]
     }
