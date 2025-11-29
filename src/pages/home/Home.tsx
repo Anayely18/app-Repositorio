@@ -7,7 +7,7 @@ export default function Home() {
         <div className="h-svh overflow-hidden">
             <div className="h-16 bg-secondary flex m-auto items-center justify-around">
                 <Logo />
-                
+
             </div>
             <main className="max-w-6xl mx-auto px-6 py-12">
                 <div className="text-center mb-12">
@@ -19,39 +19,37 @@ export default function Home() {
                     </p>
                 </div>
                 <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
-                    <a
-                        href="#"
-                        className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary"
+                    <Link
+                        to="/student-research-report-request"
+                        className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary p-8 flex flex-col items-center gap-6"
                     >
-                        <Link to="/student-research-report-request" className="p-8 flex flex-col items-center gap-6">
-                            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
-                                <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
-                            </div>
-                            <h3 className="text-xl font-bold text-secondary transition-colors">
-                                Tesis
-                            </h3>
-                            <p className="text-gray-600 text-center text-sm">
-                                Registra y gestiona tu proyecto de tesis
-                            </p>
-                        </Link>
-                    </a>
-                    <a
-                        href="#"
-                        className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary"
+                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
+                            <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
+                        </div>
+                        <h3 className="text-xl font-bold text-secondary transition-colors">
+                            Tesis
+                        </h3>
+                        <p className="text-gray-600 text-center text-sm">
+                            Registra y gestiona tu proyecto de tesis
+                        </p>
+                    </Link>
+
+                    <Link
+                        to="/Teacher-research-report-request"
+                        className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-secondary p-8 flex flex-col items-center gap-6"
                     >
-                         <Link to="/Teacher-research-report-request" className="p-8 flex flex-col items-center gap-6">
-                            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
-                                <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
-                            </div>
-                            <h3 className="text-xl font-bold text-secondary transition-colors">
-                                Informe de Docentes
-                            </h3>
-                            <p className="text-gray-600 text-center text-sm">
-                                Presenta tu informe académico
-                            </p>
-                        </Link>
-                    </a>
+                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
+                            <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
+                        </div>
+                        <h3 className="text-xl font-bold text-secondary transition-colors">
+                            Informe de Docentes
+                        </h3>
+                        <p className="text-gray-600 text-center text-sm">
+                            Presenta tu informe académico
+                        </p>
+                    </Link>
                 </div>
+
                 <div className="max-w-2xl mx-auto">
                     <a
                         href="#"
