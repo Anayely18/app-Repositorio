@@ -124,6 +124,9 @@ export default function StudentResearchReportRequest() {
                 formData.append('originality', files.originality);
             }
 
+
+            console.log(Object.fromEntries(formData.entries()));
+
             const response = await fetch(`${API_URL}/applications/students`, {
                 method: 'POST',
                 body: formData
@@ -305,7 +308,7 @@ export default function StudentResearchReportRequest() {
                                                 <FormInput
                                                     icon={User}
                                                     label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                    sublabel ="(En mayúsculas y minúsculas según corresponda)"
+                                                    sublabel="(En mayúsculas y minúsculas según corresponda)"
                                                     type="text"
                                                     placeholder="Ejem: Luis"
                                                     value={juryData[index]?.firstName || ''}
@@ -314,7 +317,7 @@ export default function StudentResearchReportRequest() {
                                                 <FormInput
                                                     icon={User}
                                                     label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                    sublabel ="(En mayúsculas y minúsculas según corresponda)"
+                                                    sublabel="(En mayúsculas y minúsculas según corresponda)"
                                                     type="text"
                                                     placeholder="Ejem: Robles"
                                                     value={juryData[index]?.lastName || ''}
