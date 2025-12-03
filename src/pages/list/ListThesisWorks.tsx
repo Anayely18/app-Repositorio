@@ -43,10 +43,9 @@ export default function ListThesisWorks() {
 
     const statusOptions = [
         { value: "pendiente", label: "Pendiente" },
-        { value: "en_revision", label: "En Revisión" },
         { value: "aprobado", label: "Aprobado" },
-        { value: "rechazado", label: "Rechazado" },
-        { value: "requiere_correccion", label: "Requiere Corrección" },
+        { value: "observado", label: "Rechazado" },
+        { value: "publicado", label: "publicado" },
     ];
 
     useEffect(() => {
@@ -338,11 +337,12 @@ export default function ListThesisWorks() {
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Apellidos
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                Estado
-                                            </th>
+                                            
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Escuela Profesional
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                                Estado
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Observación
@@ -377,11 +377,12 @@ export default function ListThesisWorks() {
                                                     <td className="px-6 py-4 text-sm text-slate-800 font-medium">
                                                         {item.surname }
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
-                                                        {item.status }
-                                                    </td>
+                                                    
                                                     <td className="px-6 py-4 text-sm text-slate-600">
                                                         {item.professionalSchool}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+                                                        {item.status }
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-600">
                                                         <span
