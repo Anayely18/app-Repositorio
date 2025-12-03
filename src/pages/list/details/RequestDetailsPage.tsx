@@ -26,7 +26,8 @@ export default function RequestDetailsPage() {
     const [applicationData, setApplicationData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const navigate = useNavigate();
+    const [documentReviews, setDocumentReviews] = useState({});
+
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -109,6 +110,14 @@ export default function RequestDetailsPage() {
         };
         return roleMap[role] || role;
     };
+
+    const handleReviewDecision = (documentId, decision) => {
+        setDocumentReviews(prev => ({
+            ...prev,
+            [documentId]: decision
+        }));
+    };
+
 
     if (loading) {
         return (
@@ -209,6 +218,38 @@ export default function RequestDetailsPage() {
                             )}
                         </Section>
 
+                        {applicationData.application_type === 'docente' && (
+                            <Section title="Coautores" icon={User}>
+                                {applicationData.coauthors && applicationData.coauthors.length > 0 ? (
+                                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-slate-50">
+                                                <tr className="text-left text-slate-600">
+                                                    <th className="py-3 px-4 font-semibold">Nombres</th>
+                                                    <th className="py-3 px-4 font-semibold">Apellidos</th>
+                                                    <th className="py-3 px-4 font-semibold">DNI</th>
+                                                    <th className="py-3 px-4 font-semibold">Correo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200">
+                                                {applicationData.coauthors.map((coauthor, index) => (
+                                                    <tr key={index} className="hover:bg-slate-50">
+                                                        <td className="py-3 px-4">{coauthor.first_name || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.last_name || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.dni || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.email || "N/A"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 text-sm py-4">No hay coautores registrados</p>
+                                )}
+                            </Section>
+                        )}
+
+
                         <Section title="Asesores" icon={Users}>
                             {applicationData.advisors && applicationData.advisors.length > 0 ? (
                                 <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -239,62 +280,26 @@ export default function RequestDetailsPage() {
                         <Section title="Jurado Evaluador" icon={Users}>
                             {applicationData.jury && applicationData.jury.length > 0 ? (
                                 <div className="space-y-3">
-                                    {applicationData.jury.map((juryMember, index) => (
-                                        <JuryItem
-                                            key={index}
-                                            rol={getJuryRoleLabel(juryMember.jury_role)}
-                                            nombre={juryMember.full_name || "No asignado"}
-                                            badge={juryMember.jury_role === 'presidente' ? 'Principal' : 'Miembro'}
-                                        />
-                                    ))}
+                                    {[...applicationData.jury]
+                                        .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
+                                        .map((juryMember, index) => (
+
+                                            <JuryItem
+                                                key={index}
+                                                rol={getJuryRoleLabel(juryMember.jury_role)}
+                                                nombre={juryMember.full_name || "No asignado"}
+                                                badge={juryMember.jury_role === 'presidente' ? 'Principal' : 'Miembro'}
+                                            />
+                                        ))}
                                 </div>
                             ) : (
                                 <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
                             )}
                         </Section>
+
                     </div>
 
                     <div className="space-y-6">
-                        <Section title="Documentos Adjuntos" icon={FileText}>
-                            {applicationData.documents && applicationData.documents.length > 0 ? (
-                                <div className="space-y-3">
-                                    {applicationData.documents.map((doc, index) => (
-                                        <div
-                                            key={index}
-                                            className="flex items-center justify-between border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
-                                                    <FileText className="w-4 h-4 text-red-600" />
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
-                                                    <div className="text-xs text-slate-500">PDF • {doc.size_kb || "?"} KB</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
-                                                    className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                    title="Ver documento"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
-                                                    className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded"
-                                                    title="Descargar documento"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
-                            )}
-                        </Section>
 
                         <Section title="Historial de Estado" icon={AlertCircle}>
                             {applicationData.history && applicationData.history.length > 0 ? (
@@ -320,9 +325,82 @@ export default function RequestDetailsPage() {
                     </div>
                 </div>
 
-                <div className="mt-6">
+                <div className="lg:col-span-2 mt-6">
+                    <Section title="Documentos Adjuntos" icon={FileText}>
+                        {applicationData.documents && applicationData.documents.length > 0 ? (
+                            <div className="lg:col-span-4 flex flex-wrap gap-6 space-x-4">
+                                {applicationData.documents.map((doc, index) => (
+                                    <div
+                                        key={index}
+                                        className="w-full sm:w-1/2 lg:w-1/3 xl:w-1/5 border border-slate-200 rounded-lg p-4 hover:bg-slate-5 transition-all flex flex-col justify-between "
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
+                                                <FileText className="w-4 h-4 text-red-600" />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
+                                                <div className="text-xs text-slate-500">PDF • {doc.size_kb || "?"} KB</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
+                                                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                title="Ver documento"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
+                                                className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded"
+                                                title="Descargar documento"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+
+                                            <div className="flex justify-end mt-3 gap-2">
+                                            <button
+                                                onClick={() => handleReviewDecision(doc.id, "aprobado")}
+                                                title="Aprobar documento"
+                                                className={`px-2 py-1 text-xs rounded-md border transition-all
+                                                        ${documentReviews[doc.id] === "aprobado"
+                                                        ? "bg-green-100 text-green-700 border-green-300"
+                                                        : "text-slate-500 hover:text-green-600 hover:border-green-300 border-slate-200"
+                                                    }`}
+                                            >
+                                                ✔
+                                            </button>
+                                            <button
+                                                onClick={() => handleReviewDecision(doc.id, "rechazado")}
+                                                title="Rechazar documento"
+                                                className={`px-2 py-1 text-xs rounded-md border transition-all
+                                                      ${documentReviews[doc.id] === "rechazado"
+                                                        ? "bg-red-100 text-red-700 border-red-300"
+                                                        : "text-slate-500 hover:text-red-600 hover:border-red-300 border-slate-200"
+                                                    }`}
+                                            >
+                                                ✖
+                                            </button>
+                                        </div>
+                                        </div>
+
+                                        {/* 🎯 AQUI AGREGA EL BLOQUE DE REVISIÓN */}
+                                        
+
+
+                                    </div>
+
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
+                        )}
+                    </Section>
+                    <div className="lg:col-span-2 mt-6"></div>
                     <Section title="Observaciones del Administrador" icon={AlertCircle}>
-                        <div className="space-y-4">
+                        <div className="space-y-4 ">
                             {applicationData.observations && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                                     <p className="text-sm text-blue-900"><strong>Observación actual:</strong> {applicationData.observations}</p>
@@ -372,7 +450,7 @@ export default function RequestDetailsPage() {
                                 )}
                             </div>
 
-                            <div className="flex gap-4 mt-6">
+                            <div className="flex gap-4 mt-6 ">
                                 <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
                                     <Shield className="w-5 h-5" />
                                     Aprobar solicitud
