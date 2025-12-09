@@ -26,7 +26,11 @@ export default function RequestDetailsPage() {
     const [applicationData, setApplicationData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [documentObservations, setDocumentObservations] = useState({});
+    const [documentImages, setDocumentImages] = useState({});
+    const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
+
 
 
     const getApplicationId = () => {
@@ -46,6 +50,7 @@ export default function RequestDetailsPage() {
                 }
 
                 const result = await response.json();
+                console.log(result.data.documents);
                 setApplicationData(result.data);
             } catch (err) {
                 setError(err.message);
@@ -58,12 +63,23 @@ export default function RequestDetailsPage() {
     }, []);
 
     const handleImageUpload = (e) => {
+        if (!selectedDocument) return;
+        
         const files = Array.from(e.target.files || []);
-        setImages((prev) => [...prev, ...files]);
+        setDocumentImages(prev => ({
+            ...prev,
+            [selectedDocument]: [...(prev[selectedDocument] || []), ...files]
+        }));
     };
 
+
     const removeImage = (index) => {
-        setImages((prev) => prev.filter((_, i) => i !== index));
+        if (!selectedDocument) return;
+        
+        setDocumentImages(prev => ({
+            ...prev,
+            [selectedDocument]: (prev[selectedDocument] || []).filter((_, i) => i !== index)
+        }));
     };
 
     const formatDate = (dateString) => {
@@ -118,7 +134,23 @@ export default function RequestDetailsPage() {
         }));
     };
 
+    const handleDocumentClick = (document_id) => {
+        setSelectedDocument(document_id);
+    };
 
+    const handleObservationChange = (e) => {
+        if (selectedDocument) {
+            setDocumentObservations(prev => ({
+                ...prev,
+                [selectedDocument]: e.target.value
+            }));
+        }
+    };
+
+
+
+    const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
+    const currentImages = selectedDocument ? (documentImages[selectedDocument] || []) : [];
     if (loading) {
         return (
             <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center">
@@ -149,6 +181,11 @@ export default function RequestDetailsPage() {
             </div>
         );
     }
+
+    if (applicationData?.documents?.length > 0) {
+  console.log("Documentos:", applicationData.documents);
+}
+
 
     return (
         <div className="min-h-screen w-full bg-slate-50 relative">
@@ -324,79 +361,193 @@ export default function RequestDetailsPage() {
                         </Section>
                     </div>
                 </div>
-
+                            
                 <div className="lg:col-span-2 mt-6">
                     <Section title="Documentos Adjuntos" icon={FileText}>
                         {applicationData.documents && applicationData.documents.length > 0 ? (
-                            <div className="lg:col-span-4 flex flex-wrap gap-6 space-x-4">
-                                {applicationData.documents.map((doc, index) => (
-                                    <div
-                                        key={index}
-                                        className="w-full sm:w-1/2 lg:w-1/3 xl:w-1/5 border border-slate-200 rounded-lg p-4 hover:bg-slate-5 transition-all flex flex-col justify-between "
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
-                                                <FileText className="w-4 h-4 text-red-600" />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
-                                                <div className="text-xs text-slate-500">PDF • {doc.size_kb || "?"} KB</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
-                                                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                title="Ver documento"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => window.open(`http://localhost:3000/${doc.file_path}`, '_blank')}
-                                                className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded"
-                                                title="Descargar documento"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </button>
-
-                                            <div className="flex justify-end mt-3 gap-2">
-                                            <button
-                                                onClick={() => handleReviewDecision(doc.id, "aprobado")}
-                                                title="Aprobar documento"
-                                                className={`px-2 py-1 text-xs rounded-md border transition-all
-                                                        ${documentReviews[doc.id] === "aprobado"
-                                                        ? "bg-green-100 text-green-700 border-green-300"
-                                                        : "text-slate-500 hover:text-green-600 hover:border-green-300 border-slate-200"
-                                                    }`}
-                                            >
-                                                ✔
-                                            </button>
-                                            <button
-                                                onClick={() => handleReviewDecision(doc.id, "rechazado")}
-                                                title="Rechazar documento"
-                                                className={`px-2 py-1 text-xs rounded-md border transition-all
-                                                      ${documentReviews[doc.id] === "rechazado"
-                                                        ? "bg-red-100 text-red-700 border-red-300"
-                                                        : "text-slate-500 hover:text-red-600 hover:border-red-300 border-slate-200"
-                                                    }`}
-                                            >
-                                                ✖
-                                            </button>
-                                        </div>
-                                        </div>
-
-                                        {/* 🎯 AQUI AGREGA EL BLOQUE DE REVISIÓN */}
+                                <div className="space-y-3">
+                                    
+                                    {applicationData.documents.map((doc) => {
+                                        const decision = documentReviews[doc.document_id];
+                                        const isSelected = selectedDocument === doc.document_id;
+                                        const hasObservations = documentObservations[doc.document_id]?.trim().length > 0;
                                         
+                                        return (
+                                            <div
+                                                key={doc.document_id}
+                                                onClick={() => handleDocumentClick(doc.document_id)}
+                                                className={`border rounded-lg p-4 cursor-pointer transition-all
+                                                    ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200 hover:border-blue-300"}
+                                                    ${decision === "aprobado" ? "border-green-300 bg-green-50" : ""}
+                                                    ${decision === "rechazado" ? "border-red-300 bg-red-50" : ""}
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                                            <FileText className="w-5 h-5 text-red-600" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
+                                                            <div className="text-xs text-slate-500">PDF • {doc.size_kb} KB</div>
+                                                        </div>
+                                                    </div>
+                                                    {hasObservations && (
+                                                        <div className="w-2 h-2 bg-orange-500 rounded-full" title="Tiene observaciones"></div>
+                                                    )}
+                                                </div>
 
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                alert('Ver documento: ' + doc.file_path);
+                                                            }}
+                                                            className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                                            title="Ver documento"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                alert('Descargar documento: ' + doc.file_path);
+                                                            }}
+                                                            className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
+                                                            title="Descargar documento"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
 
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleReviewDecision(doc.document_id, "aprobado");
+                                                            }}
+                                                            title="Aprobar"
+                                                            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
+                                                                ${decision === "aprobado"
+                                                                    ? "bg-green-500 border-green-600 text-white"
+                                                                    : "border-slate-300 text-slate-400 hover:bg-green-50 hover:border-green-400 hover:text-green-600"}
+                                                            `}
+                                                            >
+                                                                ✓
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleReviewDecision(doc.document_id, "rechazado");
+                                                            }}
+                                                            title="Rechazar"
+                                                            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
+                                                                ${decision === "rechazado"
+                                                                    ? "bg-red-500 border-red-600 text-white"
+                                                                    : "border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-400 hover:text-red-600"}
+                                                            `}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
+                            )}
+                        </Section>
+                    </div>
+
+                    {/* Panel de observaciones */}
+                    <div>
+                        <Section title="Observaciones del Documento" icon={AlertCircle}>
+                            {!selectedDocument ? (
+                                <div className="text-center py-12">
+                                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                    <p className="text-slate-500">Selecciona un documento para agregar observaciones</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                        <p className="text-sm text-blue-900 font-medium">
+                                            Editando: {getDocumentTypeLabel(
+                                                applicationData.documents.find(d => d.document_id === selectedDocument)?.document_type
+                                            )}
+                                        </p>
                                     </div>
 
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
-                        )}
+                                    <div className="flex gap-3">
+                                        <textarea
+                                            value={currentObservation}
+                                            onChange={handleObservationChange}
+                                            className="flex-1 border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                                            rows={6}
+                                            placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales para este documento..."
+                                        />
+                                        <button 
+                                            onClick={() => {
+                                                alert(`Guardando observaciones para el documento ${selectedDocument}:\n\n${currentObservation}`);
+                                            }}
+                                            className="px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
+                                        >
+                                            Guardar
+                                        </button>
+                                    </div>
+
+                                    <div className="border border-slate-200 rounded-lg p-4">
+                                        <label className="flex items-center gap-2 text-sm text-slate-700 font-medium mb-3">
+                                            <Upload className="text-blue-600" size={18} />
+                                            Adjuntar capturas de pantalla (opcional)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleImageUpload}
+                                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        />
+
+                                        {currentImages.length > 0 && (
+                                            <div className="mt-4">
+                                                <div className="flex gap-3 flex-wrap">
+                                                    {currentImages.map((img, idx) => (
+                                                        <div key={idx} className="relative group">
+                                                            <div className="w-20 h-20 border-2 border-slate-200 rounded-lg overflow-hidden">
+                                                                <img 
+                                                                    src={URL.createObjectURL(img)} 
+                                                                    className="w-full h-full object-cover" 
+                                                                    alt={`Captura ${idx + 1}`} 
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                onClick={() => removeImage(idx)}
+                                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-2">{currentImages.length} archivo(s) adjunto(s)</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Resumen de revisión</h4>
+                                        <div className="space-y-1 text-xs text-slate-600">
+                                            <p>• Observaciones: {currentObservation.trim() ? "✓ Agregadas" : "Sin observaciones"}</p>
+                                            <p>• Imágenes: {currentImages.length > 0 ? `${currentImages.length} adjunta(s)` : "Sin imágenes"}</p>
+                                            <p>• Estado: {documentReviews[selectedDocument] === "aprobado" ? "✓ Aprobado" : documentReviews[selectedDocument] === "rechazado" ? "✕ Rechazado" : "Pendiente de decisión"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                     </Section>
                     <div className="lg:col-span-2 mt-6"></div>
                     <Section title="Observaciones del Administrador" icon={AlertCircle}>
