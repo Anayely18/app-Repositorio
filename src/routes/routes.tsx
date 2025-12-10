@@ -7,6 +7,7 @@ import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRe
 import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
 import Layout from "@/shared/ui/layout/Layout"
 import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage"; 
+import TramiteStatusApp from "@/pages/process/TramiteDetailsPage"
 
 export const routes = [
     {
@@ -32,6 +33,10 @@ export const routes = [
     {
         path: '/',
         element: <Home />
+    },
+    {
+        path: '/process',
+        element: <TramiteStatusApp />
     },
     {
         path: '/dashboard',
