@@ -64,7 +64,7 @@ export default function RequestDetailsPage() {
 
     const handleImageUpload = (e) => {
         if (!selectedDocument) return;
-        
+
         const files = Array.from(e.target.files || []);
         setDocumentImages(prev => ({
             ...prev,
@@ -75,7 +75,7 @@ export default function RequestDetailsPage() {
 
     const removeImage = (index) => {
         if (!selectedDocument) return;
-        
+
         setDocumentImages(prev => ({
             ...prev,
             [selectedDocument]: (prev[selectedDocument] || []).filter((_, i) => i !== index)
@@ -91,17 +91,18 @@ export default function RequestDetailsPage() {
     const getStatusLabel = (status) => {
         const statusMap = {
             pendiente: "Pendiente de revisión",
-            aprobado: "Aprobado",
+            validado: "Aprobado", // Mapear 'validado' a 'Aprobado' para mostrar
             rechazado: "Rechazado",
             en_revision: "En revisión"
         };
         return statusMap[status] || "Estado desconocido";
     };
 
+    // Modificar getStatusColor
     const getStatusColor = (status) => {
         const colorMap = {
             pendiente: "bg-amber-100 text-amber-800",
-            aprobado: "bg-green-100 text-green-800",
+            validado: "bg-green-100 text-green-800", // Cambiado de 'aprobado'
             rechazado: "bg-red-100 text-red-800",
             en_revision: "bg-blue-100 text-blue-800"
         };
@@ -147,6 +148,111 @@ export default function RequestDetailsPage() {
         }
     };
 
+    const handleSaveDocumentReview = async (documentId) => {
+        try {
+            const formData = new FormData();
+
+            // Mapear el estado del frontend a la base de datos
+            const frontendStatus = documentReviews[documentId] || 'pendiente';
+            const mappedStatus = mapStatusToDatabase(frontendStatus);
+
+            console.log('Estado frontend:', frontendStatus);
+            console.log('Estado mapeado para BD:', mappedStatus);
+
+            formData.append('status', mappedStatus);
+            formData.append('observation', documentObservations[documentId] || '');
+
+            // Agregar imágenes
+            const images = documentImages[documentId] || [];
+            images.forEach((image) => {
+                formData.append('images', image);
+            });
+
+            const response = await fetch(`${API_URL}/applications/documents/${documentId}/review`, {
+                method: 'PATCH',
+                body: formData
+            });
+
+            const result = await response.json();
+            console.log(result)
+            if (result.success) {
+                alert('✅ Documento actualizado correctamente');
+                window.location.reload();
+            } else {
+                alert('❌ ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al guardar la revisión');
+        }
+    };
+
+
+    const handleApproveApplication = async () => {
+        try {
+            const applicationId = getApplicationId();
+
+            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: 'aprobado', 
+                    observations: observation
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Solicitud aprobada correctamente');
+                window.location.reload();
+            } else {
+                alert('❌ ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al aprobar la solicitud');
+        }
+    };
+    const handleRejectApplication = async () => {
+        try {
+            const applicationId = getApplicationId();
+
+            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: 'rechazado',
+                    observations: observation
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Solicitud rechazada');
+                window.location.reload();
+            } else {
+                alert('❌ ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al rechazar la solicitud');
+        }
+    };
+
+    const mapStatusToDatabase = (frontendStatus) => {
+        const statusMap = {
+            'aprobado': 'validado',
+            'rechazado': 'rechazado',
+            'pendiente': 'pendiente'
+        };
+        return statusMap[frontendStatus] || 'pendiente';
+    };
 
 
     const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
@@ -183,8 +289,8 @@ export default function RequestDetailsPage() {
     }
 
     if (applicationData?.documents?.length > 0) {
-  console.log("Documentos:", applicationData.documents);
-}
+        console.log("Documentos:", applicationData.documents);
+    }
 
 
     return (
@@ -361,192 +467,190 @@ export default function RequestDetailsPage() {
                         </Section>
                     </div>
                 </div>
-                            
+
                 <div className="lg:col-span-2 mt-6">
                     <Section title="Documentos Adjuntos" icon={FileText}>
                         {applicationData.documents && applicationData.documents.length > 0 ? (
-                                <div className="space-y-3">
-                                    
-                                    {applicationData.documents.map((doc) => {
-                                        const decision = documentReviews[doc.document_id];
-                                        const isSelected = selectedDocument === doc.document_id;
-                                        const hasObservations = documentObservations[doc.document_id]?.trim().length > 0;
-                                        
-                                        return (
-                                            <div
-                                                key={doc.document_id}
-                                                onClick={() => handleDocumentClick(doc.document_id)}
-                                                className={`border rounded-lg p-4 cursor-pointer transition-all
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+
+                                {applicationData.documents.map((doc) => {
+                                    const decision = documentReviews[doc.document_id];
+                                    const isSelected = selectedDocument === doc.document_id;
+                                    const hasObservations = documentObservations[doc.document_id]?.trim().length > 0;
+
+                                    return (
+                                        <div
+                                            key={doc.document_id}
+                                            onClick={() => handleDocumentClick(doc.document_id)}
+                                            className={`border rounded-lg p-4 cursor-pointer transition-all
                                                     ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200 hover:border-blue-300"}
                                                     ${decision === "aprobado" ? "border-green-300 bg-green-50" : ""}
                                                     ${decision === "rechazado" ? "border-red-300 bg-red-50" : ""}
                                                 `}
-                                            >
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                                            <FileText className="w-5 h-5 text-red-600" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
-                                                            <div className="text-xs text-slate-500">PDF • {doc.size_kb} KB</div>
-                                                        </div>
-                                                    </div>
-                                                    {hasObservations && (
-                                                        <div className="w-2 h-2 bg-orange-500 rounded-full" title="Tiene observaciones"></div>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                alert('Ver documento: ' + doc.file_path);
-                                                            }}
-                                                            className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                                                            title="Ver documento"
-                                                        >
-                                                            <Eye className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                alert('Descargar documento: ' + doc.file_path);
-                                                            }}
-                                                            className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
-                                                            title="Descargar documento"
-                                                        >
-                                                            <Download className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleReviewDecision(doc.document_id, "aprobado");
-                                                            }}
-                                                            title="Aprobar"
-                                                            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
-                                                                ${decision === "aprobado"
-                                                                    ? "bg-green-500 border-green-600 text-white"
-                                                                    : "border-slate-300 text-slate-400 hover:bg-green-50 hover:border-green-400 hover:text-green-600"}
-                                                            `}
-                                                            >
-                                                                ✓
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleReviewDecision(doc.document_id, "rechazado");
-                                                            }}
-                                                            title="Rechazar"
-                                                            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
-                                                                ${decision === "rechazado"
-                                                                    ? "bg-red-500 border-red-600 text-white"
-                                                                    : "border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-400 hover:text-red-600"}
-                                                            `}
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
-                            )}
-                        </Section>
-                    </div>
-
-                    {/* Panel de observaciones */}
-                    <div>
-                        <Section title="Observaciones del Documento" icon={AlertCircle}>
-                            {!selectedDocument ? (
-                                <div className="text-center py-12">
-                                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                    <p className="text-slate-500">Selecciona un documento para agregar observaciones</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <p className="text-sm text-blue-900 font-medium">
-                                            Editando: {getDocumentTypeLabel(
-                                                applicationData.documents.find(d => d.document_id === selectedDocument)?.document_type
-                                            )}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <textarea
-                                            value={currentObservation}
-                                            onChange={handleObservationChange}
-                                            className="flex-1 border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
-                                            rows={6}
-                                            placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales para este documento..."
-                                        />
-                                        <button 
-                                            onClick={() => {
-                                                alert(`Guardando observaciones para el documento ${selectedDocument}:\n\n${currentObservation}`);
-                                            }}
-                                            className="px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
                                         >
-                                            Guardar
-                                        </button>
-                                    </div>
-
-                                    <div className="border border-slate-200 rounded-lg p-4">
-                                        <label className="flex items-center gap-2 text-sm text-slate-700 font-medium mb-3">
-                                            <Upload className="text-blue-600" size={18} />
-                                            Adjuntar capturas de pantalla (opcional)
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleImageUpload}
-                                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        />
-
-                                        {currentImages.length > 0 && (
-                                            <div className="mt-4">
-                                                <div className="flex gap-3 flex-wrap">
-                                                    {currentImages.map((img, idx) => (
-                                                        <div key={idx} className="relative group">
-                                                            <div className="w-20 h-20 border-2 border-slate-200 rounded-lg overflow-hidden">
-                                                                <img 
-                                                                    src={URL.createObjectURL(img)} 
-                                                                    className="w-full h-full object-cover" 
-                                                                    alt={`Captura ${idx + 1}`} 
-                                                                />
-                                                            </div>
-                                                            <button
-                                                                onClick={() => removeImage(idx)}
-                                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    ))}
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                                        <FileText className="w-5 h-5 text-red-600" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{getDocumentTypeLabel(doc.document_type)}</div>
+                                                        <div className="text-xs text-slate-500">PDF • {doc.size_kb} KB</div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-slate-500 mt-2">{currentImages.length} archivo(s) adjunto(s)</p>
+                                                {hasObservations && (
+                                                    <div className="w-2 h-2 bg-orange-500 rounded-full" title="Tiene observaciones"></div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
 
-                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Resumen de revisión</h4>
-                                        <div className="space-y-1 text-xs text-slate-600">
-                                            <p>• Observaciones: {currentObservation.trim() ? "✓ Agregadas" : "Sin observaciones"}</p>
-                                            <p>• Imágenes: {currentImages.length > 0 ? `${currentImages.length} adjunta(s)` : "Sin imágenes"}</p>
-                                            <p>• Estado: {documentReviews[selectedDocument] === "aprobado" ? "✓ Aprobado" : documentReviews[selectedDocument] === "rechazado" ? "✕ Rechazado" : "Pendiente de decisión"}</p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            alert('Ver documento: ' + doc.file_path);
+                                                        }}
+                                                        className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                                        title="Ver documento"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            alert('Descargar documento: ' + doc.file_path);
+                                                        }}
+                                                        className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
+                                                        title="Descargar documento"
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleReviewDecision(doc.document_id, "aprobado");
+                                                        }}
+                                                        title="Aprobar"
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
+                                                                ${decision === "aprobado"
+                                                                ? "bg-green-500 border-green-600 text-white"
+                                                                : "border-slate-300 text-slate-400 hover:bg-green-50 hover:border-green-400 hover:text-green-600"}
+                                                            `}
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleReviewDecision(doc.document_id, "rechazado");
+                                                        }}
+                                                        title="Rechazar"
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
+                                                                ${decision === "rechazado"
+                                                                ? "bg-red-500 border-red-600 text-white"
+                                                                : "border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-400 hover:text-red-600"}
+                                                            `}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm py-4">No hay documentos adjuntos</p>
+                        )}
+                    </Section>
+                </div>
+
+                {/* Panel de observaciones */}
+                <div>
+                    <Section title="Observaciones del Documento" icon={AlertCircle}>
+                        {!selectedDocument ? (
+                            <div className="text-center py-12">
+                                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                <p className="text-slate-500">Selecciona un documento para agregar observaciones</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm text-blue-900 font-medium">
+                                        Editando: {getDocumentTypeLabel(
+                                            applicationData.documents.find(d => d.document_id === selectedDocument)?.document_type
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <textarea
+                                        value={currentObservation}
+                                        onChange={handleObservationChange}
+                                        className="flex-1 border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                                        rows={6}
+                                        placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales para este documento..."
+                                    />
+                                    <button
+                                        onClick={() => handleSaveDocumentReview(selectedDocument)}
+                                        className="px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
+                                    >
+                                        Guardar
+                                    </button>
+                                </div>
+
+                                <div className="border border-slate-200 rounded-lg p-4">
+                                    <label className="flex items-center gap-2 text-sm text-slate-700 font-medium mb-3">
+                                        <Upload className="text-blue-600" size={18} />
+                                        Adjuntar capturas de pantalla (opcional)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleImageUpload}
+                                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    />
+
+                                    {currentImages.length > 0 && (
+                                        <div className="mt-4">
+                                            <div className="flex gap-3 flex-wrap">
+                                                {currentImages.map((img, idx) => (
+                                                    <div key={idx} className="relative group">
+                                                        <div className="w-20 h-20 border-2 border-slate-200 rounded-lg overflow-hidden">
+                                                            <img
+                                                                src={URL.createObjectURL(img)}
+                                                                className="w-full h-full object-cover"
+                                                                alt={`Captura ${idx + 1}`}
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => removeImage(idx)}
+                                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-2">{currentImages.length} archivo(s) adjunto(s)</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Resumen de revisión</h4>
+                                    <div className="space-y-1 text-xs text-slate-600">
+                                        <p>• Observaciones: {currentObservation.trim() ? "✓ Agregadas" : "Sin observaciones"}</p>
+                                        <p>• Imágenes: {currentImages.length > 0 ? `${currentImages.length} adjunta(s)` : "Sin imágenes"}</p>
+                                        <p>• Estado: {documentReviews[selectedDocument] === "aprobado" ? "✓ Aprobado" : documentReviews[selectedDocument] === "rechazado" ? "✕ Rechazado" : "Pendiente de decisión"}</p>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
                     </Section>
                     <div className="lg:col-span-2 mt-6"></div>
@@ -602,11 +706,17 @@ export default function RequestDetailsPage() {
                             </div>
 
                             <div className="flex gap-4 mt-6 ">
-                                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                                <button
+                                    onClick={handleApproveApplication}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                >
                                     <Shield className="w-5 h-5" />
                                     Aprobar solicitud
                                 </button>
-                                <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                                <button
+                                    onClick={handleRejectApplication}
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                >
                                     <AlertCircle className="w-5 h-5" />
                                     Rechazar solicitud
                                 </button>
