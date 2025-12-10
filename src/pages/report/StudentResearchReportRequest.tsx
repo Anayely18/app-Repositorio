@@ -4,12 +4,12 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
-
 export default function StudentResearchReportRequest() {
+    const [isModalOpen, setIsModalOpen] = useState(false)
 
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
@@ -135,7 +135,7 @@ export default function StudentResearchReportRequest() {
             const result = await response.json();
 
             if (result.success) {
-                toastService.success('Solicitud enviada exitosamente');
+                setIsModalOpen(true);
                 resetForm();
             } else {
                 toastService.error(result.message || 'Error al enviar solicitud');
@@ -178,6 +178,55 @@ export default function StudentResearchReportRequest() {
 
     return (
         <div className="min-h-screen w-full bg-linear-to-br from-gray-50 to-blue-50">
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            aria-label="Cerrar"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="w-10 h-10 text-emerald-600 stroke-[3]" />
+                            </div>
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-slate-900 text-center mb-4">
+                            ¡Solicitud enviada con éxito!
+                        </h2>
+
+                        <p className="text-slate-500 text-center leading-relaxed mb-6">
+                            Tu solicitud para publicar el informe de investigación ha sido enviada correctamente.
+                            Recibirás una confirmación por correo electrónico y podrás hacer seguimiento de tu trámite en la plataforma.
+                        </p>
+
+                        <div className="flex gap-3 mb-3">
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    window.location.href = '/process'; 
+                                }}
+                                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Ir a seguimiento
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
                 <Logo />
             </div>
