@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast, Toaster } from 'sonner';
 import {
     FileText,
     User,
@@ -14,7 +15,7 @@ import {
     ArrowLeft,
 } from "lucide-react";
 import { API_URL } from "@/utils/api";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
 import JuryItem from "@/shared/components/JuradoItem";
@@ -30,8 +31,6 @@ export default function RequestDetailsPage() {
     const [documentImages, setDocumentImages] = useState({});
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
-
-
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -50,10 +49,15 @@ export default function RequestDetailsPage() {
                 }
 
                 const result = await response.json();
-                console.log(result.data.documents);
+                console.log('📦 Datos completos de la aplicación:', result.data);
+                console.log('📄 Documentos:', result.data.documents);
+                console.log('📊 Estado de aplicación:', result.data.status);
+                console.log('📜 Historial:', result.data.history);
                 setApplicationData(result.data);
             } catch (err) {
+                console.error('❌ Error al cargar:', err);
                 setError(err.message);
+                toast.error('Error al cargar los detalles de la solicitud');
             } finally {
                 setLoading(false);
             }
@@ -72,7 +76,6 @@ export default function RequestDetailsPage() {
         }));
     };
 
-
     const removeImage = (index) => {
         if (!selectedDocument) return;
 
@@ -85,28 +88,40 @@ export default function RequestDetailsPage() {
     const formatDate = (dateString) => {
         if (!dateString) return "Sin fecha";
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return date.toLocaleDateString('es-PE', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     const getStatusLabel = (status) => {
         const statusMap = {
             pendiente: "Pendiente de revisión",
-            validado: "Aprobado", // Mapear 'validado' a 'Aprobado' para mostrar
+            validado: "Aprobado",
+            aprobado: "Aprobado",
             rechazado: "Rechazado",
             en_revision: "En revisión"
         };
-        return statusMap[status] || "Estado desconocido";
+        const label = statusMap[status?.toLowerCase()] || status || "Estado desconocido";
+        console.log(`🏷️ Estado "${status}" mapeado a "${label}"`);
+        return label;
     };
 
-    // Modificar getStatusColor
     const getStatusColor = (status) => {
+        const normalizedStatus = status?.toLowerCase();
         const colorMap = {
             pendiente: "bg-amber-100 text-amber-800",
-            validado: "bg-green-100 text-green-800", // Cambiado de 'aprobado'
+            validado: "bg-green-100 text-green-800",
+            aprobado: "bg-green-100 text-green-800",
             rechazado: "bg-red-100 text-red-800",
             en_revision: "bg-blue-100 text-blue-800"
         };
-        return colorMap[status] || "bg-gray-100 text-gray-800";
+        const color = colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
+        console.log(`🎨 Estado "${status}" color "${color}"`);
+        return color;
     };
 
     const getDocumentTypeLabel = (type) => {
@@ -152,7 +167,6 @@ export default function RequestDetailsPage() {
         try {
             const formData = new FormData();
 
-            // Mapear el estado del frontend a la base de datos
             const frontendStatus = documentReviews[documentId] || 'pendiente';
             const mappedStatus = mapStatusToDatabase(frontendStatus);
 
@@ -162,7 +176,6 @@ export default function RequestDetailsPage() {
             formData.append('status', mappedStatus);
             formData.append('observation', documentObservations[documentId] || '');
 
-            // Agregar imágenes
             const images = documentImages[documentId] || [];
             images.forEach((image) => {
                 formData.append('images', image);
@@ -174,19 +187,21 @@ export default function RequestDetailsPage() {
             });
 
             const result = await response.json();
-            console.log(result)
+            console.log(result);
+
             if (result.success) {
-                alert('✅ Documento actualizado correctamente');
-                window.location.reload();
+                toast.success('Documento actualizado correctamente');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
-                alert('❌ ' + result.message);
+                toast.error(result.message || 'Error al actualizar el documento');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al guardar la revisión');
+            toast.error('Error al guardar la revisión');
         }
     };
-
 
     const handleApproveApplication = async () => {
         try {
@@ -198,7 +213,7 @@ export default function RequestDetailsPage() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    status: 'aprobado', 
+                    status: 'aprobado',
                     observations: observation
                 })
             });
@@ -206,16 +221,19 @@ export default function RequestDetailsPage() {
             const result = await response.json();
 
             if (result.success) {
-                alert('✅ Solicitud aprobada correctamente');
-                window.location.reload();
+                toast.success('Solicitud aprobada correctamente');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
-                alert('❌ ' + result.message);
+                toast.error(result.message || 'Error al aprobar la solicitud');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al aprobar la solicitud');
+            toast.error('Error al aprobar la solicitud');
         }
     };
+
     const handleRejectApplication = async () => {
         try {
             const applicationId = getApplicationId();
@@ -234,14 +252,16 @@ export default function RequestDetailsPage() {
             const result = await response.json();
 
             if (result.success) {
-                alert('✅ Solicitud rechazada');
-                window.location.reload();
+                toast.success('Solicitud rechazada');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
-                alert('❌ ' + result.message);
+                toast.error(result.message || 'Error al rechazar la solicitud');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al rechazar la solicitud');
+            toast.error('Error al rechazar la solicitud');
         }
     };
 
@@ -254,9 +274,9 @@ export default function RequestDetailsPage() {
         return statusMap[frontendStatus] || 'pendiente';
     };
 
-
     const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
     const currentImages = selectedDocument ? (documentImages[selectedDocument] || []) : [];
+
     if (loading) {
         return (
             <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center">
@@ -288,14 +308,12 @@ export default function RequestDetailsPage() {
         );
     }
 
-    if (applicationData?.documents?.length > 0) {
-        console.log("Documentos:", applicationData.documents);
-    }
-
-
     return (
         <div className="min-h-screen w-full bg-slate-50 relative">
-            <Link to="/dashboard" className="flex absolute top-0 left-6 text-xs items-center text-secondary gap-x-1"><ArrowLeft size={14} />Volver</Link>
+            <Toaster position="top-right" richColors closeButton />
+            <Link to="/dashboard" className="flex absolute top-0 left-6 text-xs items-center text-secondary gap-x-1">
+                <ArrowLeft size={14} />Volver
+            </Link>
             <main className="max-w-6xl mx-auto p-6">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -314,6 +332,7 @@ export default function RequestDetailsPage() {
                         </div>
                     </div>
                 </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                         <Section title="Información del Proyecto" icon={BookOpen}>
@@ -392,7 +411,6 @@ export default function RequestDetailsPage() {
                             </Section>
                         )}
 
-
                         <Section title="Asesores" icon={Users}>
                             {applicationData.advisors && applicationData.advisors.length > 0 ? (
                                 <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -426,7 +444,6 @@ export default function RequestDetailsPage() {
                                     {[...applicationData.jury]
                                         .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
                                         .map((juryMember, index) => (
-
                                             <JuryItem
                                                 key={index}
                                                 rol={getJuryRoleLabel(juryMember.jury_role)}
@@ -439,29 +456,42 @@ export default function RequestDetailsPage() {
                                 <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
                             )}
                         </Section>
-
                     </div>
 
                     <div className="space-y-6">
-
                         <Section title="Historial de Estado" icon={AlertCircle}>
                             {applicationData.history && applicationData.history.length > 0 ? (
                                 <div className="space-y-4">
                                     {applicationData.history.map((item, index) => (
                                         <TimelineItem
                                             key={index}
-                                            status={item.status}
-                                            title={item.title}
-                                            date={formatDate(item.date)}
-                                            color={item.color}
+                                            status={item.status || "Sin estado"}
+                                            title={item.title || item.status || "Sin título"}
+                                            date={formatDate(item.date || item.created_at)}
+                                            color={item.color || "blue"}
                                         />
                                     ))}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <TimelineItem status="Completado" title="Solicitud enviada" date={formatDate(applicationData.created_at)} color="green" />
-                                    <TimelineItem status="En revisión" title="En evaluación documentaria" date={formatDate(applicationData.updated_at)} color="blue" />
-                                    <TimelineItem status="Pendiente" title="Aprobación final" date="Por definir" color="gray" />
+                                    <TimelineItem
+                                        status="Completado"
+                                        title="Solicitud enviada"
+                                        date={formatDate(applicationData.created_at)}
+                                        color="green"
+                                    />
+                                    <TimelineItem
+                                        status="En revisión"
+                                        title="En evaluación documentaria"
+                                        date={formatDate(applicationData.updated_at)}
+                                        color="blue"
+                                    />
+                                    <TimelineItem
+                                        status="Pendiente"
+                                        title="Aprobación final"
+                                        date="Por definir"
+                                        color="gray"
+                                    />
                                 </div>
                             )}
                         </Section>
@@ -472,7 +502,6 @@ export default function RequestDetailsPage() {
                     <Section title="Documentos Adjuntos" icon={FileText}>
                         {applicationData.documents && applicationData.documents.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-
                                 {applicationData.documents.map((doc) => {
                                     const decision = documentReviews[doc.document_id];
                                     const isSelected = selectedDocument === doc.document_id;
@@ -508,7 +537,7 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            alert('Ver documento: ' + doc.file_path);
+                                                            window.open(doc.file_path, '_blank');
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
                                                         title="Ver documento"
@@ -518,7 +547,10 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            alert('Descargar documento: ' + doc.file_path);
+                                                            const link = document.createElement('a');
+                                                            link.href = doc.file_path;
+                                                            link.download = getDocumentTypeLabel(doc.document_type);
+                                                            link.click();
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
                                                         title="Descargar documento"
@@ -568,7 +600,6 @@ export default function RequestDetailsPage() {
                     </Section>
                 </div>
 
-                {/* Panel de observaciones */}
                 <div>
                     <Section title="Observaciones del Documento" icon={AlertCircle}>
                         {!selectedDocument ? (
@@ -651,11 +682,11 @@ export default function RequestDetailsPage() {
                                 </div>
                             </div>
                         )}
-
                     </Section>
+
                     <div className="lg:col-span-2 mt-6"></div>
                     <Section title="Observaciones del Administrador" icon={AlertCircle}>
-                        <div className="space-y-4 ">
+                        <div className="space-y-4">
                             {applicationData.observations && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                                     <p className="text-sm text-blue-900"><strong>Observación actual:</strong> {applicationData.observations}</p>
@@ -670,42 +701,7 @@ export default function RequestDetailsPage() {
                                 placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales necesarios para la aprobación..."
                             />
 
-                            <div className="border border-slate-200 rounded-lg p-4">
-                                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium mb-3">
-                                    <Upload size={18} className="text-blue-600" />
-                                    Adjuntar capturas de pantalla (opcional)
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleImageUpload}
-                                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                />
-
-                                {images.length > 0 && (
-                                    <div className="mt-4">
-                                        <div className="flex gap-3 flex-wrap">
-                                            {images.map((img, idx) => (
-                                                <div key={idx} className="relative group">
-                                                    <div className="w-20 h-20 border-2 border-slate-200 rounded-lg overflow-hidden">
-                                                        <img src={URL.createObjectURL(img)} className="w-full h-full object-cover" alt={`Captura ${idx + 1}`} />
-                                                    </div>
-                                                    <button
-                                                        onClick={() => removeImage(idx)}
-                                                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-2">{images.length} archivo(s) adjunto(s)</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex gap-4 mt-6 ">
+                            <div className="flex gap-4 mt-6">
                                 <button
                                     onClick={handleApproveApplication}
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"

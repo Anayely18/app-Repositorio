@@ -148,7 +148,7 @@ export const useForgotPassword = () => {
                 await toastService.success("Contraseña actualizada exitosamente");
 
                 setTimeout(() => {
-                    navigate("/login");
+                    navigate("/admin");
                 }, 1500);
             }
         } catch (error) {
