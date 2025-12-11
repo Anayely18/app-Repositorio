@@ -180,8 +180,8 @@ export default function RequestDetailsPage() {
             images.forEach((image) => {
                 formData.append('images', image);
             });
-
-            const response = await fetch(`${API_URL}/applications/documents/${documentId}/review`, {
+            
+            const response = await fetch(`${API_URL}/applications/uploads/${documentId}/review`, {
                 method: 'PATCH',
                 body: formData
             });
@@ -338,7 +338,6 @@ export default function RequestDetailsPage() {
                         <Section title="Información del Proyecto" icon={BookOpen}>
                             <div className="space-y-4">
                                 <InfoRow label="Título" value={applicationData.project_name || "Sin título"} />
-                                <InfoRow label="Código de proyecto" value={applicationData.application_id?.split('-')[0]?.toUpperCase() || "N/A"} />
                                 <InfoRow label="Facultad" value={applicationData.professional_school || "No especificada"} />
                                 <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Tesis de posgrado'} />
                                 <InfoRow label="Tipo de financiamiento" value={applicationData.funding_type || "No especificado"} />
@@ -500,7 +499,7 @@ export default function RequestDetailsPage() {
 
                 <div className="lg:col-span-2 mt-6">
                     <Section title="Documentos Adjuntos" icon={FileText}>
-                        {applicationData.documents && applicationData.documents.length > 0 ? (
+                        {applicationData.file && applicationData.file.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                 {applicationData.documents.map((doc) => {
                                     const decision = documentReviews[doc.document_id];

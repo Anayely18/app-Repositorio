@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { 
-  Search, 
-  FileText, 
-  Calendar, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
+import Logo from "@/shared/ui/Logo"
+import {
+  Search,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Clock,
   AlertCircle,
   Download,
   Loader2,
@@ -27,45 +28,42 @@ import {
 // ============================================
 function ImageModal({ show, images, currentIndex, onClose, onNext, onPrev }) {
   if (!show) return null;
-
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-2"
       onClick={onClose}
     >
-      <div className="relative max-w-5xl w-full">
+      <div className="relative max-w-4xl w-full">
         <button
           onClick={onClose}
-          className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+          className="absolute -top-10 right-0 text-white hover:text-gray-300"
         >
-          <X className="w-8 h-8" />
+          <X className="w-6 h-6" />
         </button>
-        
         {images.length > 1 && (
           <>
             <button
               onClick={(e) => { e.stopPropagation(); onPrev(); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-3"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
             >
-              <ChevronLeft className="w-8 h-8" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onNext(); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-3"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
             >
-              <ChevronRight className="w-8 h-8" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </>
         )}
-
-        <div className="bg-white rounded-lg overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl overflow-hidden shadow-sm" onClick={(e) => e.stopPropagation()}>
           <img
             src={images[currentIndex]}
             alt="Evidencia ampliada"
-            className="w-full h-auto max-h-[85vh] object-contain"
+            className="w-full h-auto max-h-[80vh] object-contain"
           />
           {images.length > 1 && (
-            <div className="bg-white px-4 py-3 text-center text-sm text-slate-600 border-t">
+            <div className="bg-white px-3 py-2 text-center text-xs text-slate-600 border-t">
               Imagen {currentIndex + 1} de {images.length}
             </div>
           )}
@@ -88,50 +86,51 @@ function ApplicantInfo({ applicant, createdAt }) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 rounded-xl p-6">
+
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="text-sm font-medium text-blue-600" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500 mb-1">Solicitante</p>
-          <p className="font-semibold text-slate-900 leading-tight">
+          <p className="font-semibold text-xs text-gray-900">
             {applicant.name} {applicant.surname}
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
           <Mail className="w-5 h-5 text-purple-600" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500 mb-1">Correo electrónico</p>
-          <p className="font-semibold text-slate-900 text-sm truncate">
+          <p className="font-semibold text-xs text-gray-900">
             {applicant.email}
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
           <Phone className="w-5 h-5 text-green-600" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500 mb-1">Teléfono</p>
-          <p className="font-semibold text-slate-900">
+          <p className="font-semibold text-xs text-gray-900">
             {applicant.phone}
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
           <Calendar className="w-5 h-5 text-orange-600" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500 mb-1">Fecha de solicitud</p>
-          <p className="font-semibold text-slate-900 text-sm">
+          <p className="font-semibold text-xs text-gray-900">
             {formatDate(createdAt)}
           </p>
         </div>
@@ -182,13 +181,13 @@ function DocumentCard({ doc, onOpenImage }) {
   };
 
   return (
-    <div className="border-2 border-slate-200 rounded-xl p-6 hover:shadow-md transition-all">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <FileText className="w-5 h-5 text-slate-600" />
+    <div className="border border-slate-200 rounded-xl p-4 text-sm">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center">
+            <FileText className="w-4 h-4 text-slate-600" />
           </div>
-          <h3 className="font-bold text-slate-900 text-lg">{doc.name}</h3>
+          <h3 className="font-medium text-slate-900">{doc.name}</h3>
         </div>
         <span className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 flex items-center gap-2 ${getStatusColor(doc.status)}`}>
           {getStatusIcon(doc.status)}
@@ -205,7 +204,7 @@ function DocumentCard({ doc, onOpenImage }) {
               <p className="text-sm text-orange-800 leading-relaxed">{doc.observation}</p>
             </div>
           </div>
-          
+
           {doc.images && doc.images.length > 0 && (
             <div className="border-t-2 border-orange-200 pt-4">
               <div className="flex items-center gap-2 mb-3">
@@ -275,15 +274,11 @@ function ConstanciaStatus({ status }) {
           </div>
           <div className="flex-1">
             <h3 className="text-xl font-bold text-green-900 mb-2">
-              ¡Trámite Aprobado!
+              ¡En proceso!
             </h3>
             <p className="text-green-800 mb-4 text-sm">
-              Su constancia ha sido generada y está disponible para descarga.
+              Su trámite está siendo generado
             </p>
-            <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
-              <Download className="w-5 h-5" />
-              Descargar Constancia
-            </button>
           </div>
         </div>
       </div>
@@ -305,7 +300,7 @@ function ConstanciaStatus({ status }) {
               Su trámite requiere correcciones antes de poder generar la constancia.
             </p>
             <p className="text-sm text-orange-700 leading-relaxed">
-              Revise las observaciones en cada documento y presente los archivos corregidos.
+              Revise las observaciones en cada documento y envie los archivos corregidos nuevamente por el formulario.
             </p>
           </div>
         </div>
@@ -320,14 +315,14 @@ function ConstanciaStatus({ status }) {
           <Clock className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-blue-900 mb-2">
-            En Proceso
+          <h3 className="text-s text-blue-900 leading-relaxed mb-2">
+            ¡Publicado!
           </h3>
           <p className="text-blue-800 mb-2 text-sm">
-            Su trámite está siendo evaluado por el administrador.
+            Su trámite ya ha sido publicado en el repositorio.
           </p>
           <p className="text-sm text-blue-700 leading-relaxed">
-            El proceso toma aproximadamente 5 días hábiles. Le notificaremos por correo.
+            Ingrese al siguiente link para
           </p>
         </div>
       </div>
@@ -445,147 +440,154 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <button
-          onClick={onReset}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6 transition-colors font-medium"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Realizar nueva búsqueda
-        </button>
+    <>
+      <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
+        <Logo />
+      </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
+        <div className="max-w-6xl mx-auto">
+          <button
+            onClick={onReset}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6 transition-colors font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Realizar nueva búsqueda
+          </button>
 
-        <ImageModal
-          show={showImageModal}
-          images={allImages}
-          currentIndex={currentImageIndex}
-          onClose={closeImageModal}
-          onNext={nextImage}
-          onPrev={prevImage}
-        />
-
-        {/* Header del trámite */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-              activeTab === 'estudiante' 
-                ? 'bg-blue-100 text-blue-800' 
-                : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {activeTab === 'estudiante' ? (
-                <>
-                  <GraduationCap className="w-4 h-4" />
-                  Tesis de Estudiante
-                </>
-              ) : (
-                <>
-                  <Users className="w-4 h-4" />
-                  Informe de Docente
-                </>
-              )}
-            </span>
-          </div>
-
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-slate-900 mb-3 leading-tight">
-                {tramiteData.projectName}
-              </h1>
-              <p className="text-sm text-slate-500 font-mono bg-slate-50 inline-block px-3 py-1 rounded-md">
-                {tramiteData.applicationId}
-              </p>
-            </div>
-            <div className={`px-5 py-3 rounded-xl border-2 ${getStatusColor(tramiteData.status)} font-semibold flex items-center gap-3 shadow-sm`}>
-              {getStatusIcon(tramiteData.status)}
-              <span className="text-base">{getStatusLabel(tramiteData.status)}</span>
-            </div>
-          </div>
-
-          <ApplicantInfo 
-            applicant={tramiteData.applicant} 
-            createdAt={tramiteData.createdAt} 
+          <ImageModal
+            show={showImageModal}
+            images={allImages}
+            currentIndex={currentImageIndex}
+            onClose={closeImageModal}
+            onNext={nextImage}
+            onPrev={prevImage}
           />
-        </div>
 
-        {/* Estado de documentos */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Estado de Documentos</h2>
-              <p className="text-sm text-slate-600">Revisa el estado de cada documento presentado</p>
-            </div>
-          </div>
+          {/* Header del trámite */}
+          <main className="max-w-5xl mx-auto p-6 md:p-8">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+              <div className="flex items-center gap-2 mb-6">
+                <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${activeTab === 'estudiante'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                  {activeTab === 'estudiante' ? (
+                    <>
+                      <GraduationCap className="w-4 h-4" />
+                      Tesis de Estudiante
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4" />
+                      Informe de Docente
+                    </>
+                  )}
+                </span>
+              </div>
 
-          <div className="space-y-5">
-            {tramiteData.documents.map((doc, index) => (
-              <DocumentCard 
-                key={index} 
-                doc={doc} 
-                onOpenImage={openImageModal}
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8">
+                <div className="flex-1">
+                  <h1 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">
+                    {tramiteData.projectName}
+                  </h1>
+                  <p className="text-sm text-slate-500 font-mono bg-slate-50 inline-block px-3 py-1 rounded-md">
+                    {tramiteData.applicationId}
+                  </p>
+                </div>
+                <div className={`px-4 py-2 rounded-lg ${getStatusColor(tramiteData.status)} text-sm font-bold border-2 flex items-center gap-2`}>
+                  {getStatusIcon(tramiteData.status)}
+                  <span className="text-base">{getStatusLabel(tramiteData.status)}</span>
+                </div>
+              </div>
+
+              <ApplicantInfo
+                applicant={tramiteData.applicant}
+                createdAt={tramiteData.createdAt}
               />
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Grid de Constancia y Timeline */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <FileText className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">Constancia</h2>
-                <p className="text-sm text-slate-600">Estado de tu certificado</p>
-              </div>
-            </div>
-            <ConstanciaStatus status={tramiteData.status} />
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-amber-600" />
+            {/* Estado de documentos */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Estado de Documentos</h2>
+                  <p className="text-sm text-slate-600">Revisa el estado de cada documento presentado</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">Historial</h2>
-                <p className="text-sm text-slate-600">Seguimiento del trámite</p>
-              </div>
-            </div>
-            <Timeline timeline={tramiteData.timeline} />
-          </div>
-        </div>
 
-        {/* Información adicional */}
-        <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-white" />
+              <div className="space-y-5">
+                {tramiteData.documents.map((doc, index) => (
+                  <DocumentCard
+                    key={index}
+                    doc={doc}
+                    onOpenImage={openImageModal}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="text-sm">
-              <p className="font-bold text-blue-900 mb-3 text-base">Información importante</p>
-              <ul className="space-y-2 text-blue-800">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-500 font-bold mt-1">•</span>
-                  <span>Recibirá notificaciones por correo sobre cualquier cambio en su trámite</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-500 font-bold mt-1">•</span>
-                  <span>El tiempo de procesamiento es de 5 días hábiles</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-500 font-bold mt-1">•</span>
-                  <span>Si tiene dudas, puede contactar a la Unidad de Investigación</span>
-                </li>
-              </ul>
+
+            {/* Grid de Constancia y Timeline */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Constancia</h2>
+                    <p className="text-sm text-slate-600">Estado de tu certificado</p>
+                  </div>
+                </div>
+                <ConstanciaStatus status={tramiteData.status} />
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Historial</h2>
+                    <p className="text-sm text-slate-600">Seguimiento del trámite</p>
+                  </div>
+                </div>
+                <Timeline timeline={tramiteData.timeline} />
+              </div>
             </div>
-          </div>
+
+            {/* Información adicional */}
+            <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-sm">
+                  <p className="font-bold text-blue-900 mb-3 text-base">Información importante</p>
+                  <ul className="space-y-2 text-blue-800">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-1">•</span>
+                      <span>Recibirá notificaciones por correo sobre cualquier cambio en su trámite</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-1">•</span>
+                      <span>El tiempo de procesamiento es de 5 días hábiles</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-1">•</span>
+                      <span>Si tiene dudas, puede contactar a la Unidad de Investigación</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -621,7 +623,7 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
       // Construir la URL completa - ajusta el puerto y ruta según tu configuración
       const API_BASE_URL = 'http://localhost:3000'; // Cambia esto según tu backend
       const url = `${API_BASE_URL}/api/applications/search?dni=${encodeURIComponent(dni)}&type=${activeTab}`;
-      
+
       console.log('🔍 Buscando en:', url);
       console.log('🔍 DNI:', dni, 'Tipo:', activeTab);
 
@@ -686,143 +688,137 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-2xl w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-6 shadow-lg">
-            <Search className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Consulta el Estado de tu Trámite
-          </h1>
-          <p className="text-lg text-slate-600">
-            Selecciona tu tipo de trámite e ingresa tu DNI o código
-          </p>
-        </div>
+    <>
+      <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
+        <Logo />
+      </div>
+      <div className="min-h-screen max-w-5xl mx-auto p-6 md:p-8een bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
+        <div className="max-w-7xl mx-auto p-6 md:p-8">
+          <div className="text-center mb-8">
 
-        <div className="flex items-center gap-4 mb-6 justify-center">
-          <button
-            onClick={() => handleTabChange('estudiante')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all shadow-sm ${
-              activeTab === 'estudiante'
-                ? 'bg-blue-600 text-white shadow-lg scale-105'
-                : 'bg-white text-slate-600 hover:bg-blue-50 border-2 border-slate-200'
-            }`}
-          >
-            <GraduationCap className="w-5 h-5" />
-            Estudiante
-          </button>
-          <button
-            onClick={() => handleTabChange('docente')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all shadow-sm ${
-              activeTab === 'docente'
-                ? 'bg-emerald-600 text-white shadow-lg scale-105'
-                : 'bg-white text-slate-600 hover:bg-emerald-50 border-2 border-slate-200'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            Docente
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-            <p className="text-center">
-              <span className="font-semibold text-slate-800 text-base">
-                {activeTab === 'estudiante' ? '🎓 Búsqueda de Tesis' : '👨‍🏫 Búsqueda de Informes'}
-              </span>
-              <br />
-              <span className="text-sm text-slate-600 mt-1 inline-block">
-                {activeTab === 'estudiante' 
-                  ? 'Consulta el estado de tu proyecto de tesis'
-                  : 'Consulta el estado de tu informe de investigación'
-                }
-              </span>
+            <h1 className="text-2xl font-bold text-slate-900 mb-3">
+              Consulta el Estado de tu Trámite
+            </h1>
+            <p className="text-1xl text-slate-600">
+              Selecciona tu tipo de trámite e ingresa tu DNI o código
             </p>
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="dni" className="block text-sm font-semibold text-slate-700 mb-2">
-                {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Código de Docente (6 dígitos)'}
-              </label>
-              <input
-                type="text"
-                id="dni"
-                value={dni}
-                onChange={(e) => {
-                  const value = e.target.value.trim();
-                  setDni(value);
-                  setError('');
-                }}
-                placeholder={activeTab === 'estudiante' ? 'Ej: 12345678' : 'Ej: 123456'}
-                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg"
-              />
-              {error && (
-                <div className="flex items-center gap-2 mt-3 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <p className="text-sm font-medium">{error}</p>
-                </div>
-              )}
-            </div>
-
+          <div className="flex items-center gap-4 mb-6 justify-center">
             <button
-              onClick={handleSearch}
-              disabled={loading}
-              className={`w-full font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
-                activeTab === 'estudiante'
-                  ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
-                  : 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400'
-              } text-white disabled:cursor-not-allowed`}
+              onClick={() => handleTabChange('estudiante')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all shadow-sm ${activeTab === 'estudiante'
+                ? 'bg-blue-900 text-white shadow-lg scale-105'
+                : 'bg-white text-slate-600 hover:bg-blue-50 border-2 border-slate-200'
+                }`}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Buscando...
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  Consultar Estado
-                </>
-              )}
+              <GraduationCap className="w-5 h-5" />
+              Estudiante
+            </button>
+            <button
+              onClick={() => handleTabChange('docente')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all shadow-sm ${activeTab === 'docente'
+                ? 'bg-emerald-600 text-white shadow-lg scale-105'
+                : 'bg-white text-slate-600 hover:bg-emerald-50 border-2 border-slate-200'
+                }`}
+            >
+              <Users className="w-5 h-5" />
+              Docente
             </button>
           </div>
 
-          <div className="mt-6 p-5 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-slate-700">
-                <p className="font-semibold mb-2">Nota importante:</p>
-                <p className="mb-2">
-                  Ingresa el {activeTab === 'estudiante' ? 'DNI' : 'código'} que utilizaste al momento de realizar tu solicitud.
-                </p>
-                <p className="text-slate-600">
-                  Si no encuentras tu trámite, verifica que:
-                </p>
-                <ul className="list-disc list-inside mt-2 space-y-1 text-slate-600 ml-2">
-                  <li>Has seleccionado el tipo correcto (Estudiante/Docente)</li>
-                  <li>El {activeTab === 'estudiante' ? 'DNI' : 'código'} ingresado es correcto</li>
-                  <li>Tu solicitud ha sido registrada en el sistema</li>
-                </ul>
+          <div className=" lg:col-span-2 mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <p className="text-center">
+                <span className="font-semibold text-slate-800 text-base">
+                  {activeTab === 'estudiante' ? '🎓 Búsqueda de Tesis' : '👨‍🏫 Búsqueda de Informes'}
+                </span>
+                <br />
+                <span className="text-sm text-slate-600 mt-1 inline-block">
+                  {activeTab === 'estudiante'
+                    ? 'Consulta el estado de tu proyecto de tesis'
+                    : 'Consulta el estado de tu informe de investigación'
+                  }
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="dni" className="block text-sm font-semibold text-slate-700 mb-2">
+                  {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Código de Docente (6 dígitos)'}
+                </label>
+                <input
+                  type="text"
+                  id="dni"
+                  value={dni}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    setDni(value);
+                    setError('');
+                  }}
+                  placeholder={activeTab === 'estudiante' ? 'Ej: 12345678' : 'Ej: 123456'}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg"
+                />
+                {error && (
+                  <div className="flex items-center gap-2 mt-3 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <p className="text-sm font-medium">{error}</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className={`w-full font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${activeTab === 'estudiante'
+                  ? 'bg-blue-900 hover:bg-blue-700 disabled:bg-blue-400'
+                  : 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400'
+                  } text-white disabled:cursor-not-allowed`}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5" />
+                    Consultar Estado
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="mt-6 p-5 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-700">
+                  <p className="font-semibold mb-2">Nota importante:</p>
+                  <p className="mb-2">
+                    Ingresa el {activeTab === 'estudiante' ? 'DNI' : 'código'} que utilizaste al momento de realizar tu solicitud.
+                  </p>
+                  <p className="text-slate-600">
+                    Si no encuentras tu trámite, verifica que:
+                  </p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-slate-600 ml-2">
+                    <li>Has seleccionado el tipo correcto (Estudiante/Docente)</li>
+                    <li>El {activeTab === 'estudiante' ? 'DNI' : 'código'} ingresado es correcto</li>
+                    <li>Tu solicitud ha sido registrada en el sistema</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-slate-600">
-            ¿Necesitas ayuda?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-800 font-semibold underline">
-              Contacta con soporte
-            </a>
-          </p>
-          <p className="text-xs text-slate-400 mt-2">
-            © {new Date().getFullYear()} Universidad Nacional Micaela Bastidas de Apurímac
-          </p>
+          <div className="mt-8 text-center">
+            <p className="text-xs text-slate-400 mt-2">
+              © {new Date().getFullYear()} Universidad Nacional Micaela Bastidas de Apurímac
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -847,8 +843,8 @@ export default function TramiteStatusApp() {
 
   if (tramiteData) {
     return (
-      <TramiteDetailsPage 
-        tramiteData={tramiteData} 
+      <TramiteDetailsPage
+        tramiteData={tramiteData}
         activeTab={activeTab}
         onReset={handleReset}
       />
@@ -856,7 +852,7 @@ export default function TramiteStatusApp() {
   }
 
   return (
-    <SearchPage 
+    <SearchPage
       activeTab={activeTab}
       onTabChange={handleTabChange}
       onSearch={handleSearch}

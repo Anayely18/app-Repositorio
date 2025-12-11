@@ -236,7 +236,7 @@ export default function StudentResearchReportRequest() {
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                             <FileText className="w-8 h-8 text-blue-600" />
                         </div>
-                        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                        <h2 className=" md:textext-lgt-xl font-bold text-gray-900 mb-2">
                             Solicitud para publicar informe de investigación
                         </h2>
                         <p className="text-sm text-gray-500 font-medium">Tesis</p>
