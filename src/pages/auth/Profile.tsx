@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'sonner';
-import { 
+import {
   User,
   Mail,
   Lock,
@@ -43,7 +43,7 @@ export default function AdminProfile() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      
+
       const response = await fetch(`${API_URL}/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -56,7 +56,7 @@ export default function AdminProfile() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setAdminData(data.data);
         setFormData({
@@ -115,7 +115,7 @@ export default function AdminProfile() {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       const response = await fetch(`${API_URL}/profile`, {
         method: 'PUT',
         headers: {
@@ -178,7 +178,7 @@ export default function AdminProfile() {
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Error al cargar el perfil</h3>
           <p className="text-slate-600 mb-4">No se pudo obtener la información de tu cuenta</p>
-          <button 
+          <button
             onClick={fetchProfile}
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-2lg"
           >
@@ -197,19 +197,19 @@ export default function AdminProfile() {
         <div className=" bg-blue-900 rounded-3xl  p-8 mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
-          
+
           <div className="relative flex flex-col md:flex-row items-center gap-6">
             <div className="relative group">
-              <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-white to-blue-100 flex items-center justify-center text-blue-600 text-5xl font-bold  ring-4 ring-white/50">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-white to-blue-100 flex items-center justify-center text-blue-900 text-1xl font-bold  ring-4 ring-white/50">
                 {formData.nombre.charAt(0)}{formData.apellidos.charAt(0)}
               </div>
-              <button className="absolute bottom-0 right-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center hover:bg-blue-50 transition-all  hover:scale-110 group">
-                <Camera className="w-5 h-5 text-blue-600" />
+              <button className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-xl flex items-center justify-center hover:bg-blue-50 transition-all  hover:scale-110 group">
+                <Camera className="w-4 h-4 text-blue-600" />
               </button>
             </div>
-            
+
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl md:text-lgt font-bold text-white mb-2">
+              <h1 className="text-2xl md:text-lgt font-bold text-white mb-2">
                 {formData.nombre} {formData.apellidos}
               </h1>
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
@@ -217,9 +217,8 @@ export default function AdminProfile() {
                   <Shield className="w-4 h-4" />
                   Administrador
                 </span>
-                <span className={`px-4 py-1.5 backdrop-blur-sm rounded-full text-white text-sm font-semibold flex items-center gap-2 ${
-                  adminData.activo ? 'bg-emerald-400/30' : 'bg-red-400/30'
-                }`}>
+                <span className={`px-4 py-1.5 backdrop-blur-sm rounded-full text-white text-sm font-semibold flex items-center gap-2 ${adminData.activo ? 'bg-emerald-400/30' : 'bg-red-400/30'
+                  }`}>
                   <CheckCircle2 className="w-4 h-4" />
                   {adminData.activo ? 'Cuenta Activa' : 'Cuenta Inactiva'}
                 </span>
@@ -232,12 +231,12 @@ export default function AdminProfile() {
           {/* Sidebar con stats */}
           <div className="lg:col-span-1 space-y-6">
             {/* Stats Cards */}
-            <div className="bg-white rounded-3xl  border border-slate-200/50 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 p-6">
               <h3 className="md:text-lgt-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                 <Settings className="w-5 h-5 text-blue-600" />
                 Información de Cuenta
               </h3>
-              
+
               <div className="space-y-4">
                 <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
                   <div className="flex items-center gap-2 mb-1">
@@ -262,9 +261,9 @@ export default function AdminProfile() {
             </div>
 
             {/* Security Note */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-3xl p-6 ">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-100 rounded-3xl p-6 ">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl  bg-amber-500 flex items-center justify-center flex-shrink-0">
                   <AlertCircle className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-sm text-amber-900">
@@ -291,7 +290,7 @@ export default function AdminProfile() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Personal Information */}
-            <div className="bg-white rounded-3xl  border border-slate-200/50 p-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-gradient sticky top-0 z-30 bg-blue-900 to-indigo-500 rounded-2xl flex items-center justify-center ">
                   <User className="w-6 h-6 text-white" />
@@ -313,7 +312,7 @@ export default function AdminProfile() {
                       name="nombre"
                       value={formData.nombre}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 fond-bold leading-relaxed "
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 fond-bold leading-relaxed text-sm"
                     />
                   </div>
                   <div>
@@ -325,7 +324,7 @@ export default function AdminProfile() {
                       name="apellidos"
                       value={formData.apellidos}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 fond-bold leading-relaxed"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 leading-relaxed text-sm"
                     />
                   </div>
                 </div>
@@ -341,13 +340,11 @@ export default function AdminProfile() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 fond-bold leading-relaxed"
+                      className="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-900 fond-bold leading-relaxed text-sm"
                     />
                   </div>
                 </div>
-
-              
-
+                
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     DNI
@@ -356,14 +353,14 @@ export default function AdminProfile() {
                     type="text"
                     value={adminData.dni}
                     disabled
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 text-slate-500 cursor-not-allowed font-mono font-bold"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 text-slate-500 cursor-not-allowed font-mono leading-relaxed text-sm"
                   />
                 </div>
               </div>
             </div>
 
             {/* Change Password */}
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-200/50 p-8">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/50 p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400">
                   <Lock className="w-6 h-6 text-white" />
@@ -440,7 +437,7 @@ export default function AdminProfile() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-gray-600 transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -450,14 +447,14 @@ export default function AdminProfile() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
+            <div className="flex justify-end">
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex-1 px-8 py-4  sticky top-0 z-30 bg-blue-900 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold transition-all disabled:from-blue-400 disabled:to-indigo-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center gap-2"
+                className="px-8 py-2 bg-blue-900 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all disabled:from-blue-300 font-bold disabled:to-indigo-200 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center gap-2"
               >
-                <Save className="w-5 h-5" />
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                <Save className="w-4 h-4" />
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>

@@ -309,7 +309,7 @@ export default function RequestDetailsPage() {
     }
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 relative">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 relative">
             <Toaster position="top-right" richColors closeButton />
             <Link to="/dashboard" className="flex absolute top-0 left-6 text-xs items-center text-secondary gap-x-1">
                 <ArrowLeft size={14} />Volver
@@ -318,7 +318,7 @@ export default function RequestDetailsPage() {
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900 mb-2">Detalles de Solicitud</h1>
+                            <h1 className="text-lg font-bold text-slate-900 mb-2">Detalles de Solicitud</h1>
                             <p className="text-slate-500 text-sm">Visualización completa del informe enviado</p>
                         </div>
                         <div className="flex items-center gap-3">

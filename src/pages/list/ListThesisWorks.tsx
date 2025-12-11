@@ -344,9 +344,6 @@ export default function ListThesisWorks() {
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Estado
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                Observación
-                                            </th>
                                             <th className="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Acciones
                                             </th>
@@ -384,15 +381,7 @@ export default function ListThesisWorks() {
                                                     <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
                                                         {item.status }
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                                        <span
-                                                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getObservationStyle(
-                                                                item.observations || null
-                                                            )}`}
-                                                        >
-                                                            {item.observations || "Sin observación"}
-                                                        </span>
-                                                    </td>
+                                                    
                                                     <td className="px-6 py-4 text-center">
                                                         <button
                                                             onClick={() => handleViewDetails(item.id )}
