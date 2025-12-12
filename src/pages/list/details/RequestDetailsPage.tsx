@@ -14,7 +14,7 @@ import {
     Loader2,
     ArrowLeft,
 } from "lucide-react";
-import { API_URL } from "@/utils/api";
+import { API_URL, API_URL_DOCUMENTS } from "@/utils/api";
 import { Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
@@ -392,7 +392,7 @@ export default function RequestDetailsPage() {
     const getDocumentUrl = (filePath) => {
         if (!filePath) return '';
         if (filePath.startsWith('http')) return filePath;
-        return `${API_URL}/${filePath}`;
+        return `${API_URL_DOCUMENTS}/${filePath}`;
     };
 
     const ReviewSummaryPanel = () => {
