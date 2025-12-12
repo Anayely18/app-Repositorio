@@ -153,7 +153,7 @@ export default function RequestDetailsPage() {
     const handleDocumentClick = (document_id) => {
         setSelectedDocument(document_id);
     };
-
+    console.log(applicationData)
     const handleObservationChange = (e) => {
         if (selectedDocument) {
             setDocumentObservations(prev => ({
@@ -220,7 +220,6 @@ export default function RequestDetailsPage() {
                 return;
             }
 
-            // Confirmar acción
             const totalDocs = applicationData.documents.length;
             const reviewedDocs = documentsWithDecisions.length;
 
@@ -236,12 +235,10 @@ export default function RequestDetailsPage() {
             let successCount = 0;
             let errorCount = 0;
 
-            // Iterar por cada documento y guardar
             for (const doc of applicationData.documents) {
                 const documentId = doc.document_id;
                 const decision = documentReviews[documentId];
 
-                // Si no hay decisión, saltar este documento
                 if (!decision || decision === 'pendiente') {
                     continue;
                 }
@@ -253,7 +250,6 @@ export default function RequestDetailsPage() {
                     formData.append('status', mappedStatus);
                     formData.append('observation', documentObservations[documentId] || '');
 
-                    // Agregar imágenes si las hay
                     const images = documentImages[documentId] || [];
                     images.forEach((image) => {
                         formData.append('images', image);
@@ -283,7 +279,6 @@ export default function RequestDetailsPage() {
                 }
             }
 
-            // Mostrar resultado final
             if (errorCount === 0) {
                 toast.success(`✅ ${successCount} documentos actualizados correctamente`);
                 setTimeout(() => {
@@ -652,10 +647,10 @@ export default function RequestDetailsPage() {
                                     {applicationData.history.map((item, index) => (
                                         <TimelineItem
                                             key={index}
-                                            status={item.status || "Sin estado"}
-                                            title={item.title || item.status || "Sin título"}
-                                            date={formatDate(item.date || item.created_at)}
-                                            color={item.color || "blue"}
+                                            status={item.new_status || "Sin estado"}
+                                            title={item.title || item.new_status || "Sin título"}
+                                            date={formatDate(item.date || item.change_date)}
+                                            color={item.color || "green"}
                                         />
                                     ))}
                                 </div>
@@ -791,6 +786,7 @@ export default function RequestDetailsPage() {
                         )}
                     </Section>
                 </div>
+                
                 <div className="my-4">
                     <Section title="Observaciones del Documento" icon={AlertCircle}>
                         {!selectedDocument ? (
@@ -953,6 +949,52 @@ export default function RequestDetailsPage() {
                                 )}
                         </div>
                     </div>
+
+                    {applicationData.documents && applicationData.documents.some(doc => doc.images && doc.images.length > 0) && (
+                        <div className="mt-6 border-t pt-6">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Imágenes Adjuntas a los Documentos
+                            </h3>
+
+                            <div className="space-y-6">
+                                {applicationData.documents.map((doc) => (
+                                    doc.images && doc.images.length > 0 && (
+                                        <div key={doc.document_id} className="bg-gray-50 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-700 mb-3">
+                                                📄 {doc.file_name}
+                                            </h4>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                {doc.images.map((image) => (
+                                                    <div key={image.image_id} className="group relative">
+                                                        <div className="aspect-square rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                                            <img
+                                                                src={`${API_URL_DOCUMENTS}/${image.image_path}`}
+                                                                alt={image.file_name}
+                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                onClick={() => window.open(image.image_path, '_blank')}
+                                                            />
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <p className="text-xs text-gray-600 truncate" title={image.file_name}>
+                                                                {image.file_name}
+                                                            </p>
+                                                            <p className="text-xs text-gray-400">
+                                                                {new Date(image.created_at).toLocaleDateString('es-PE')}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="lg:col-span-2 mt-6"></div>
                     <Section title="Observaciones del Administrador" icon={AlertCircle}>
