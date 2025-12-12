@@ -164,12 +164,19 @@ export default function RequestDetailsPage() {
     };
 
     const handleSaveDocumentReview = async (documentId) => {
+
+        if (!documentId) {
+            toast.error('Selecciona un documento primero');
+            return;
+        }
+
         try {
             const formData = new FormData();
 
             const frontendStatus = documentReviews[documentId] || 'pendiente';
             const mappedStatus = mapStatusToDatabase(frontendStatus);
 
+            console.log('📝 Guardando revisión del documento:', documentId);
             console.log('Estado frontend:', frontendStatus);
             console.log('Estado mapeado para BD:', mappedStatus);
 
@@ -180,27 +187,135 @@ export default function RequestDetailsPage() {
             images.forEach((image) => {
                 formData.append('images', image);
             });
-            
-            const response = await fetch(`${API_URL}/applications/uploads/${documentId}/review`, {
+
+            // ✅ ENDPOINT CORREGIDO
+            const response = await fetch(`${API_URL}/applications/documents/${documentId}/review`, {
                 method: 'PATCH',
                 body: formData
             });
 
             const result = await response.json();
-            console.log(result);
+            console.log('✅ Respuesta del servidor:', result);
 
             if (result.success) {
                 toast.success('Documento actualizado correctamente');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
             } else {
                 toast.error(result.message || 'Error al actualizar el documento');
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('❌ Error:', error);
             toast.error('Error al guardar la revisión');
         }
+    };
+
+    const handleSaveAllDocuments = async () => {
+        try {
+            // Verificar que haya al menos un documento con decisión
+            const documentsWithDecisions = Object.keys(documentReviews).filter(
+                docId => documentReviews[docId] && documentReviews[docId] !== 'pendiente'
+            );
+
+            if (documentsWithDecisions.length === 0) {
+                toast.error('Debes aprobar o rechazar al menos un documento');
+                return;
+            }
+
+            // Confirmar acción
+            const totalDocs = applicationData.documents.length;
+            const reviewedDocs = documentsWithDecisions.length;
+
+            if (!window.confirm(
+                `¿Guardar revisión de ${reviewedDocs} de ${totalDocs} documentos?\n\n` +
+                `${Object.values(documentReviews).filter(d => d === 'aprobado').length} aprobados\n` +
+                `${Object.values(documentReviews).filter(d => d === 'rechazado').length} rechazados`
+            )) {
+                return;
+            }
+
+            toast.info('Guardando documentos...');
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Iterar por cada documento y guardar
+            for (const doc of applicationData.documents) {
+                const documentId = doc.document_id;
+                const decision = documentReviews[documentId];
+
+                // Si no hay decisión, saltar este documento
+                if (!decision || decision === 'pendiente') {
+                    continue;
+                }
+
+                try {
+                    const formData = new FormData();
+                    const mappedStatus = mapStatusToDatabase(decision);
+
+                    formData.append('status', mappedStatus);
+                    formData.append('observation', documentObservations[documentId] || '');
+
+                    // Agregar imágenes si las hay
+                    const images = documentImages[documentId] || [];
+                    images.forEach((image) => {
+                        formData.append('images', image);
+                    });
+
+                    const response = await fetch(
+                        `${API_URL}/applications/documents/${documentId}/review`,
+                        {
+                            method: 'PATCH',
+                            body: formData
+                        }
+                    );
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        successCount++;
+                        console.log(`✅ Documento ${documentId} actualizado`);
+                    } else {
+                        errorCount++;
+                        console.error(`❌ Error en documento ${documentId}:`, result.message);
+                    }
+
+                } catch (error) {
+                    errorCount++;
+                    console.error(`❌ Error guardando documento ${documentId}:`, error);
+                }
+            }
+
+            // Mostrar resultado final
+            if (errorCount === 0) {
+                toast.success(`✅ ${successCount} documentos actualizados correctamente`);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toast.warning(
+                    `⚠️ ${successCount} documentos guardados, ${errorCount} con errores`
+                );
+            }
+
+        } catch (error) {
+            console.error('❌ Error general:', error);
+            toast.error('Error al guardar los documentos');
+        }
+    };
+
+
+    const getReviewSummary = () => {
+        const total = applicationData.documents.length;
+        const reviewed = Object.keys(documentReviews).filter(
+            key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+        ).length;
+        const approved = Object.values(documentReviews).filter(
+            status => status === 'aprobado'
+        ).length;
+        const rejected = Object.values(documentReviews).filter(
+            status => status === 'rechazado'
+        ).length;
+        const pending = total - reviewed;
+
+        return { total, reviewed, approved, rejected, pending };
     };
 
     const handleApproveApplication = async () => {
@@ -274,6 +389,79 @@ export default function RequestDetailsPage() {
         return statusMap[frontendStatus] || 'pendiente';
     };
 
+    const getDocumentUrl = (filePath) => {
+        if (!filePath) return '';
+        if (filePath.startsWith('http')) return filePath;
+        return `${API_URL}/${filePath}`;
+    };
+
+    const ReviewSummaryPanel = () => {
+        const summary = getReviewSummary();
+
+        return (
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mt-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">
+                    📋 Resumen de Revisión de Documentos
+                </h3>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-slate-700">{summary.total}</div>
+                        <div className="text-xs text-slate-500">Total</div>
+                    </div>
+                    <div className="bg-green-100 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-green-700">{summary.approved}</div>
+                        <div className="text-xs text-green-600">Aprobados</div>
+                    </div>
+                    <div className="bg-red-100 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-red-700">{summary.rejected}</div>
+                        <div className="text-xs text-red-600">Rechazados</div>
+                    </div>
+                    <div className="bg-amber-100 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-amber-700">{summary.pending}</div>
+                        <div className="text-xs text-amber-600">Pendientes</div>
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleSaveAllDocuments}
+                        disabled={summary.reviewed === 0}
+                        className={`flex-1 py-4 px-6 rounded-xl font-semibold text-white transition-all
+                        ${summary.reviewed === 0
+                                ? 'bg-gray-300 cursor-not-allowed'
+                                : 'bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                            }`}
+                    >
+                        💾 Guardar Todas las Revisiones ({summary.reviewed})
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            if (window.confirm('¿Limpiar todas las decisiones?')) {
+                                setDocumentReviews({});
+                                setDocumentObservations({});
+                                setDocumentImages({});
+                                setSelectedDocument(null);
+                                toast.info('Revisiones limpiadas');
+                            }
+                        }}
+                        className="px-6 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-colors"
+                    >
+                        🗑️ Limpiar
+                    </button>
+                </div>
+
+                {summary.reviewed > 0 && (
+                    <div className="mt-4 text-sm text-slate-600">
+                        ℹ️ Se guardarán {summary.reviewed} documentos con sus observaciones e imágenes
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+
     const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
     const currentImages = selectedDocument ? (documentImages[selectedDocument] || []) : [];
 
@@ -309,7 +497,7 @@ export default function RequestDetailsPage() {
     }
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 relative">
+        <div className="min-h-screen w-full bg-linear-to-br from-slate-50 to-blue-50 relative">
             <Toaster position="top-right" richColors closeButton />
             <Link to="/dashboard" className="flex absolute top-0 left-6 text-xs items-center text-secondary gap-x-1">
                 <ArrowLeft size={14} />Volver
@@ -499,7 +687,7 @@ export default function RequestDetailsPage() {
 
                 <div className="lg:col-span-2 mt-6">
                     <Section title="Documentos Adjuntos" icon={FileText}>
-                        {applicationData.file && applicationData.file.length > 0 ? (
+                        {applicationData.documents && applicationData.documents.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                 {applicationData.documents.map((doc) => {
                                     const decision = documentReviews[doc.document_id];
@@ -511,10 +699,10 @@ export default function RequestDetailsPage() {
                                             key={doc.document_id}
                                             onClick={() => handleDocumentClick(doc.document_id)}
                                             className={`border rounded-lg p-4 cursor-pointer transition-all
-                                                    ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200 hover:border-blue-300"}
-                                                    ${decision === "aprobado" ? "border-green-300 bg-green-50" : ""}
-                                                    ${decision === "rechazado" ? "border-red-300 bg-red-50" : ""}
-                                                `}
+                                ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200 hover:border-blue-300"}
+                                ${decision === "aprobado" ? "border-green-300 bg-green-50" : ""}
+                                ${decision === "rechazado" ? "border-red-300 bg-red-50" : ""}
+                            `}
                                         >
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-3">
@@ -536,7 +724,8 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(doc.file_path, '_blank');
+                                                            const url = getDocumentUrl(doc.file_path);
+                                                            window.open(url, '_blank');
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
                                                         title="Ver documento"
@@ -546,10 +735,14 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            const url = getDocumentUrl(doc.file_path);
                                                             const link = document.createElement('a');
-                                                            link.href = doc.file_path;
-                                                            link.download = getDocumentTypeLabel(doc.document_type);
+                                                            link.href = url;
+                                                            link.download = `${getDocumentTypeLabel(doc.document_type)}.pdf`;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
                                                             link.click();
+                                                            document.body.removeChild(link);
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
                                                         title="Descargar documento"
@@ -566,10 +759,10 @@ export default function RequestDetailsPage() {
                                                         }}
                                                         title="Aprobar"
                                                         className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
-                                                                ${decision === "aprobado"
+                                            ${decision === "aprobado"
                                                                 ? "bg-green-500 border-green-600 text-white"
                                                                 : "border-slate-300 text-slate-400 hover:bg-green-50 hover:border-green-400 hover:text-green-600"}
-                                                            `}
+                                        `}
                                                     >
                                                         ✓
                                                     </button>
@@ -580,10 +773,10 @@ export default function RequestDetailsPage() {
                                                         }}
                                                         title="Rechazar"
                                                         className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors text-sm font-bold
-                                                                ${decision === "rechazado"
+                                            ${decision === "rechazado"
                                                                 ? "bg-red-500 border-red-600 text-white"
                                                                 : "border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-400 hover:text-red-600"}
-                                                            `}
+                                        `}
                                                     >
                                                         ✕
                                                     </button>
@@ -598,8 +791,7 @@ export default function RequestDetailsPage() {
                         )}
                     </Section>
                 </div>
-
-                <div>
+                <div className="my-4">
                     <Section title="Observaciones del Documento" icon={AlertCircle}>
                         {!selectedDocument ? (
                             <div className="text-center py-12">
@@ -616,21 +808,13 @@ export default function RequestDetailsPage() {
                                     </p>
                                 </div>
 
-                                <div className="flex gap-3">
-                                    <textarea
-                                        value={currentObservation}
-                                        onChange={handleObservationChange}
-                                        className="flex-1 border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
-                                        rows={6}
-                                        placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales para este documento..."
-                                    />
-                                    <button
-                                        onClick={() => handleSaveDocumentReview(selectedDocument)}
-                                        className="px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
-                                    >
-                                        Guardar
-                                    </button>
-                                </div>
+                                <textarea
+                                    value={currentObservation}
+                                    onChange={handleObservationChange}
+                                    className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                                    rows={6}
+                                    placeholder="Escribe aquí las observaciones, comentarios o requisitos adicionales para este documento..."
+                                />
 
                                 <div className="border border-slate-200 rounded-lg p-4">
                                     <label className="flex items-center gap-2 text-sm text-slate-700 font-medium mb-3">
@@ -650,7 +834,7 @@ export default function RequestDetailsPage() {
                                             <div className="flex gap-3 flex-wrap">
                                                 {currentImages.map((img, idx) => (
                                                     <div key={idx} className="relative group">
-                                                        <div className="w-20 h-20 border-2 border-slate-200 rounded-lg overflow-hidden">
+                                                        <div className="w-24 h-24 border-2 border-slate-200 rounded-lg overflow-hidden">
                                                             <img
                                                                 src={URL.createObjectURL(img)}
                                                                 className="w-full h-full object-cover"
@@ -666,7 +850,9 @@ export default function RequestDetailsPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                            <p className="text-xs text-slate-500 mt-2">{currentImages.length} archivo(s) adjunto(s)</p>
+                                            <p className="text-xs text-slate-500 mt-3">
+                                                {currentImages.length} archivo(s) adjunto(s)
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -682,6 +868,91 @@ export default function RequestDetailsPage() {
                             </div>
                         )}
                     </Section>
+                    <div className="lg:col-span-2 mt-6">
+                        <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-blue-600" />
+                                Resumen de Revisión de Documentos
+                            </h3>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-3xl font-bold text-slate-700">
+                                        {applicationData.documents.length}
+                                    </div>
+                                    <div className="text-xs text-slate-500 mt-1">Total Documentos</div>
+                                </div>
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-3xl font-bold text-green-700">
+                                        {Object.values(documentReviews).filter(d => d === 'aprobado').length}
+                                    </div>
+                                    <div className="text-xs text-green-600 mt-1">✓ Aprobados</div>
+                                </div>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-3xl font-bold text-red-700">
+                                        {Object.values(documentReviews).filter(d => d === 'rechazado').length}
+                                    </div>
+                                    <div className="text-xs text-red-600 mt-1">✕ Rechazados</div>
+                                </div>
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-3xl font-bold text-amber-700">
+                                        {applicationData.documents.length - Object.keys(documentReviews).filter(
+                                            key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                                        ).length}
+                                    </div>
+                                    <div className="text-xs text-amber-600 mt-1">⏳ Pendientes</div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleSaveAllDocuments}
+                                    disabled={Object.keys(documentReviews).filter(
+                                        key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                                    ).length === 0}
+                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-2
+                    ${Object.keys(documentReviews).filter(
+                                        key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                                    ).length === 0
+                                            ? 'bg-gray-300 cursor-not-allowed'
+                                            : 'bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                                        }`}
+                                >
+                                    <Upload className="w-5 h-5" />
+                                    Guardar Todas las Revisiones (
+                                    {Object.keys(documentReviews).filter(
+                                        key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                                    ).length})
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('¿Limpiar todas las decisiones y observaciones?')) {
+                                            setDocumentReviews({});
+                                            setDocumentObservations({});
+                                            setDocumentImages({});
+                                            setSelectedDocument(null);
+                                            toast.info('Revisiones limpiadas');
+                                        }
+                                    }}
+                                    className="px-6 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-colors flex items-center gap-2"
+                                >
+                                    <AlertCircle className="w-5 h-5" />
+                                    Limpiar
+                                </button>
+                            </div>
+
+                            {Object.keys(documentReviews).filter(
+                                key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                            ).length > 0 && (
+                                    <div className="mt-4 p-3 bg-blue-100 rounded-lg text-sm text-blue-800">
+                                        ℹ️ Se guardarán <strong>{Object.keys(documentReviews).filter(
+                                            key => documentReviews[key] && documentReviews[key] !== 'pendiente'
+                                        ).length}</strong> documentos con sus observaciones e imágenes adjuntas
+                                    </div>
+                                )}
+                        </div>
+                    </div>
 
                     <div className="lg:col-span-2 mt-6"></div>
                     <Section title="Observaciones del Administrador" icon={AlertCircle}>
