@@ -650,7 +650,7 @@ export default function RequestDetailsPage() {
                                             status={item.new_status || "Sin estado"}
                                             title={item.title || item.new_status || "Sin título"}
                                             date={formatDate(item.date || item.change_date)}
-                                            color={item.color || "green"}
+                                            color={item.new_status === "aprobado" ? "green": "red"}
                                         />
                                     ))}
                                 </div>

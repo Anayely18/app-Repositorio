@@ -3,6 +3,7 @@ export default function TimelineItem({ status, title, date, color }) {
         green: "bg-green-100 text-green-800",
         blue: "bg-blue-100 text-blue-800",
         gray: "bg-slate-100 text-slate-800",
+        red: "bg-red-100 text-red-800",
     };
 
     return (
@@ -13,8 +14,8 @@ export default function TimelineItem({ status, title, date, color }) {
             </div>
             <div className="flex-1 pb-4">
                 <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-sm text-slate-900">{title}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${colorClasses[color]}`}>{status}</span>
+                    <span className="font-medium text-sm text-slate-900 capitalize">{title}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full capitalize ${colorClasses[color]}`}>{status}</span>
                 </div>
                 <p className="text-xs text-slate-500">{date}</p>
             </div>
