@@ -30,7 +30,7 @@ function ImageModal({ show, images, currentIndex, onClose, onNext, onPrev }) {
   if (!show) return null;
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-2"
+      className="fixed inset-0 bg-black/80 bg-opacity-90 z-50 flex items-center justify-center p-2"
       onClick={onClose}
     >
       <div className="relative max-w-4xl w-full">
@@ -147,7 +147,7 @@ function DocumentCard({ doc, onOpenImage }) {
     const colors = {
       pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
-      aprobado: 'bg-green-100 text-green-800 border-green-200',
+      validado: 'bg-green-100 text-green-800 border-green-200',
       rechazado: 'bg-red-100 text-red-800 border-red-200',
       requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200'
     };
@@ -156,7 +156,7 @@ function DocumentCard({ doc, onOpenImage }) {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'aprobado':
+      case 'validado':
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
       case 'rechazado':
         return <XCircle className="w-5 h-5 text-red-600" />;
@@ -227,12 +227,12 @@ function DocumentCard({ doc, onOpenImage }) {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
                       <div className="bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                         <ZoomIn className="w-5 h-5 text-slate-800" />
                       </div>
                     </div>
-                    <div className="absolute bottom-1.5 right-1.5 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded font-mono">
+                    <div className="absolute bottom-1.5 right-1.5 bg-black/70 bg-opacity-70 text-white text-xs px-2 py-0.5 rounded font-mono">
                       {imgIndex + 1}/{doc.images.length}
                     </div>
                   </div>
@@ -247,7 +247,7 @@ function DocumentCard({ doc, onOpenImage }) {
         </div>
       )}
 
-      {doc.status === 'aprobado' && !doc.observation && (
+      {doc.status === 'validado' && !doc.observation && (
         <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -650,7 +650,6 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
       console.log('📦 Datos recibidos:', result);
 
       if (response.ok && result.success) {
-        // Transformar los datos del backend al formato esperado por el frontend
         const transformedData = {
           applicationId: result.data.application_id,
           applicationType: result.data.application_type,
@@ -692,7 +691,7 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
       <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
         <Logo />
       </div>
-      <div className="min-h-screen max-w-5xl mx-auto p-6 md:p-8een bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
+      <div className="min-h-screen max-w-5xl mx-auto p-6 md:p-8een bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
         <div className="max-w-7xl mx-auto p-6 md:p-8">
           <div className="text-center mb-8">
 
@@ -822,9 +821,6 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
   );
 }
 
-// ============================================
-// COMPONENTE PRINCIPAL: App
-// ============================================
 export default function TramiteStatusApp() {
   const [activeTab, setActiveTab] = useState('estudiante');
   const [tramiteData, setTramiteData] = useState(null);
