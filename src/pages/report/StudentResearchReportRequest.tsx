@@ -195,22 +195,22 @@ export default function StudentResearchReportRequest() {
                             </div>
                         </div>
 
-                        <h2 className="text-2xl font-bold text-slate-900 text-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
                             ¡Solicitud enviada con éxito!
                         </h2>
 
                         <p className="text-slate-500 text-center leading-relaxed mb-6">
-                            Tu solicitud para publicar el informe de investigación ha sido enviada correctamente.
-                            Recibirás una confirmación por correo electrónico y podrás hacer seguimiento de tu trámite en la plataforma.
+                            Tu solicitud para publicar tu tesis ha sido enviada correctamente.
+                            Podrás hacer seguimiento de tu trámite en la plataforma.
                         </p>
 
                         <div className="flex gap-3 mb-3">
                             <button
                                 onClick={() => {
                                     setIsModalOpen(false);
-                                    window.location.href = '/process'; 
+                                    window.location.href = '/process';
                                 }}
-                                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                                className="flex-1 px-6 py-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
                             >
                                 Ir a seguimiento
                             </button>
@@ -300,13 +300,14 @@ export default function StudentResearchReportRequest() {
                                 {student.map((num, index) => (
                                     <AddStudentForm
                                         key={index}
-                                        number={num}
+                                        number={index + 1} 
                                         onRemove={() => removeStudent(index)}
-                                        canRemove={student.length > 1}
+                                        canRemove={index !== 0} 
                                         data={studentData[index]}
                                         onChange={(data) => updateStudentData(index, data)}
                                     />
                                 ))}
+
                             </div>
                         </div>
                         <div className="border-t-2 border-gray-100 pt-8">
@@ -330,9 +331,9 @@ export default function StudentResearchReportRequest() {
                                 {advisor.map((num, index) => (
                                     <AsesorForm
                                         key={index}
-                                        number={num}
+                                        number={index+1}
                                         onRemove={() => removeAdvisor(index)}
-                                        canRemove={advisor.length > 1}
+                                        canRemove={index !== 0}
                                         data={advisorData[index]}
                                         onChange={(data) => updateAdvisorData(index, data)}
                                     />

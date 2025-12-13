@@ -24,6 +24,7 @@ export function AddTeacherForm({ number, canRemove, onRemove, data, onChange }: 
         apellidos: '',
         dni: '',
         orcid: '',
+        
         escuela: ''
     }
 
@@ -94,13 +95,15 @@ export function AddTeacherForm({ number, canRemove, onRemove, data, onChange }: 
                     value={formData.escuela}
                     onChange={(value) => handleChange('escuela', value)}
                     options={[
-                        "Ingeniería de Sistemas",
+                        "Ingeniería informática y sistemas",
                         "Ingeniería Civil",
-                        "Ingeniería Ambiental",
+                        "Ingeniería de Minas",
+                        "Ingeniería Agroindustrial",
+                        "Ingeniería Agroecológica y Desarrollo Rural",
                         "Administración",
-                        "Contabilidad",
-                        "Derecho",
-                        "Educación",
+                        "Ciencia Política y Gobernabilidad",
+                        "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
+                        "Medicina Veterinaria y zootécnia",
                     ]}
                 />
             </div>

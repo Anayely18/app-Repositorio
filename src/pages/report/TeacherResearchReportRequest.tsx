@@ -225,8 +225,8 @@ export default function TeacherResearchReportRequest() {
                         </h2>
 
                         <p className="text-slate-500 text-center leading-relaxed mb-6">
-                            Tu solicitud para publicar el informe de investigación ha sido enviada correctamente.
-                            Recibirás una confirmación por correo electrónico y podrás hacer seguimiento de tu trámite en la plataforma.
+                            Tu solicitud para publicar su informe de investigación ha sido enviada correctamente.
+                            Podrás hacer seguimiento de tu trámite en el siguiente link.
                         </p>
 
                         <div className="flex gap-3 mb-3">
@@ -258,8 +258,8 @@ export default function TeacherResearchReportRequest() {
             <main className="max-w-5xl mx-auto p-6 md:p-8">
                 <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
                     <div className="text-center mb-10 pb-6 border-b-2 border-gray-100">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                            <FileText className="w-8 h-8 text-blue-600" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                            <FileText className="w-8 h-8 text-green-600" />
                         </div>
                         <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                             Solicitud para publicar informe de investigación
@@ -326,9 +326,9 @@ export default function TeacherResearchReportRequest() {
                                 {autorTeacher.map((num, index) => (
                                     <AddTeacherForm
                                         key={index}
-                                        number={num}
+                                        number={index+1}
                                         onRemove={() => removeAutorTeacher(index)}
-                                        canRemove={autorTeacher.length > 1}
+                                        canRemove={index !== 0}
                                         data={teacherData[index]}
                                         onChange={(data) => updateTeacherData(index, data)}
                                     />
@@ -355,20 +355,16 @@ export default function TeacherResearchReportRequest() {
                                 </button>
                             </div>
                             <div className="space-y-4">
-                                {coautor.length === 0 ? (
-                                    <p className="text-gray-500 text-sm italic">No hay coautores agregados. Haga clic en "Agregar coautor" si desea añadir uno.</p>
-                                ) : (
-                                    coautor.map((num, index) => (
+                                {coautor.map((num, index) => (
                                         <CoautorForm
                                             key={index}
-                                            number={num}
+                                            number={index+1}
                                             onRemove={() => removeCoautor(index)}
-                                            canRemove={true}
+                                            canRemove={index !== 0}
                                             data={coautorData[index]}
                                             onChange={(data) => updateCoautorData(index, data)}
                                         />
-                                    ))
-                                )}
+                                    ))}
                             </div>
                         </div>
 

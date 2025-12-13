@@ -148,7 +148,7 @@ function DocumentCard({ doc, onOpenImage }) {
       pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
       validado: 'bg-green-100 text-green-800 border-green-200',
-      rechazado: 'bg-red-100 text-red-800 border-red-200',
+      observado: 'bg-red-100 text-red-800 border-red-200',
       requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200'
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
@@ -158,7 +158,7 @@ function DocumentCard({ doc, onOpenImage }) {
     switch (status) {
       case 'validado':
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-      case 'rechazado':
+      case 'observado':
         return <XCircle className="w-5 h-5 text-red-600" />;
       case 'en_revision':
         return <Clock className="w-5 h-5 text-blue-600" />;
@@ -174,7 +174,7 @@ function DocumentCard({ doc, onOpenImage }) {
       pendiente: 'Pendiente de revisión',
       en_revision: 'En revisión',
       aprobado: 'Aprobado',
-      rechazado: 'Rechazado',
+      observado: 'observado',
       requiere_correccion: 'Requiere correcciones'
     };
     return labels[status] || status;
@@ -285,7 +285,7 @@ function ConstanciaStatus({ status }) {
     );
   }
 
-  if (status === 'requiere_correccion' || status === 'rechazado') {
+  if (status === 'requiere_correccion' || status === 'observado') {
     return (
       <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6">
         <div className="flex items-start gap-4">
@@ -407,7 +407,7 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
       pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
       aprobado: 'bg-green-100 text-green-800 border-green-200',
-      rechazado: 'bg-red-100 text-red-800 border-red-200',
+      observado: 'bg-red-100 text-red-800 border-red-200',
       requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200'
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
@@ -417,7 +417,7 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     switch (status) {
       case 'aprobado':
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-      case 'rechazado':
+      case 'observado':
         return <XCircle className="w-5 h-5 text-red-600" />;
       case 'en_revision':
         return <Clock className="w-5 h-5 text-blue-600" />;
@@ -433,7 +433,7 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
       pendiente: 'Pendiente de revisión',
       en_revision: 'En revisión',
       aprobado: 'Aprobado',
-      rechazado: 'Rechazado',
+      observado: 'observado',
       requiere_correccion: 'Requiere correcciones'
     };
     return labels[status] || status;

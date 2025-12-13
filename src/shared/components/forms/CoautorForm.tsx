@@ -65,7 +65,7 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es externo o interno</span>
           </div>
-          <div className="grid grid-cols-2 w-full px-2">
+          <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
               <RadioGroupItem 
                 value="externo" 
@@ -95,7 +95,7 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es estudiante o docente</span>
           </div>
-          <div className="grid grid-cols-2 w-full px-2">
+          <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
               <RadioGroupItem 
                 value="estudiante" 
