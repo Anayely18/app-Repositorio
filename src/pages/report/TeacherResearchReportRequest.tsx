@@ -44,8 +44,8 @@ export default function TeacherResearchReportRequest() {
         setTeacherData(newData)
     }
 
-    const [coautor, setCoautor] = useState<number[]>([])
-    const [coautorData, setCoautorData] = useState<any[]>([])
+    const [coautor, setCoautor] = useState([1])
+    const [coautorData, setCoautorData] = useState<any[]>([{}])
 
     const addCoautor = () => {
         if (coautor.length === 5) {
