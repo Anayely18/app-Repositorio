@@ -149,14 +149,15 @@ function DocumentCard({ doc, onOpenImage }) {
       en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
       validado: 'bg-green-100 text-green-800 border-green-200',
       observado: 'bg-red-100 text-red-800 border-red-200',
-      requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200'
+      requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200',
+      publicado: 'bg-orange-100 text-yellow-800 border-orange-200'
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'validado':
+      case 'aprobado':
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
       case 'observado':
         return <XCircle className="w-5 h-5 text-red-600" />;
@@ -164,6 +165,8 @@ function DocumentCard({ doc, onOpenImage }) {
         return <Clock className="w-5 h-5 text-blue-600" />;
       case 'requiere_correccion':
         return <AlertCircle className="w-5 h-5 text-orange-600" />;
+      case 'publicado':
+        return <AlertCircle className="w-5 h-5 text-yellow-600" />;
       default:
         return <Clock className="w-5 h-5 text-gray-600" />;
     }
@@ -175,7 +178,8 @@ function DocumentCard({ doc, onOpenImage }) {
       en_revision: 'En revisión',
       aprobado: 'Aprobado',
       observado: 'observado',
-      requiere_correccion: 'Requiere correcciones'
+      requiere_correccion: 'Requiere correcciones',
+      publicado: 'Publicado'
     };
     return labels[status] || status;
   };
@@ -264,7 +268,12 @@ function DocumentCard({ doc, onOpenImage }) {
 // ============================================
 // COMPONENTE: Estado de Constancia
 // ============================================
-function ConstanciaStatus({ status }) {
+interface ConstanciaStatusProps {
+  status: string;
+  publicationLink?: string;
+}
+
+function ConstanciaStatus({ status, publicationLink }: ConstanciaStatusProps) {
   if (status === 'aprobado') {
     return (
       <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
@@ -322,12 +331,28 @@ function ConstanciaStatus({ status }) {
             Su trámite ya ha sido publicado en el repositorio.
           </p>
           <p className="text-sm text-blue-700 leading-relaxed">
-            Ingrese al siguiente link para
+            Ingrese al siguiente link para ver la publicación:
           </p>
+
+          {publicationLink ? (
+            <a
+              href={publicationLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline break-words"
+            >
+              {publicationLink}
+            </a>
+          ) : (
+            <p className="text-sm text-slate-600 italic mt-2">
+              Enlace no disponible.
+            </p>
+          )}
         </div>
       </div>
     </div>
   );
+
 }
 
 // ============================================
@@ -434,7 +459,8 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
       en_revision: 'En revisión',
       aprobado: 'Aprobado',
       observado: 'observado',
-      requiere_correccion: 'Requiere correcciones'
+      requiere_correccion: 'Requiere correcciones',
+      publicado: 'Publicado'
     };
     return labels[status] || status;
   };
@@ -542,7 +568,10 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                     <p className="text-sm text-slate-600">Estado de tu certificado</p>
                   </div>
                 </div>
-                <ConstanciaStatus status={tramiteData.status} />
+                <ConstanciaStatus
+                  status={tramiteData.status}
+                  publicationLink={tramiteData.publication_link}
+                />
               </div>
 
               <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
@@ -658,6 +687,7 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
           projectName: result.data.project_name,
           applicant: result.data.applicant,
           documents: result.data.documents,
+           publication_link: result.data.publication_link,
           timeline: result.data.timeline
         };
 

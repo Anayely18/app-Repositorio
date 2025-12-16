@@ -20,6 +20,7 @@ import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
 import JuryItem from "@/shared/components/JuradoItem";
 import TimelineItem from "@/shared/components/TimelineItem";
+import PublicationSection from "@/shared/components/PublicationSection";
 
 export default function RequestDetailsPage() {
     const [observation, setObservation] = useState("");
@@ -102,7 +103,8 @@ export default function RequestDetailsPage() {
             pendiente: "Pendiente de revisión",
             aprobado: "aprobado",
             observado: "observado",
-            en_revision: "En revisión"
+            en_revision: "En revisión",
+            publicado: "publicado"
         };
         const label = statusMap[status?.toLowerCase()] || status || "Estado desconocido";
         console.log(`🏷️ Estado "${status}" mapeado a "${label}"`);
@@ -115,7 +117,8 @@ export default function RequestDetailsPage() {
             pendiente: "bg-amber-100 text-amber-800",
             aprobado: "bg-green-100 text-green-800",
             observado: "bg-red-100 text-red-800",
-            en_revision: "bg-blue-100 text-blue-800"
+            en_revision: "bg-blue-100 text-amber-800",
+            publicado: "bg-blue-100 text-blue-800"
         };
         const color = colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
         console.log(`🎨 Estado "${status}" color "${color}"`);
@@ -362,7 +365,8 @@ export default function RequestDetailsPage() {
         const statusMap = {
             'aprobado': 'aprobado',
             'observado': 'observado',
-            'pendiente': 'pendiente'
+            'pendiente': 'pendiente',
+            'publicado': 'publicado'
         };
         return statusMap[frontendStatus] || 'pendiente';
     };
@@ -376,67 +380,7 @@ export default function RequestDetailsPage() {
     const ReviewSummaryPanel = () => {
         const summary = getReviewSummary();
 
-        return (
-            <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mt-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">
-                    📋 Resumen de Revisión de Documentos
-                </h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-slate-700">{summary.total}</div>
-                        <div className="text-xs text-slate-500">Total</div>
-                    </div>
-                    <div className="bg-green-100 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-green-700">{summary.approved}</div>
-                        <div className="text-xs text-green-600">Aprobados</div>
-                    </div>
-                    <div className="bg-red-100 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-red-700">{summary.rejected}</div>
-                        <div className="text-xs text-red-600">Observados</div>
-                    </div>
-                    <div className="bg-amber-100 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-amber-700">{summary.pending}</div>
-                        <div className="text-xs text-amber-600">Pendientes</div>
-                    </div>
-                </div>
-
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleSaveAllDocuments}
-                        disabled={summary.reviewed === 0}
-                        className={`flex-1 py-4 px-6 rounded-xl font-semibold text-white transition-all
-                        ${summary.reviewed === 0
-                                ? 'bg-gray-300 cursor-not-allowed'
-                                : 'bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
-                            }`}
-                    >
-                        💾 Guardar Todas las Revisiones ({summary.reviewed})
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (window.confirm('¿Limpiar todas las decisiones?')) {
-                                setDocumentReviews({});
-                                setDocumentObservations({});
-                                setDocumentImages({});
-                                setSelectedDocument(null);
-                                toast.info('Revisiones limpiadas');
-                            }
-                        }}
-                        className="px-6 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-colors"
-                    >
-                        🗑️ Limpiar
-                    </button>
-                </div>
-
-                {summary.reviewed > 0 && (
-                    <div className="mt-4 text-sm text-slate-600">
-                        Se guardarán {summary.reviewed} documentos con sus observaciones e imágenes
-                    </div>
-                )}
-            </div>
-        );
     };
 
 
@@ -506,7 +450,7 @@ export default function RequestDetailsPage() {
                                 <InfoRow label="Título" value={applicationData.project_name || "Sin título"} />
                                 <InfoRow label="Facultad" value={applicationData.professional_school || "No especificada"} />
                                 <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Tesis de posgrado'} />
-                                 {applicationData.application_type === 'docente' && (
+                                {applicationData.application_type === 'docente' && (
                                     <InfoRow label="Tipo de financiamiento" value={applicationData.funding_type || "No especificado"} />
                                 )}
                             </div>
@@ -635,14 +579,21 @@ export default function RequestDetailsPage() {
                                             status={item.new_status || "Sin estado"}
                                             title={item.title || item.new_status || "Sin título"}
                                             date={formatDate(item.date || item.change_date)}
-                                            color={item.new_status === "aprobado" ? "green" : "red"}
+                                            color={
+                                                item.new_status === "aprobado"
+                                                    ? "green"
+                                                    : item.new_status === "publicado"
+                                                        ? "blue"
+                                                        : "red"
+                                            }
                                         />
+
                                     ))}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     <TimelineItem
-                                        status="Completado"
+                                        status="aprobado"
                                         title="Solicitud enviada"
                                         date={formatDate(applicationData.created_at)}
                                         color="green"
@@ -659,10 +610,39 @@ export default function RequestDetailsPage() {
                                         date="Por definir"
                                         color="gray"
                                     />
+
                                 </div>
                             )}
                         </Section>
-                        
+                       {console.log("🔗 Enlace de publicación recibido:", applicationData.publication_link)}
+                        <div className="lg:col-span-2 mt-6">
+                            <PublicationSection
+                                applicationId={applicationData.application_id}
+                                initialLink={applicationData.publication_link}
+                                onSave={async (link) => {
+                                    const response = await fetch(
+                                        `${API_URL}/applications/${applicationData.application_id}/publication-link`
+                                        ,
+                                        {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ publicationLink: link })
+                                        }
+                                    );
+
+                                    if (!response.ok) {
+                                        throw new Error('Error al guardar');
+                                    }
+
+                                    // Actualizar estado local
+                                    setApplicationData({
+                                        ...applicationData,
+                                        publication_link: link
+                                    });
+                                }}
+                            />
+                        </div>
+
                     </div>
                 </div>
 
@@ -684,7 +664,7 @@ export default function RequestDetailsPage() {
                                                 ${decision === "aprobado" ? "border-green-300 bg-green-50" : ""}
                                                 ${decision === "observado" ? "border-red-300 bg-red-50" : ""}
                                             `}
-                                            >
+                                        >
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
@@ -863,6 +843,7 @@ export default function RequestDetailsPage() {
                                             </div>
                                             <div className="text-xs text-red-600 mt-1">✕ Observados</div>
                                         </div>
+
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center shadow-sm">
                                             <div className="text-3xl font-bold text-amber-700">
                                                 {applicationData.documents.length - Object.keys(documentReviews).filter(
