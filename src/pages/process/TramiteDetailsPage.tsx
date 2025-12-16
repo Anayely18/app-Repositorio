@@ -687,7 +687,7 @@ function SearchPage({ activeTab, onTabChange, onSearch }) {
           projectName: result.data.project_name,
           applicant: result.data.applicant,
           documents: result.data.documents,
-           publication_link: result.data.publication_link,
+        publication_link: result.data.publication_link,
           timeline: result.data.timeline
         };
 
