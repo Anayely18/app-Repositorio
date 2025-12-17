@@ -32,6 +32,7 @@ export default function RequestDetailsPage() {
     const [documentImages, setDocumentImages] = useState({});
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
+    const [showDocumentModal, setShowDocumentModal] = useState(false);
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -418,6 +419,168 @@ export default function RequestDetailsPage() {
         );
     }
 
+    const DocumentDetailsModal = () => {
+        if (!showDocumentModal) return null;
+
+        const rejectedDocs = applicationData.documents.filter(
+            doc => doc.rejection_reason || doc.status === 'rechazado' || doc.status === 'observado'
+        );
+
+        return (
+            <div className="fixed inset-0 bg-black/80 bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+                    <div className="bg-secondary px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <AlertCircle className="w-6 h-6 " />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Documentos con Observaciones</h2>
+                                <p className="text-red-100 text-sm">
+                                    {rejectedDocs.length} {rejectedDocs.length === 1 ? 'documento' : 'documentos'} con observaciones
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowDocumentModal(false)}
+                            className="text-white hover:text-secondary hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        {rejectedDocs.length > 0 ? (
+                            <div className="space-y-6">
+                                {rejectedDocs.map((doc, index) => (
+                                    <div key={index} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
+                                        <div className="bg-white border-b border-red-200 px-5 py-4">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                                        <FileText className="w-6 h-6 text-red-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-slate-900 text-lg">
+                                                            {getDocumentTypeLabel(doc.document_type)}
+                                                        </h3>
+                                                        <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                        <div className="flex items-center gap-3 mt-2">
+                                                            <span className="text-xs text-slate-500">
+                                                                📦 {doc.size_kb} KB
+                                                            </span>
+                                                            <span className="text-xs text-slate-500">
+                                                                📅 {formatDate(doc.upload_date)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
+                                                ${doc.status === 'rechazado'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-orange-100 text-orange-800'
+                                                    }`}>
+                                                    {doc.status === 'rechazado' ? '✕ Rechazado' : '⚠ Observado'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-5 py-4">
+                                            <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                                <div className="flex items-start gap-3">
+                                                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-red-900 text-sm mb-2">
+                                                            Motivo del rechazo:
+                                                        </h4>
+                                                        <p className="text-slate-700 text-sm leading-relaxed">
+                                                            {doc.rejection_reason || 'Sin descripción específica'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {doc.images && doc.images.length > 0 && (
+                                            <div className="px-5 pb-4">
+                                                <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    Capturas de pantalla ({doc.images.length})
+                                                </h4>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                    {doc.images.map((image, imgIndex) => (
+                                                        <div key={imgIndex} className="group relative">
+                                                            <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                                                                <img
+                                                                    src={`${API_URL_DOCUMENTS}/${image.image_path}`}
+                                                                    alt={image.file_name}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                                    onClick={() => window.open(`${API_URL_DOCUMENTS}/${image.image_path}`, '_blank')}
+                                                                />
+                                                            </div>
+                                                            <p className="text-xs text-slate-600 mt-1 truncate" title={image.file_name}>
+                                                                {image.file_name}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="px-5 pb-4 flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    const url = getDocumentUrl(doc.file_path);
+                                                    window.open(url, '_blank');
+                                                }}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                Ver Documento
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const url = getDocumentUrl(doc.file_path);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = doc.file_name;
+                                                    link.target = '_blank';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Descargar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                                    ¡Todos los documentos están validados!
+                                </h3>
+                                <p className="text-slate-600">No hay documentos con observaciones o rechazos.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen w-full bg-linear-to-br from-slate-50 to-blue-50 relative">
             <Toaster position="top-right" richColors closeButton />
@@ -614,7 +777,7 @@ export default function RequestDetailsPage() {
                                 </div>
                             )}
                         </Section>
-                       {console.log("🔗 Enlace de publicación recibido:", applicationData.published_thesis_link)}
+
                         <div className="lg:col-span-2 mt-6">
                             <PublicationSection
                                 applicationId={applicationData.application_id}
@@ -971,6 +1134,72 @@ export default function RequestDetailsPage() {
                     </div>
 
                 </div>
+                <div className="mt-6">
+                    <Section title="Historial Detallado de la Solicitud" icon={Calendar}>
+                        <div className="mb-4 flex justify-end">
+                            <button
+                                onClick={() => setShowDocumentModal(true)}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                            >
+                                <AlertCircle className="w-4 h-4" />
+                                Ver Documentos Observados
+                                {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length > 0 && (
+                                    <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                                        {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                        {applicationData.history && applicationData.history.length > 0 ? (
+                            <div className="overflow-x-auto rounded-lg border border-slate-200">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50">
+                                        <tr className="text-left text-slate-600">
+                                            <th className="py-3 px-4 font-semibold">Fecha</th>
+                                            <th className="py-3 px-4 font-semibold">Estado Anterior</th>
+                                            <th className="py-3 px-4 font-semibold">Estado Nuevo</th>
+                                            <th className="py-3 px-4 font-semibold">Comentario</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {[...applicationData.history]
+                                            .sort((a, b) => new Date(b.change_date) - new Date(a.change_date))
+                                            .map((item, index) => (
+                                                <tr key={index} className="hover:bg-slate-50">
+                                                    <td className="py-3 px-4 whitespace-nowrap">
+                                                        <div className="text-sm font-medium text-slate-900">
+                                                            {formatDate(item.change_date)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.previous_status)}`}>
+                                                            {getStatusLabel(item.previous_status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.new_status)}`}>
+                                                            {getStatusLabel(item.new_status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 max-w-xs">
+                                                        <p className="text-slate-600 text-xs line-clamp-2">
+                                                            {item.comment || item.observations || "—"}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                <p className="text-slate-500">No hay historial registrado</p>
+                            </div>
+                        )}
+                    </Section>
+                </div>
+                <DocumentDetailsModal />
             </main>
         </div>
     );
