@@ -364,10 +364,12 @@ export default function RequestDetailsPage() {
 
     const mapStatusToDatabase = (frontendStatus) => {
         const statusMap = {
-            'aprobado': 'aprobado',
-            'observado': 'observado',
+            'aprobado': 'validado',
+            'observado': 'rechazado',
             'pendiente': 'pendiente',
-            'publicado': 'publicado'
+            'validado': 'validado',       // ✅ Por si acaso viene directo
+            'rechazado': 'rechazado'      // ✅ Por si acaso viene directo
+
         };
         return statusMap[frontendStatus] || 'pendiente';
     };
