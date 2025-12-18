@@ -20,7 +20,11 @@ import {
     GraduationCap,
     Users,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    FileX,
+    History,
+    ChevronUp,
+    ChevronDown
 } from 'lucide-react';
 
 // ============================================
@@ -139,18 +143,17 @@ function ApplicantInfo({ applicant, createdAt }) {
     );
 }
 
-// ============================================
-// COMPONENTE: Tarjeta de Documento
-// ============================================
 function DocumentCard({ doc, onOpenImage }) {
     const getStatusColor = (status) => {
         const colors = {
             pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
             en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
             validado: 'bg-green-100 text-green-800 border-green-200',
+            aprobado: 'bg-green-100 text-green-800 border-green-200',
             observado: 'bg-red-100 text-red-800 border-red-200',
+            rechazado: 'bg-red-100 text-red-800 border-red-200',
             requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200',
-            publicado: 'bg-orange-100 text-yellow-800 border-orange-200'
+            publicado: 'bg-purple-100 text-purple-800 border-purple-200'
         };
         return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
@@ -158,15 +161,17 @@ function DocumentCard({ doc, onOpenImage }) {
     const getStatusIcon = (status) => {
         switch (status) {
             case 'aprobado':
+            case 'validado':
                 return <CheckCircle2 className="w-5 h-5 text-green-600" />;
             case 'observado':
+            case 'rechazado':
                 return <XCircle className="w-5 h-5 text-red-600" />;
             case 'en_revision':
                 return <Clock className="w-5 h-5 text-blue-600" />;
             case 'requiere_correccion':
                 return <AlertCircle className="w-5 h-5 text-orange-600" />;
             case 'publicado':
-                return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+                return <CheckCircle2 className="w-5 h-5 text-purple-600" />;
             default:
                 return <Clock className="w-5 h-5 text-gray-600" />;
         }
@@ -177,12 +182,19 @@ function DocumentCard({ doc, onOpenImage }) {
             pendiente: 'Pendiente de revisión',
             en_revision: 'En revisión',
             aprobado: 'Aprobado',
-            observado: 'observado',
+            validado: 'Validado',
+            observado: 'Observado',
+            rechazado: 'Rechazado',
             requiere_correccion: 'Requiere correcciones',
             publicado: 'Publicado'
         };
         return labels[status] || status;
     };
+
+    // Determinar si debe mostrar observaciones
+    const shouldShowObservations = doc.status === 'observado' || 
+                                   doc.status === 'rechazado' || 
+                                   doc.status === 'requiere_correccion';
 
     return (
         <div className="border border-slate-200 rounded-xl p-4 text-sm">
@@ -199,7 +211,8 @@ function DocumentCard({ doc, onOpenImage }) {
                 </span>
             </div>
 
-            {doc.observation && (
+            {/* SOLO MOSTRAR OBSERVACIONES SI EL ESTADO LO REQUIERE */}
+            {shouldShowObservations && doc.observation && (
                 <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-5 space-y-4">
                     <div className="flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -248,10 +261,14 @@ function DocumentCard({ doc, onOpenImage }) {
                             </p>
                         </div>
                     )}
+                    
+                    {/* Historial de rechazos con desplegable */}
+                    <RejectionHistorySection rejectionHistory={doc.rejection_history} />
                 </div>
             )}
 
-            {doc.status === 'validado' && !doc.observation && (
+            {/* Mensaje cuando está aprobado/validado */}
+            {(doc.status === 'validado' || doc.status === 'aprobado') && (
                 <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                     <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -264,10 +281,6 @@ function DocumentCard({ doc, onOpenImage }) {
         </div>
     );
 }
-
-// ============================================
-// COMPONENTE: Estado de Constancia
-// ============================================
 interface ConstanciaStatusProps {
     status: string;
     publicationLink?: string;
@@ -359,6 +372,9 @@ function ConstanciaStatus({ status, publicationLink }: ConstanciaStatusProps) {
 // COMPONENTE: Línea de Tiempo
 // ============================================
 function Timeline({ timeline }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [showAll, setShowAll] = useState(false);
+
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('es-PE', {
             day: '2-digit',
@@ -367,34 +383,55 @@ function Timeline({ timeline }) {
         });
     };
 
+    const visibleTimeline = showAll ? timeline : timeline.slice(0, 3);
+    const hasMore = timeline.length > 3;
+
     return (
         <div className="space-y-4">
-            {timeline.map((item, index) => (
-                <div key={index} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                        <div className="w-4 h-4 rounded-full bg-blue-600 border-4 border-blue-100 shadow-sm"></div>
-                        {index < timeline.length - 1 && (
-                            <div className="w-0.5 h-full bg-slate-200 my-1"></div>
-                        )}
-                    </div>
-                    <div className="flex-1 pb-6">
-                        <div className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors">
-                            <p className="font-bold text-slate-900 mb-1 text-base">{item.status}</p>
-                            <p className="text-sm text-slate-600 mb-2 leading-relaxed">{item.description}</p>
-                            <p className="text-xs text-slate-500 font-mono bg-white inline-block px-2 py-1 rounded">
-                                {formatDate(item.date)}
-                            </p>
+            <div className="space-y-4">
+                {visibleTimeline.map((item, index) => (
+                    <div key={index} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                            <div className="w-4 h-4 rounded-full bg-blue-600 border-4 border-blue-100 shadow-sm"></div>
+                            {index < visibleTimeline.length - 1 && (
+                                <div className="w-0.5 h-full bg-slate-200 my-1"></div>
+                            )}
+                        </div>
+                        <div className="flex-1 pb-6">
+                            <div className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors">
+                                <p className="font-bold text-slate-900 mb-1 text-base">{item.status}</p>
+                                <p className="text-sm text-slate-600 mb-2 leading-relaxed">{item.description}</p>
+                                <p className="text-xs text-slate-500 font-mono bg-white inline-block px-2 py-1 rounded">
+                                    {formatDate(item.date)}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                ))}
+            </div>
+            {hasMore && (
+                <button
+                    onClick={() => setShowAll(!showAll)}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-lg transition-colors text-sm font-semibold text-slate-700"
+                >
+                    <Calendar className="w-4 h-4" />
+                    {showAll ? (
+                        <>
+                            Mostrar menos
+                            <ChevronUp className="w-4 h-4" />
+                        </>
+                    ) : (
+                        <>
+                            Ver {timeline.length - 3} registros más
+                            <ChevronDown className="w-4 h-4" />
+                        </>
+                    )}
+                </button>
+            )}
         </div>
     );
 }
 
-// ============================================
-// COMPONENTE: Página de Detalles del Trámite
-// ============================================
 function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const [showImageModal, setShowImageModal] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -554,7 +591,8 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                             </div>
                         </div>
                         <div className='pb-8'>
-                            <HistorialTable timeline={tramiteData.timeline} />
+                            {/*<HistorialTable timeline={tramiteData.timeline} />*/}
+                            {/*<RejectionHistorySection rejectionHistory={doc.rejection_history} /> */}
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
@@ -988,3 +1026,132 @@ function HistorialTable({ timeline }) {
         </div>
     );
 }
+
+
+function RejectionHistorySection({ rejectionHistory }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    
+    if (!rejectionHistory || rejectionHistory.length === 0) {
+        return null;
+    }
+
+    const formatDateShort = (dateString) => {
+        return new Date(dateString).toLocaleDateString('es-PE', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    const formatTime = (dateString) => {
+        return new Date(dateString).toLocaleTimeString('es-PE', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    };
+
+    return (
+        <div className="mt-6 border-t-2 border-orange-200 pt-6">
+            {/* Header clickeable */}
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between gap-3 mb-4 hover:bg-orange-50 p-3 rounded-lg transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                        <History className="w-5 h-5 text-orange-700" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="text-base font-bold text-orange-900">
+                            Historial Completo de Rechazos
+                        </h3>
+                        <p className="text-xs text-orange-700">
+                            {rejectionHistory.length} {rejectionHistory.length === 1 ? 'rechazo registrado' : 'rechazos registrados'}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-orange-700 font-medium">
+                        {isExpanded ? 'Ocultar' : 'Ver detalles'}
+                    </span>
+                    {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-orange-700" />
+                    ) : (
+                        <ChevronDown className="w-5 h-5 text-orange-700" />
+                    )}
+                </div>
+            </button>
+            
+            {/* Contenido desplegable */}
+            {isExpanded && (
+                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                    <div className="overflow-x-auto rounded-lg border-2 border-orange-200">
+                        <table className="w-full text-sm bg-white">
+                            <thead className="bg-orange-50 border-b-2 border-orange-200">
+                                <tr className="text-left">
+                                    <th className="py-3 px-4 font-semibold text-orange-900 w-16">#</th>
+                                    <th className="py-3 px-4 font-semibold text-orange-900">Fecha y Hora</th>
+                                    <th className="py-3 px-4 font-semibold text-orange-900">Motivo del Rechazo</th>
+                                    <th className="py-3 px-4 font-semibold text-orange-900 w-32">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-orange-100">
+                                {rejectionHistory.map((rejection, index) => (
+                                    <tr 
+                                        key={index} 
+                                        className="hover:bg-orange-50 transition-colors"
+                                    >
+                                        <td className="py-4 px-4">
+                                            <div className="flex items-center justify-center">
+                                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">
+                                                    {rejectionHistory.length - index}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-medium text-slate-900">
+                                                        {formatDateShort(rejection.rejected_at)}
+                                                    </p>
+                                                    <p className="text-xs text-slate-600 font-mono">
+                                                        {formatTime(rejection.rejected_at)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <div className="flex items-start gap-2">
+                                                <FileX className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                                                <p className="text-slate-700 leading-relaxed">
+                                                    {rejection.reason || 'Sin motivo especificado'}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                                <XCircle className="w-3.5 h-3.5" />
+                                                Rechazado
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <p>
+                            Los rechazos están ordenados del más reciente al más antiguo. 
+                            El rechazo #{rejectionHistory.length} es el más antiguo y el #1 es el más reciente.
+                        </p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
