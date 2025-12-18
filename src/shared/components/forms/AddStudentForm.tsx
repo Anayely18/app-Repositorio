@@ -1,5 +1,5 @@
 import { FormInput } from "./FormInput";
-import { User, CreditCard, Phone, Building2, Trash2,Mail } from "lucide-react"
+import { User, CreditCard, Phone, Building2, Trash2, Mail } from "lucide-react"
 import { FormSelect } from "./FormSelect";
 
 interface StudentData {
@@ -26,7 +26,7 @@ export function AddStudentForm({
   data = {},
   onChange
 }: AddStudentFormProps) {
-  
+
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
       <div className="flex items-center justify-between mb-2">
@@ -88,13 +88,15 @@ export function AddStudentForm({
           icon={Building2}
           label="Escuela Profesional"
           options={[
-            "Ingeniería de Sistemas",
+            "Ingeniería informática y sistemas",
             "Ingeniería Civil",
-            "Ingeniería Ambiental",
+            "Ingeniería de Minas",
+            "Ingeniería Agroindustrial",
+            "Ingeniería Agroecológica y Desarrollo Rural",
             "Administración",
-            "Contabilidad",
-            "Derecho",
-            "Educación",
+            "Ciencia Política y Gobernabilidad",
+            "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
+            "Medicina Veterinaria y zootécnia",
           ]}
           value={data.escuela || ""}
           onChange={(value) => onChange({ ...data, escuela: value })}

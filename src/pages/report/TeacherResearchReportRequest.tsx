@@ -4,13 +4,14 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader, X } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 
 export default function TeacherResearchReportRequest() {
     const [isLoading, setIsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false)
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
         format: false,
@@ -43,8 +44,8 @@ export default function TeacherResearchReportRequest() {
         setTeacherData(newData)
     }
 
-    const [coautor, setCoautor] = useState<number[]>([])
-    const [coautorData, setCoautorData] = useState<any[]>([])
+    const [coautor, setCoautor] = useState([1])
+    const [coautorData, setCoautorData] = useState<any[]>([{}])
 
     const addCoautor = () => {
         if (coautor.length === 5) {
@@ -155,18 +156,18 @@ export default function TeacherResearchReportRequest() {
             const result = await response.json();
 
             if (result.success) {
-                toastService.success('Solicitud enviada exitosamente');
-                
+                setIsModalOpen(true);
+
                 // Guardar ID para referencia
                 const applicationId = result.data.applicationId;
                 sessionStorage.setItem('lastApplicationId', applicationId);
-                
+
                 resetForm();
-                
+
                 // Redirigir después de 1.5 segundos
-                setTimeout(() => {
+                /*setTimeout(() => {
                     window.location.href = `/dashboard?tab=pendientes&ref=${applicationId}`;
-                }, 1500);
+                }, 1500);*/
             } else {
                 toastService.error(result.message || 'Error al enviar solicitud');
             }
@@ -202,14 +203,63 @@ export default function TeacherResearchReportRequest() {
 
     return (
         <div className="min-h-screen w-full bg-linear-to-br from-gray-50 to-blue-50">
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            aria-label="Cerrar"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="w-10 h-10 text-emerald-600 stroke-[3]" />
+                            </div>
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-slate-900 text-center mb-4">
+                            ¡Solicitud enviada con éxito!
+                        </h2>
+
+                        <p className="text-slate-500 text-center leading-relaxed mb-6">
+                            Tu solicitud para publicar su informe de investigación ha sido enviada correctamente.
+                            Podrás hacer seguimiento de tu trámite en el siguiente link.
+                        </p>
+
+                        <div className="flex gap-3 mb-3">
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    window.location.href = '/process';
+                                }}
+                                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Ir a seguimiento
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
                 <Logo />
             </div>
             <main className="max-w-5xl mx-auto p-6 md:p-8">
                 <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
                     <div className="text-center mb-10 pb-6 border-b-2 border-gray-100">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                            <FileText className="w-8 h-8 text-blue-600" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                            <FileText className="w-8 h-8 text-green-600" />
                         </div>
                         <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                             Solicitud para publicar informe de investigación
@@ -276,9 +326,9 @@ export default function TeacherResearchReportRequest() {
                                 {autorTeacher.map((num, index) => (
                                     <AddTeacherForm
                                         key={index}
-                                        number={num}
+                                        number={index+1}
                                         onRemove={() => removeAutorTeacher(index)}
-                                        canRemove={autorTeacher.length > 1}
+                                        canRemove={index !== 0}
                                         data={teacherData[index]}
                                         onChange={(data) => updateTeacherData(index, data)}
                                     />
@@ -305,20 +355,16 @@ export default function TeacherResearchReportRequest() {
                                 </button>
                             </div>
                             <div className="space-y-4">
-                                {coautor.length === 0 ? (
-                                    <p className="text-gray-500 text-sm italic">No hay coautores agregados. Haga clic en "Agregar coautor" si desea añadir uno.</p>
-                                ) : (
-                                    coautor.map((num, index) => (
+                                {coautor.map((num, index) => (
                                         <CoautorForm
                                             key={index}
-                                            number={num}
+                                            number={index+1}
                                             onRemove={() => removeCoautor(index)}
-                                            canRemove={true}
+                                            canRemove={index !== 0}
                                             data={coautorData[index]}
                                             onChange={(data) => updateCoautorData(index, data)}
                                         />
-                                    ))
-                                )}
+                                    ))}
                             </div>
                         </div>
 

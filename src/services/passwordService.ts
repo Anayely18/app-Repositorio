@@ -37,6 +37,7 @@ export const passwordService = {
 
     async verifyCode(email: string, code: string) {
         try {
+            console.log("Verificando código:", { email, code });
             const response = await fetch(`${API_URL}/auth/verify-code`, {
                 method: "POST",
                 headers: {

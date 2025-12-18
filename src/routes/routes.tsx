@@ -7,6 +7,8 @@ import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRe
 import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
 import Layout from "@/shared/ui/layout/Layout"
 import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage"; 
+import TramiteStatusApp from "@/pages/process/TramiteDetailsPage"
+import Profile from "@/pages/auth/Profile"
 
 export const routes = [
     {
@@ -34,6 +36,10 @@ export const routes = [
         element: <Home />
     },
     {
+        path: '/process',
+        element: <TramiteStatusApp />
+    },
+    {
         path: '/dashboard',
         element: <Layout />,
         children: [
@@ -44,7 +50,11 @@ export const routes = [
             {
             path: "details/:id", 
             element: <RequestDetailsPage />
-            }
+            },
+            {
+            path: "profile", 
+            element: <Profile />
+            },
         ]
     }
 ]

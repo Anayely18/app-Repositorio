@@ -32,21 +32,22 @@ export default function ListThesisWorks() {
     const navigate = useNavigate();
 
     const professionalSchools = [
-        "Ingeniería de Sistemas",
+        "Ingeniería informática y sistemas",
         "Ingeniería Civil",
-        "Ingeniería Ambiental",
+        "Ingeniería de Minas",
+        "Ingeniería Agroindustrial",
+        "Ingeniería Agroecológica y Desarrollo Rural",
         "Administración",
-        "Contabilidad",
-        "Derecho",
-        "Educación",
+        "Ciencia Política y Gobernabilidad",
+        "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
+        "Medicina Veterinaria y zootécnia",
     ];
 
     const statusOptions = [
         { value: "pendiente", label: "Pendiente" },
-        { value: "en_revision", label: "En Revisión" },
         { value: "aprobado", label: "Aprobado" },
-        { value: "rechazado", label: "Rechazado" },
-        { value: "requiere_correccion", label: "Requiere Corrección" },
+        { value: "observado", label: "Observado" },
+        { value: "publicado", label: "publicado" },
     ];
 
     useEffect(() => {
@@ -140,13 +141,6 @@ export default function ListThesisWorks() {
         });
     };
 
-    const getObservationStyle = (observation: string | null): string => {
-        if (!observation) return "bg-gray-100 text-gray-800";
-        if (observation.includes("Aprobado")) return "bg-green-100 text-green-800";
-        if (observation.includes("completos")) return "bg-blue-100 text-blue-800";
-        if (observation.includes("Falta")) return "bg-red-100 text-red-800";
-        return "bg-amber-100 text-amber-800";
-    };
 
     const handleViewDetails = (id: string) => {
         console.log("Ver detalles de:", id);
@@ -155,6 +149,26 @@ export default function ListThesisWorks() {
 
     const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
     const indexOfLastItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    const normalizeStatus = (status?: string | null) =>
+        (status || "").toLowerCase().trim();
+
+    const getStatusLabel = (status?: string | null) => {
+        const s = normalizeStatus(status);
+        return statusOptions.find((x) => x.value === s)?.label || status || "—";
+    };
+
+    const getStatusStyle = (status?: string | null) => {
+        const s = normalizeStatus(status);
+
+        if (s === "pendiente") return "bg-amber-100 text-amber-800 border border-amber-200";
+        if (s === "aprobado") return "bg-green-100 text-green-800 border border-green-200";
+        if (s === "observado") return "bg-red-100 text-red-800 border border-red-200";
+        if (s === "publicado") return "bg-indigo-100 text-indigo-800 border border-indigo-200";
+
+        return "bg-slate-100 text-slate-700 border border-slate-200";
+    };
+
 
     return (
         <div className="overflow-y-auto min-h-screen bg-slate-50">
@@ -171,21 +185,19 @@ export default function ListThesisWorks() {
                 <div className="flex items-center gap-4 mb-6">
                     <button
                         onClick={() => handleTabChange("students")}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm text-xs ${
-                            activeTab === "students"
-                                ? "bg-blue-600 text-white shadow-lg scale-105"
-                                : "bg-white text-slate-600 hover:bg-blue-50 border border-slate-200"
-                        }`}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm text-xs ${activeTab === "students"
+                            ? "bg-blue-600 text-white shadow-lg scale-105"
+                            : "bg-white text-slate-600 hover:bg-blue-50 border border-slate-200"
+                            }`}
                     >
                         Estudiantes
                     </button>
                     <button
                         onClick={() => handleTabChange("teachers")}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm text-xs ${
-                            activeTab === "teachers"
-                                ? "bg-emerald-600 text-white shadow-lg scale-105"
-                                : "bg-white text-slate-600 hover:bg-emerald-50 border border-slate-200"
-                        }`}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm text-xs ${activeTab === "teachers"
+                            ? "bg-emerald-600 text-white shadow-lg scale-105"
+                            : "bg-white text-slate-600 hover:bg-emerald-50 border border-slate-200"
+                            }`}
                     >
                         Docentes
                     </button>
@@ -200,7 +212,7 @@ export default function ListThesisWorks() {
                                     : "Trabajos docentes"}
                             </span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="relative">
                                 <input
@@ -338,14 +350,12 @@ export default function ListThesisWorks() {
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Apellidos
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                Estado
-                                            </th>
+
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Escuela Profesional
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                Observación
+                                                Estado
                                             </th>
                                             <th className="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">
                                                 Acciones
@@ -365,7 +375,7 @@ export default function ListThesisWorks() {
                                         ) : (
                                             data.map((item) => (
                                                 <tr
-                                                    key={item.id }
+                                                    key={item.id}
                                                     className="hover:bg-slate-50 transition-colors"
                                                 >
                                                     <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
@@ -375,31 +385,26 @@ export default function ListThesisWorks() {
                                                         {item.name}
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-800 font-medium">
-                                                        {item.surname }
+                                                        {item.surname}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
-                                                        {item.status }
-                                                    </td>
+
                                                     <td className="px-6 py-4 text-sm text-slate-600">
                                                         {item.professionalSchool}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                                        <span
-                                                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getObservationStyle(
-                                                                item.observations || null
-                                                            )}`}
-                                                        >
-                                                            {item.observations || "Sin observación"}
+                                                    <td className="px-6 py-4 text-sm whitespace-nowrap">
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyle(item.status)}`}>
+                                                            {getStatusLabel(item.status)}
                                                         </span>
                                                     </td>
+
+
                                                     <td className="px-6 py-4 text-center">
                                                         <button
-                                                            onClick={() => handleViewDetails(item.id )}
-                                                            className={`inline-flex items-center gap-2 px-2 py-2 rounded-lg transition-all transform hover:scale-105 shadow-sm ${
-                                                                activeTab === "students"
-                                                                    ? "bg-blue-600 hover:bg-blue-700"
-                                                                    : "bg-emerald-600 hover:bg-emerald-700"
-                                                            }`}
+                                                            onClick={() => handleViewDetails(item.id)}
+                                                            className={`inline-flex items-center gap-2 px-2 py-2 rounded-lg transition-all transform hover:scale-105 shadow-sm ${activeTab === "students"
+                                                                ? "bg-blue-600 hover:bg-blue-700"
+                                                                : "bg-emerald-600 hover:bg-emerald-700"
+                                                                }`}
                                                         >
                                                             <Eye size={16} className="text-white" />
                                                         </button>
@@ -463,13 +468,12 @@ export default function ListThesisWorks() {
                                                         <button
                                                             key={i}
                                                             onClick={() => handlePageChange(i)}
-                                                            className={`px-3 py-2 rounded-lg font-medium transition-all text-xs ${
-                                                                currentPage === i
-                                                                    ? activeTab === "students"
-                                                                        ? "bg-blue-600 text-white"
-                                                                        : "bg-emerald-600 text-white"
-                                                                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                                                            }`}
+                                                            className={`px-3 py-2 rounded-lg font-medium transition-all text-xs ${currentPage === i
+                                                                ? activeTab === "students"
+                                                                    ? "bg-blue-600 text-white"
+                                                                    : "bg-emerald-600 text-white"
+                                                                : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                                                                }`}
                                                         >
                                                             {i}
                                                         </button>

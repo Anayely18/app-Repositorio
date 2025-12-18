@@ -3,38 +3,31 @@ import { User, CreditCard, FileText, Building2, Trash2 } from "lucide-react"
 import { FormSelect } from "./FormSelect";
 
 interface TeacherData {
-    nombres: string
-    apellidos: string
-    dni: string
-    orcid: string
-    escuela: string
+    nombres ?: string
+    apellidos?: string
+    dni?: string
+    orcid?: string
+    escuela?: string
 }
 
 interface AddTeacherFormProps {
     number: number
     canRemove: boolean
     onRemove: () => void
-    data?: TeacherData
-    onChange?: (data: TeacherData) => void
+    data: TeacherData
+    onChange: (data: TeacherData) => void
 }
 
-export function AddTeacherForm({ number, canRemove, onRemove, data, onChange }: AddTeacherFormProps) {
-    const formData: TeacherData = data || {
-        nombres: '',
-        apellidos: '',
-        dni: '',
-        orcid: '',
-        escuela: ''
-    }
-
-    const handleChange = (field: keyof TeacherData, value: string) => {
-        if (onChange) {
-            onChange({ ...formData, [field]: value })
-        }
-    }
-
+export function AddTeacherForm({ 
+    number, 
+    canRemove, 
+    onRemove, 
+    data ={}, 
+    onChange 
+}: AddTeacherFormProps) {
+   
     return (
-        <div className="border border-gray-200 rounded-xl p-4 md:p-5 bg-gray-50/60 space-y-4">
+        <div className="border-2 border-gray-200 rounded-xl p-6 flex flex-col gap-y-6 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
             <div className="flex items-center justify-between mb-2">
                 <h4 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -60,16 +53,16 @@ export function AddTeacherForm({ number, canRemove, onRemove, data, onChange }: 
                     label="Nombres"
                     type="text"
                     placeholder="Ingresa tus nombres"
-                    value={formData.nombres}
-                    onChange={(e) => handleChange('nombres', e.target.value)}
+                    value={data.nombres || ""}
+                    onChange={(e) => onChange({... data, nombres: e.target.value})}
                 />
                 <FormInput
                     icon={User}
                     label="Apellidos"
                     type="text"
                     placeholder="Ingresa tus apellidos"
-                    value={formData.apellidos}
-                    onChange={(e) => handleChange('apellidos', e.target.value)}
+                    value={data.apellidos || ""}
+                    onChange={(e) => onChange({... data, apellidos: e.target.value})}
                 />
                 <FormInput
                     icon={CreditCard}
@@ -77,30 +70,32 @@ export function AddTeacherForm({ number, canRemove, onRemove, data, onChange }: 
                     type="text"
                     placeholder="12345678"
                     maxLength={8}
-                    value={formData.dni}
-                    onChange={(e) => handleChange('dni', e.target.value)}
+                    value={data.dni || ""}
+                    onChange={(e) => onChange({... data, dni: e.target.value})}
                 />
                 <FormInput
                     icon={FileText}
                     label="URL de ORCID"
                     type="text"
                     placeholder="0000-0000-0000-0000"
-                    value={formData.orcid}
-                    onChange={(e) => handleChange('orcid', e.target.value)}
+                    value={data.orcid || ""}
+                    onChange={(e) => onChange({... data, orcid: e.target.value})}
                 />
                 <FormSelect
                     icon={Building2}
                     label="Escuela Profesional"
-                    value={formData.escuela}
-                    onChange={(value) => handleChange('escuela', value)}
+                    value={data.escuela || ""}
+                    onChange={(value) => onChange({... data, escuela: value})}
                     options={[
-                        "Ingeniería de Sistemas",
+                        "Ingeniería informática y sistemas",
                         "Ingeniería Civil",
-                        "Ingeniería Ambiental",
+                        "Ingeniería de Minas",
+                        "Ingeniería Agroindustrial",
+                        "Ingeniería Agroecológica y Desarrollo Rural",
                         "Administración",
-                        "Contabilidad",
-                        "Derecho",
-                        "Educación",
+                        "Ciencia Política y Gobernabilidad",
+                        "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
+                        "Medicina Veterinaria y zootécnia",
                     ]}
                 />
             </div>

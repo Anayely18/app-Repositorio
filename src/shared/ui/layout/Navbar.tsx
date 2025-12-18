@@ -1,4 +1,5 @@
 import { Bell, Search, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Navbar() {
     return (
@@ -22,9 +23,9 @@ export default function Navbar() {
                     <span className='absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full'></span>
                 </button>
                 <button className='flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors'>
-                    <div className='w-8 h-8 rounded-full bg-white/20 flex items-center justify-center'>
+                    <Link to="/dashboard/profile" className='w-8 h-8 rounded-full bg-white/20 flex items-center justify-center'>
                         <User size={18} />
-                    </div>
+                    </Link>
                     <span className='hidden md:block text-sm font-medium'>Admin</span>
                 </button>
             </div>

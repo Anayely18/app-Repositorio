@@ -51,8 +51,8 @@ export default function Home() {
                 </div>
 
                 <div className="max-w-2xl mx-auto">
-                    <a
-                        href="#"
+                    <Link
+                        to="/process"
                         className="group bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:bg-black"
                     >
                         <div className="p-8 flex items-center gap-6">
@@ -71,7 +71,7 @@ export default function Home() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                         </div>
-                    </a>
+                    </Link>
                 </div>
             </main>
         </div>

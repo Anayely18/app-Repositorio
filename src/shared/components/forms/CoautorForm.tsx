@@ -4,37 +4,31 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 
 interface CoautorData {
-  tipoUbicacion: 'externo' | 'interno' | ''
-  tipoRol: 'estudiante' | 'docente' | ''
-  nombre: string
-  apellido: string
-  dni: string
-  orcid: string
+  tipoUbicacion?: 'externo' | 'interno' 
+  tipoRol?: 'estudiante' | 'docente'
+  nombre?: string
+  apellido?: string
+  dni?: string
+  orcid?: string
 }
 
 interface CoautorFormProps {
   number: number
   onRemove: () => void
   canRemove: boolean
-  data?: CoautorData
-  onChange?: (data: CoautorData) => void
+  data: CoautorData
+  onChange: (data: CoautorData) => void
 }
 
-export function CoautorForm({ number, onRemove, canRemove, data, onChange }: CoautorFormProps) {
-  const formData: CoautorData = data || {
-    tipoUbicacion: '',
-    tipoRol: '',
-    nombre: '',
-    apellido: '',
-    dni: '',
-    orcid: ''
-  }
+export function CoautorForm({ 
+  number, 
+  onRemove, 
+  canRemove, 
+  data={}, 
+  onChange 
 
-  const handleChange = (field: keyof CoautorData, value: string) => {
-    if (onChange) {
-      onChange({ ...formData, [field]: value })
-    }
-  }
+}: CoautorFormProps) {
+  
 
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 flex flex-col gap-y-6 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
@@ -58,14 +52,14 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
 
       <div>
         <RadioGroup 
-          value={formData.tipoUbicacion} 
-          onValueChange={(value) => handleChange('tipoUbicacion', value)}
+          value={data.tipoUbicacion || ""} 
+          onValueChange={(value) => onChange({...data, tipoUbicacion: value as 'externo' | 'interno'})}
         >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es externo o interno</span>
           </div>
-          <div className="grid grid-cols-2 w-full px-2">
+          <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
               <RadioGroupItem 
                 value="externo" 
@@ -88,14 +82,14 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
 
       <div>
         <RadioGroup 
-          value={formData.tipoRol} 
-          onValueChange={(value) => handleChange('tipoRol', value)}
+          value={data.tipoRol||"  "} 
+          onValueChange={(value) => onChange({...data, tipoRol: value as 'estudiante' | 'docente'})}
         >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es estudiante o docente</span>
           </div>
-          <div className="grid grid-cols-2 w-full px-2">
+          <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
               <RadioGroupItem 
                 value="estudiante" 
@@ -123,8 +117,8 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Ejem: Gustavo"
-          value={formData.nombre}
-          onChange={(e) => handleChange('nombre', e.target.value)}
+          value={data.nombre|| ""}
+          onChange={(e) => onChange({ ...data, nombre: e.target.value })}
         />
         <FormInput
           icon={User}
@@ -132,8 +126,8 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
           sublabel="(En mayúsculas y minúsculas según corresponda)"
           type="text"
           placeholder="Ejem:vRobles Rojas"
-          value={formData.apellido}
-          onChange={(e) => handleChange('apellido', e.target.value)}
+          value={data.apellido || ""}
+          onChange={(e) => onChange({ ...data, apellido: e.target.value })}
         />
         <FormInput
           icon={CreditCard}
@@ -141,16 +135,16 @@ export function CoautorForm({ number, onRemove, canRemove, data, onChange }: Coa
           type="text"
           placeholder="Ejem: 78345758"
           maxLength={8}
-          value={formData.dni}
-          onChange={(e) => handleChange('dni', e.target.value)}
+          value={data.dni || ""}
+          onChange={(e) => onChange({ ...data, dni: e.target.value })}
         />
         <FormInput
           icon={FileText}
           label="Url de ORCID"
           type="text"
           placeholder="0000-0000-0000-0000"
-          value={formData.orcid}
-          onChange={(e) => handleChange('orcid', e.target.value)}
+          value={data.orcid || ""}
+          onChange={(e) => onChange({ ...data, orcid: e.target.value })}
         />
       </div>
     </div>

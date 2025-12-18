@@ -4,12 +4,12 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X } from "lucide-react"
 import { useState } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
-
 export default function StudentResearchReportRequest() {
+    const [isModalOpen, setIsModalOpen] = useState(false)
 
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
@@ -135,7 +135,7 @@ export default function StudentResearchReportRequest() {
             const result = await response.json();
 
             if (result.success) {
-                toastService.success('Solicitud enviada exitosamente');
+                setIsModalOpen(true);
                 resetForm();
             } else {
                 toastService.error(result.message || 'Error al enviar solicitud');
@@ -178,6 +178,55 @@ export default function StudentResearchReportRequest() {
 
     return (
         <div className="min-h-screen w-full bg-linear-to-br from-gray-50 to-blue-50">
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            aria-label="Cerrar"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="w-10 h-10 text-emerald-600 stroke-[3]" />
+                            </div>
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
+                            ¡Solicitud enviada con éxito!
+                        </h2>
+
+                        <p className="text-slate-500 text-center leading-relaxed mb-6">
+                            Tu solicitud para publicar tu tesis ha sido enviada correctamente.
+                            Podrás hacer seguimiento de tu trámite en la plataforma.
+                        </p>
+
+                        <div className="flex gap-3 mb-3">
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    window.location.href = '/process';
+                                }}
+                                className="flex-1 px-6 py-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Ir a seguimiento
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
                 <Logo />
             </div>
@@ -187,7 +236,7 @@ export default function StudentResearchReportRequest() {
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                             <FileText className="w-8 h-8 text-blue-600" />
                         </div>
-                        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                        <h2 className=" md:textext-lgt-xl font-bold text-gray-900 mb-2">
                             Solicitud para publicar informe de investigación
                         </h2>
                         <p className="text-sm text-gray-500 font-medium">Tesis</p>
@@ -251,13 +300,14 @@ export default function StudentResearchReportRequest() {
                                 {student.map((num, index) => (
                                     <AddStudentForm
                                         key={index}
-                                        number={num}
+                                        number={index + 1} 
                                         onRemove={() => removeStudent(index)}
-                                        canRemove={student.length > 1}
+                                        canRemove={index !== 0} 
                                         data={studentData[index]}
                                         onChange={(data) => updateStudentData(index, data)}
                                     />
                                 ))}
+
                             </div>
                         </div>
                         <div className="border-t-2 border-gray-100 pt-8">
@@ -281,77 +331,79 @@ export default function StudentResearchReportRequest() {
                                 {advisor.map((num, index) => (
                                     <AsesorForm
                                         key={index}
-                                        number={num}
+                                        number={index+1}
                                         onRemove={() => removeAdvisor(index)}
-                                        canRemove={advisor.length > 1}
+                                        canRemove={index !== 0}
                                         data={advisorData[index]}
                                         onChange={(data) => updateAdvisorData(index, data)}
                                     />
                                 ))}
                             </div>
                         </div>
-
-                        <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <Users className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                    Sobre los jurados
-                                </h3>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-6">
-                                    {jury.map((index) => (
-                                        <div key={index} className="flex items-start gap-2 col-span-2">
-                                            <div className="grid grid-cols-2 gap-4 flex-1">
-                                                <FormInput
-                                                    icon={User}
-                                                    label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                    sublabel="(En mayúsculas y minúsculas según corresponda)"
-                                                    type="text"
-                                                    placeholder="Ejem: Luis"
-                                                    value={juryData[index]?.firstName || ''}
-                                                    onChange={(e) => updateJuryData(index, { ...juryData[index], firstName: e.target.value })}
-                                                />
-                                                <FormInput
-                                                    icon={User}
-                                                    label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                    sublabel="(En mayúsculas y minúsculas según corresponda)"
-                                                    type="text"
-                                                    placeholder="Ejem: Robles"
-                                                    value={juryData[index]?.lastName || ''}
-                                                    onChange={(e) => updateJuryData(index, { ...juryData[index], lastName: e.target.value })}
-                                                />
-                                            </div>
-                                            {jury.length > 3 && index === jury.length - 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={removeLastJury}
-                                                    className="mt-8 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Eliminar último jurado"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                    </svg>
-                                                </button>
-                                            )}
+                         
+                        <div className="border-t-2 border-gray-100 pt-8">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <Users className="w-5 h-5 text-blue-600" />
                                         </div>
-                                    ))}
+                                        Sobre los jurados
+                                    </h3>
                                 </div>
-                                {jury.length < 4 && (
-                                    <button
-                                        type="button"
-                                        onClick={addJury}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Agregar jurado excepcional
-                                    </button>
-                                )}
-                            </div>
+                                <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            {jury.map((index) => (
+                                                <div key={index} className="flex items-start gap-2 col-span-2">
+                                                    <div className="grid grid-cols-2 gap-4 flex-1">
+                                                        <FormInput
+                                                            icon={User}
+                                                            label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                            sublabel="(En mayúsculas y minúsculas según corresponda)"
+                                                            type="text"
+                                                            placeholder="Ejem: Luis"
+                                                            value={juryData[index]?.firstName || ''}
+                                                            onChange={(e) => updateJuryData(index, { ...juryData[index], firstName: e.target.value })}
+                                                        />
+                                                        <FormInput
+                                                            icon={User}
+                                                            label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                            sublabel="(En mayúsculas y minúsculas según corresponda)"
+                                                            type="text"
+                                                            placeholder="Ejem: Robles"
+                                                            value={juryData[index]?.lastName || ''}
+                                                            onChange={(e) => updateJuryData(index, { ...juryData[index], lastName: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    {jury.length > 3 && index === jury.length - 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={removeLastJury}
+                                                            className="mt-8 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            title="Eliminar último jurado"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {jury.length < 4 && (
+                                            <button
+                                                type="button"
+                                                onClick={addJury}
+                                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Agregar jurado excepcional
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                         </div>
-
+                        
                         <div className="border-t-2 border-gray-100 pt-8">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
