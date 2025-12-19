@@ -820,7 +820,7 @@ export default function RequestDetailsPage() {
                         <div className="lg:col-span-2 mt-6">
                             <PublicationSection
                                 applicationId={applicationData.application_id}
-                                initialLink={applicationData.published_thesis_link}
+                                initialLink={applicationData.published_thesis_link ?? ""}
                                 onSave={async (link) => {
                                     const response = await fetch(
                                         `${API_URL}/applications/${applicationData.application_id}/publication-link`
