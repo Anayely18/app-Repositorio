@@ -77,9 +77,6 @@ function ImageModal({ show, images, currentIndex, onClose, onNext, onPrev }) {
     );
 }
 
-// ============================================
-// COMPONENTE: Información del Solicitante
-// ============================================
 function ApplicantInfo({ applicant, createdAt }) {
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('es-PE', {
@@ -191,10 +188,9 @@ function DocumentCard({ doc, onOpenImage }) {
         return labels[status] || status;
     };
 
-    // Determinar si debe mostrar observaciones
-    const shouldShowObservations = doc.status === 'observado' || 
-                                   doc.status === 'rechazado' || 
-                                   doc.status === 'requiere_correccion';
+    const shouldShowObservations = doc.status === 'observado' ||
+        doc.status === 'rechazado' ||
+        doc.status === 'requiere_correccion';
 
     return (
         <div className="border border-slate-200 rounded-xl p-4 text-sm">
@@ -207,11 +203,10 @@ function DocumentCard({ doc, onOpenImage }) {
                 </div>
                 <span className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 flex items-center gap-2 ${getStatusColor(doc.status)}`}>
                     {getStatusIcon(doc.status)}
-                    {getStatusLabel(doc.status)}
+                    {getStatusLabel(doc.status) == "Rechazado" ? "Observado": getStatusLabel(doc.status)}
                 </span>
             </div>
 
-            {/* SOLO MOSTRAR OBSERVACIONES SI EL ESTADO LO REQUIERE */}
             {shouldShowObservations && doc.observation && (
                 <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-5 space-y-4">
                     <div className="flex items-start gap-3">
@@ -261,9 +256,7 @@ function DocumentCard({ doc, onOpenImage }) {
                             </p>
                         </div>
                     )}
-                    
-                    {/* Historial de rechazos con desplegable */}
-                    <RejectionHistorySection rejectionHistory={doc.rejection_history} />
+
                 </div>
             )}
 
@@ -368,10 +361,7 @@ function ConstanciaStatus({ status, publicationLink }: ConstanciaStatusProps) {
 
 }
 
-// ============================================
-// COMPONENTE: Línea de Tiempo
-// ============================================
-function Timeline({ timeline }) {
+function Timeline({ timeline, onTimelineClick }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showAll, setShowAll] = useState(false);
 
@@ -383,9 +373,17 @@ function Timeline({ timeline }) {
         });
     };
 
-    const visibleTimeline = showAll ? timeline : timeline.slice(0, 3);
-    const hasMore = timeline.length > 3;
+    const filteredTimeline = timeline.filter(
+        item => item.document_type !== null &&
+            item.document_type !== undefined &&
+            item.document_type !== ''
+    );
 
+    // ✨ Ordenar timeline del más reciente al más antiguo
+    const sortedTimeline = [...filteredTimeline].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const visibleTimeline = showAll ? sortedTimeline : sortedTimeline.slice(0, 3);
+    const hasMore = sortedTimeline.length > 3;
     return (
         <div className="space-y-4">
             <div className="space-y-4">
@@ -398,8 +396,10 @@ function Timeline({ timeline }) {
                             )}
                         </div>
                         <div className="flex-1 pb-6">
-                            <div className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors">
-                                <p className="font-bold text-slate-900 mb-1 text-base">{item.status}</p>
+                            <div
+                                onClick={() => onTimelineClick(item)}
+                                className="bg-slate-50 rounded-lg p-4 hover:bg-blue-50 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-200"
+                            >
                                 <p className="text-sm text-slate-600 mb-2 leading-relaxed">{item.description}</p>
                                 <p className="text-xs text-slate-500 font-mono bg-white inline-block px-2 py-1 rounded">
                                     {formatDate(item.date)}
@@ -437,6 +437,24 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [allImages, setAllImages] = useState([]);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [selectedHistory, setSelectedHistory] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useState(() => {
+        setTimeout(() => setIsLoading(false), 800);
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+                    <p className="text-slate-600 font-medium">Cargando información del trámite...</p>
+                </div>
+            </div>
+        );
+    }
 
     const openImageModal = (images, startIndex) => {
         setAllImages(images);
@@ -456,6 +474,11 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         const newIndex = (currentImageIndex + 1) % allImages.length;
         setCurrentImageIndex(newIndex);
         setSelectedImage(allImages[newIndex]);
+    };
+
+    const handleTimelineClick = (historyItem) => {
+        setSelectedHistory(historyItem);
+        setShowHistoryModal(true);
     };
 
     const prevImage = () => {
@@ -502,6 +525,121 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         return labels[status] || status;
     };
 
+    const HistoryDetailsModal = () => {
+        if (!showHistoryModal || !selectedHistory) return null;
+        console.log(selectedHistory)
+        const hasImages = selectedHistory.images && selectedHistory.images.length > 0;
+        const hasObservations = selectedHistory.description;
+
+        return (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <Clock className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Detalles del Historial</h2>
+                                <p className="text-blue-100 text-sm">
+                                    {new Date(selectedHistory.date).toLocaleDateString('es-PE', {
+                                        day: '2-digit',
+                                        month: 'long',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowHistoryModal(false)}
+                            className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 rounded-lg p-4">
+                                    <p className="text-xs text-slate-500 mb-1">Estado</p>
+                                    <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedHistory.status)}`}>
+                                        {getStatusLabel(selectedHistory.status) == "rechazado" ? "Observado" : getStatusLabel(selectedHistory.status)}
+                                    </span>
+                                </div>
+                                {selectedHistory.document_type && selectedHistory.document_type && (
+                                    <div className="bg-blue-50 rounded-lg p-4">
+                                        <p className="text-xs text-slate-500 mb-1">Documento</p>
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-blue-600" />
+                                            <p className="text-sm font-semibold text-slate-900">
+                                                {selectedHistory.document_type}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            {hasObservations && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-amber-900 text-sm mb-2">
+                                                Descripción:
+                                            </h4>
+                                            <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                                {selectedHistory.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {hasImages ? (
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4 text-blue-600" />
+                                        Capturas de pantalla adjuntas ({selectedHistory.images.length})
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {selectedHistory.images.map((image, idx) => (
+                                            <div key={idx} className="group relative">
+                                                <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                                                    <img
+                                                        src={image}
+                                                        alt={`Captura ${idx + 1}`}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                        onClick={() => window.open(image, '_blank')}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-slate-50 rounded-lg">
+                                    <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-slate-500 text-sm">No hay capturas adjuntas</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-50 px-6 py-4 flex justify-end">
+                        <button
+                            onClick={() => setShowHistoryModal(false)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <>
             <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
@@ -516,6 +654,7 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                         <ArrowLeft className="w-4 h-4" />
                         Realizar nueva búsqueda
                     </button>
+                    <HistoryDetailsModal />
 
                     <ImageModal
                         show={showImageModal}
@@ -621,7 +760,10 @@ function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                         <p className="text-sm text-slate-600">Seguimiento del trámite</p>
                                     </div>
                                 </div>
-                                <Timeline timeline={tramiteData.timeline} />
+                                <Timeline
+                                    timeline={tramiteData.timeline}
+                                    onTimelineClick={handleTimelineClick}
+                                />
                             </div>
                         </div>
 
@@ -923,235 +1065,4 @@ export default function TramiteStatusApp() {
     );
 }
 
-function HistorialTable({ timeline }) {
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const getStatusColor = (status) => {
-        const normalizedStatus = status?.toLowerCase();
-        const colorMap = {
-            pendiente: "bg-amber-100 text-amber-800",
-            aprobado: "bg-green-100 text-green-800",
-            observado: "bg-red-100 text-red-800",
-            en_revision: "bg-blue-100 text-blue-800",
-            publicado: "bg-purple-100 text-purple-800",
-            requiere_correccion: "bg-orange-100 text-orange-800"
-        };
-        return colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
-    };
-
-    const getStatusLabel = (status) => {
-        const statusMap = {
-            pendiente: "Pendiente",
-            aprobado: "Aprobado",
-            observado: "Observado",
-            en_revision: "En revisión",
-            publicado: "Publicado",
-            requiere_correccion: "Requiere corrección"
-        };
-        return statusMap[status?.toLowerCase()] || status || "Estado desconocido";
-    };
-
-    return (
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mt-6">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900">Historial Detallado</h2>
-                    <p className="text-sm text-slate-600">Registro completo de cambios de estado</p>
-                </div>
-            </div>
-
-            {timeline && timeline.length > 0 ? (
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-50">
-                            <tr className="text-left text-slate-600">
-                                <th className="py-3 px-4 font-semibold">Fecha</th>
-                                <th className="py-3 px-4 font-semibold">Estado</th>
-                                <th className="py-3 px-4 font-semibold">Descripción</th>
-                                <th className="py-3 px-4 font-semibold">Administrador</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200">
-                            {[...timeline]
-                                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                .map((item, index) => (
-                                    <tr key={index} className="hover:bg-slate-50 transition-colors">
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-slate-900">
-                                                {formatDate(item.date)}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(item.status)}`}>
-                                                {getStatusLabel(item.status)}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 max-w-md">
-                                            <p className="text-slate-700 text-sm leading-relaxed">
-                                                {item.description || "Sin descripción"}
-                                            </p>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <User className="w-4 h-4 text-blue-600" />
-                                                </div>
-                                                <span className="text-slate-700 text-sm">
-                                                    {item.admin_name || "Sistema"}
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500">No hay historial registrado</p>
-                </div>
-            )}
-        </div>
-    );
-}
-
-
-function RejectionHistorySection({ rejectionHistory }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    
-    if (!rejectionHistory || rejectionHistory.length === 0) {
-        return null;
-    }
-
-    const formatDateShort = (dateString) => {
-        return new Date(dateString).toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-    };
-
-    const formatTime = (dateString) => {
-        return new Date(dateString).toLocaleTimeString('es-PE', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    };
-
-    return (
-        <div className="mt-6 border-t-2 border-orange-200 pt-6">
-            {/* Header clickeable */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between gap-3 mb-4 hover:bg-orange-50 p-3 rounded-lg transition-colors"
-            >
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                        <History className="w-5 h-5 text-orange-700" />
-                    </div>
-                    <div className="text-left">
-                        <h3 className="text-base font-bold text-orange-900">
-                            Historial Completo de Rechazos
-                        </h3>
-                        <p className="text-xs text-orange-700">
-                            {rejectionHistory.length} {rejectionHistory.length === 1 ? 'rechazo registrado' : 'rechazos registrados'}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-orange-700 font-medium">
-                        {isExpanded ? 'Ocultar' : 'Ver detalles'}
-                    </span>
-                    {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-orange-700" />
-                    ) : (
-                        <ChevronDown className="w-5 h-5 text-orange-700" />
-                    )}
-                </div>
-            </button>
-            
-            {/* Contenido desplegable */}
-            {isExpanded && (
-                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                    <div className="overflow-x-auto rounded-lg border-2 border-orange-200">
-                        <table className="w-full text-sm bg-white">
-                            <thead className="bg-orange-50 border-b-2 border-orange-200">
-                                <tr className="text-left">
-                                    <th className="py-3 px-4 font-semibold text-orange-900 w-16">#</th>
-                                    <th className="py-3 px-4 font-semibold text-orange-900">Fecha y Hora</th>
-                                    <th className="py-3 px-4 font-semibold text-orange-900">Motivo del Rechazo</th>
-                                    <th className="py-3 px-4 font-semibold text-orange-900 w-32">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-orange-100">
-                                {rejectionHistory.map((rejection, index) => (
-                                    <tr 
-                                        key={index} 
-                                        className="hover:bg-orange-50 transition-colors"
-                                    >
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center justify-center">
-                                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">
-                                                    {rejectionHistory.length - index}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                                                <div>
-                                                    <p className="font-medium text-slate-900">
-                                                        {formatDateShort(rejection.rejected_at)}
-                                                    </p>
-                                                    <p className="text-xs text-slate-600 font-mono">
-                                                        {formatTime(rejection.rejected_at)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-start gap-2">
-                                                <FileX className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
-                                                <p className="text-slate-700 leading-relaxed">
-                                                    {rejection.reason || 'Sin motivo especificado'}
-                                                </p>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4">
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
-                                                <XCircle className="w-3.5 h-3.5" />
-                                                Rechazado
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <p>
-                            Los rechazos están ordenados del más reciente al más antiguo. 
-                            El rechazo #{rejectionHistory.length} es el más antiguo y el #1 es el más reciente.
-                        </p>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
 

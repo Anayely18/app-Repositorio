@@ -33,6 +33,7 @@ export default function RequestDetailsPage() {
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
     const [showDocumentModal, setShowDocumentModal] = useState(false);
+    const [showAllHistory, setShowAllHistory] = useState(false);
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -737,24 +738,61 @@ export default function RequestDetailsPage() {
                     <div className="space-y-6">
                         <Section title="Historial de Estado" icon={AlertCircle}>
                             {applicationData.history && applicationData.history.length > 0 ? (
-                                <div className="space-y-4">
-                                    {applicationData.history.map((item, index) => (
-                                        <TimelineItem
-                                            key={index}
-                                            status={item.new_status || "Sin estado"}
-                                            title={item.title || item.new_status || "Sin título"}
-                                            date={formatDate(item.date || item.change_date)}
-                                            color={
-                                                item.new_status === "aprobado"
-                                                    ? "green"
-                                                    : item.new_status === "publicado"
-                                                        ? "blue"
-                                                        : "red"
-                                            }
-                                        />
+                                <>
+                                    {(() => {
+                                        const sortedHistory = [...applicationData.history]
+                                            .sort((a, b) => new Date(b.change_date || b.date) - new Date(a.change_date || a.date));
 
-                                    ))}
-                                </div>
+                                        const visibleHistory = showAllHistory ? sortedHistory : sortedHistory.slice(0, 5);
+                                        const hasMore = sortedHistory.length > 5;
+
+                                        return (
+                                            <>
+                                                <div className="space-y-4">
+                                                    {visibleHistory.map((item, index) => (
+                                                        <TimelineItem
+                                                            key={index}
+                                                            status={item.new_status || "Sin estado"}
+                                                            title={item.title || item.new_status || "Sin título"}
+                                                            date={formatDate(item.date || item.change_date)}
+                                                            color={
+                                                                item.new_status === "aprobado"
+                                                                    ? "green"
+                                                                    : item.new_status === "publicado"
+                                                                        ? "blue"
+                                                                        : "red"
+                                                            }
+                                                        />
+                                                    ))}
+                                                </div>
+
+                                                {/* Botón Ver más / Ver menos */}
+                                                {hasMore && (
+                                                    <button
+                                                        onClick={() => setShowAllHistory(!showAllHistory)}
+                                                        className="mt-4 w-full flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                                    >
+                                                        {showAllHistory ? (
+                                                            <>
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                                                </svg>
+                                                                Ver menos
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                                Ver más ({sortedHistory.length - 5} eventos adicionales)
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </>
                             ) : (
                                 <div className="space-y-4">
                                     <TimelineItem
@@ -775,7 +813,6 @@ export default function RequestDetailsPage() {
                                         date="Por definir"
                                         color="gray"
                                     />
-
                                 </div>
                             )}
                         </Section>
@@ -1206,3 +1243,4 @@ export default function RequestDetailsPage() {
         </div>
     );
 }
+
