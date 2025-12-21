@@ -485,7 +485,7 @@ export default function RequestDetailsPage() {
                                                         ? 'bg-red-100 text-red-800'
                                                         : 'bg-orange-100 text-orange-800'
                                                     }`}>
-                                                    {doc.status === 'rechazado' ? '✕ Rechazado' : '⚠ Observado'}
+                                                    { '⚠ Observado'}
                                                 </span>
                                             </div>
                                         </div>
@@ -603,7 +603,7 @@ export default function RequestDetailsPage() {
                                 <span className="text-sm font-medium text-blue-700">{formatDate(applicationData.application_date)}</span>
                             </div>
                             <div className={`px-3 py-2 rounded-lg ${getStatusColor(applicationData.status)}`}>
-                                <span className="font-semibold text-sm">{getStatusLabel(applicationData.status)}</span>
+                                <span className="font-semibold text-sm capitalize">{getStatusLabel(applicationData.status)}</span>
                             </div>
                         </div>
                     </div>
@@ -752,8 +752,8 @@ export default function RequestDetailsPage() {
                                                     {visibleHistory.map((item, index) => (
                                                         <TimelineItem
                                                             key={index}
-                                                            status={item.new_status || "Sin estado"}
-                                                            title={item.title || item.new_status || "Sin título"}
+                                                            status={item.new_status == 'rechazado' ? 'Obervado' : item.new_status }
+                                                            title={item.new_status == 'rechazado' ? 'Obervado' : item.new_status || "Sin título"}
                                                             date={formatDate(item.date || item.change_date)}
                                                             color={
                                                                 item.new_status === "aprobado"
@@ -765,8 +765,6 @@ export default function RequestDetailsPage() {
                                                         />
                                                     ))}
                                                 </div>
-
-                                                {/* Botón Ver más / Ver menos */}
                                                 {hasMore && (
                                                     <button
                                                         onClick={() => setShowAllHistory(!showAllHistory)}

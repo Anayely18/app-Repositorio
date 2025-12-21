@@ -34,7 +34,7 @@ export default function AdminProfile() {
     confirmPassword: ''
   });
 
-  const API_URL = 'http://localhost:3000/api';
+  const API_URL = 'https://api-repositorio-production-950a.up.railway.app/api';
 
   useEffect(() => {
     fetchProfile();

@@ -7,8 +7,8 @@ import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRe
 import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
 import Layout from "@/shared/ui/layout/Layout"
 import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage"; 
-import TramiteStatusApp from "@/pages/process/TramiteDetailsPage"
 import Profile from "@/pages/auth/Profile"
+import TramiteStatusApp from "@/shared/components/TramiteStatusApp"
 
 export const routes = [
     {
