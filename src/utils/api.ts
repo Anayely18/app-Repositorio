@@ -1,2 +1,2 @@
-export const API_URL = "http://localhost:3000/api"
-export const API_URL_DOCUMENTS = "http://localhost:3000"
+export const API_URL = "https://api-repositorio-production-950a.up.railway.app/api"
+export const API_URL_DOCUMENTS = "https://api-repositorio-production-950a.up.railway.app"
