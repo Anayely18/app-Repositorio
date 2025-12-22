@@ -16,7 +16,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
         setError('');
 
         try {
-            const API_BASE_URL = 'https://api-repositorio-production-950a.up.railway.app'; 
+            const API_BASE_URL = 'http://localhost:3000'; 
             const url = `${API_BASE_URL}/api/applications/search?dni=${encodeURIComponent(dni)}&type=${activeTab}`;
 
             console.log('🔍 Buscando en:', url);
