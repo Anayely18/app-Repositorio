@@ -45,8 +45,8 @@ export default function ListThesisWorks() {
 
     const statusOptions = [
         { value: "pendiente", label: "Pendiente" },
-        { value: "aprobado", label: "Aprobado" },
-        { value: "observado", label: "Observado" },
+        { value: "aprobado", label: "aprobado" },
+        { value: "observado", label: "observado" },
         { value: "publicado", label: "publicado" },
     ];
 
