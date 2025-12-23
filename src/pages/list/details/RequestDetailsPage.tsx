@@ -13,7 +13,13 @@ import {
     Upload,
     Loader2,
     ArrowLeft,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
+
 import { API_URL, API_URL_DOCUMENTS } from "@/utils/api";
 import { Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
@@ -100,31 +106,37 @@ export default function RequestDetailsPage() {
         });
     };
 
-    const getStatusLabel = (status) => {
-        const statusMap = {
-            pendiente: "Pendiente de revisión",
-            aprobado: "aprobado",
-            observado: "observado",
-            en_revision: "En revisión",
-            publicado: "publicado"
-        };
-        const label = statusMap[status?.toLowerCase()] || status || "Estado desconocido";
-        console.log(`🏷️ Estado "${status}" mapeado a "${label}"`);
-        return label;
+    const normalizeStatus = (status: any) => {
+        if (typeof status === "string") return status.toLowerCase();
+        return ""; // o "pendiente" como default
     };
 
-    const getStatusColor = (status) => {
-        const normalizedStatus = status?.toLowerCase();
-        const colorMap = {
+    const getStatusColor = (status: any) => {
+        const normalizedStatus = normalizeStatus(status);
+
+        const colorMap: Record<string, string> = {
             pendiente: "bg-amber-100 text-amber-800",
             aprobado: "bg-green-100 text-green-800",
             observado: "bg-red-100 text-red-800",
             en_revision: "bg-blue-100 text-amber-800",
             publicado: "bg-blue-100 text-blue-800"
         };
-        const color = colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
-        console.log(`🎨 Estado "${status}" color "${color}"`);
-        return color;
+
+        return colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
+    };
+
+    const getStatusLabel = (status: any) => {
+        const normalizedStatus = normalizeStatus(status);
+
+        const statusMap: Record<string, string> = {
+            pendiente: "Pendiente de revisión",
+            aprobado: "Aprobado",
+            observado: "Observado",
+            en_revision: "En revisión",
+            publicado: "Publicado"
+        };
+
+        return statusMap[normalizedStatus] || String(status ?? "Estado desconocido");
     };
 
     const getDocumentTypeLabel = (type) => {
@@ -157,6 +169,8 @@ export default function RequestDetailsPage() {
         setSelectedDocument(document_id);
     };
     console.log(applicationData)
+    console.log("STATUS APP:", applicationData?.status, typeof applicationData?.status);
+
     const handleObservationChange = (e) => {
         if (selectedDocument) {
             setDocumentObservations(prev => ({
@@ -190,17 +204,16 @@ export default function RequestDetailsPage() {
                 return;
             }
 
-            toast.info('Documentos guardados');
+            toast.info('Guardando revisión de documentos...');
             let successCount = 0;
             let errorCount = 0;
 
+            // 1️⃣ Guardar revisiones individuales de documentos
             for (const doc of applicationData.documents) {
                 const documentId = doc.document_id;
                 const decision = documentReviews[documentId];
 
-                if (!decision || decision === 'pendiente') {
-                    continue;
-                }
+                if (!decision || decision === 'pendiente') continue;
 
                 try {
                     const formData = new FormData();
@@ -209,17 +222,14 @@ export default function RequestDetailsPage() {
                     formData.append('status', mappedStatus);
                     formData.append('observation', documentObservations[documentId] || '');
 
-                    const images = documentImages[documentId] || [];
-                    images.forEach((image) => {
+                    const imgs = documentImages[documentId] || [];
+                    imgs.forEach((image) => {
                         formData.append('images', image);
                     });
 
                     const response = await fetch(
                         `${API_URL}/applications/documents/${documentId}/review`,
-                        {
-                            method: 'PATCH',
-                            body: formData
-                        }
+                        { method: 'PATCH', body: formData }
                     );
 
                     const result = await response.json();
@@ -232,58 +242,75 @@ export default function RequestDetailsPage() {
                         console.error(`❌ Error en documento ${documentId}:`, result.message);
                     }
 
-                } catch (error) {
+                } catch (err) {
                     errorCount++;
-                    console.error(`❌ Error guardando documento ${documentId}:`, error);
+                    console.error(`❌ Error guardando documento ${documentId}:`, err);
                 }
             }
 
-            if (errorCount === 0) {
-                // ⬇️ NUEVO: Actualizar estado de solicitud basado en los documentos
+            // 2️⃣ Actualizar estado GENERAL de la solicitud (solo si todo lo anterior salió OK)
+            if (errorCount === 0 && successCount > 0) {
                 const applicationId = getApplicationId();
-                const totalDocs = applicationData.documents.length;
+
                 const approvedDocs = Object.values(documentReviews).filter(d => d === 'aprobado').length;
                 const observedDocs = Object.values(documentReviews).filter(d => d === 'observado').length;
+                const publishedDocs = Object.values(documentReviews).filter(d => d === 'publicado').length;
 
-                let finalStatus = 'pendiente'; // fallback
+
+                let finalStatus = 'pendiente';
+                let statusMessage = '';
 
                 if (approvedDocs === totalDocs) {
                     finalStatus = 'aprobado';
+                    statusMessage = `Todos los documentos (${totalDocs}) han sido aprobados`;
                 } else if (observedDocs > 0) {
                     finalStatus = 'observado';
+                    statusMessage = `${observedDocs} documento(s) observado(s) de ${totalDocs}`;
+                } else if (approvedDocs > 0) {
+                    finalStatus = 'en_revision';
+                    statusMessage = `${approvedDocs} documento(s) aprobado(s), ${totalDocs - approvedDocs} pendiente(s)`;
+                } else if (approvedDocs > 0) {
+                    finalStatus = 'en_revision';
+                    statusMessage = `${publishedDocs} documento(s) aprobado(s), ${totalDocs - publishedDocs} pendiente(s)`;
                 }
 
-                const reviewResponse = await fetch(`${API_URL}/applications/${applicationId}/review`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        status: finalStatus,
-                        observations: 'Revisión por múltiples documentos' // puedes ajustar esto
-                    })
-                });
+                console.log('📊 Estado final calculado:', { finalStatus, statusMessage });
 
-                const reviewResult = await reviewResponse.json();
+                try {
+                    const reviewResponse = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: finalStatus,
+                            observations: statusMessage
+                        })
+                    });
 
-                if (reviewResult.success) {
-                    console.log('✅ Estado general actualizado a:', finalStatus);
-                } else {
-                    console.warn('⚠️ No se pudo actualizar el estado general');
+                    const reviewResult = await reviewResponse.json();
+
+                    if (reviewResult.success) {
+                        console.log('✅ Estado general actualizado a:', finalStatus);
+                        toast.success(`Estado general actualizado: ${finalStatus.toUpperCase()}`);
+
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        console.warn('⚠️ No se pudo actualizar el estado general');
+                        toast.warning('Documentos guardados, pero no se pudo actualizar el estado general');
+                    }
+                } catch (err) {
+                    console.error('❌ Error actualizando estado general:', err);
+                    toast.error('Error al actualizar el estado general de la solicitud');
                 }
 
-            } else {
-                toast.warning(
-                    `⚠️ ${successCount} documentos guardados, ${errorCount} con errores`
-                );
+            } else if (errorCount > 0) {
+                toast.warning(`⚠️ ${successCount} documentos guardados, ${errorCount} con errores`);
             }
 
-        } catch (error) {
-            console.error('❌ Error general:', error);
+        } catch (err) {
+            console.error('❌ Error general:', err);
             toast.error('Error al guardar los documentos');
         }
     };
-
 
     const getReviewSummary = () => {
         const total = applicationData.documents.length;
@@ -296,9 +323,13 @@ export default function RequestDetailsPage() {
         const rejected = Object.values(documentReviews).filter(
             status => status === 'observado'
         ).length;
+        const published = Object.values(documentReviews).filter(
+            status => status === 'publicado'
+        ).length;
+
         const pending = total - reviewed;
 
-        return { total, reviewed, approved, rejected, pending };
+        return { total, reviewed, approved, rejected, pending, published };
     };
 
     const handleApproveApplication = async () => {
@@ -365,11 +396,11 @@ export default function RequestDetailsPage() {
 
     const mapStatusToDatabase = (frontendStatus) => {
         const statusMap = {
-            'aprobado': 'validado',
-            'observado': 'rechazado',
+            'aprobado': 'aprobado',
+            'observado': 'observado',
             'pendiente': 'pendiente',
-            'validado': 'validado',       // ✅ Por si acaso viene directo
-            'rechazado': 'rechazado'      // ✅ Por si acaso viene directo
+            'publicado': 'publicado',
+
 
         };
         return statusMap[frontendStatus] || 'pendiente';
@@ -380,6 +411,206 @@ export default function RequestDetailsPage() {
         if (filePath.startsWith('http')) return filePath;
         return `${API_URL_DOCUMENTS}/${filePath}`;
     };
+
+    // Sección de Historial General (solo cambios de estado de la solicitud completa)
+    const GeneralHistorySection = ({ history = [] }) => {
+        const [showAll, setShowAll] = useState(false);
+
+        const formatDate = (dateString) => {
+            if (!dateString) return "Sin fecha";
+            const safe = String(dateString).includes(" ")
+                ? String(dateString).replace(" ", "T")
+                : dateString;
+
+            const d = new Date(safe);
+            if (Number.isNaN(d.getTime())) return "Fecha inválida";
+
+            return d.toLocaleDateString("es-PE", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+        };
+
+        const normalizeStatus = (status: any) => {
+            if (typeof status === "string") return status.toLowerCase();
+            if (status === null || status === undefined) return "";
+            return String(status).toLowerCase(); // convierte boolean/número a texto
+        };
+
+        const getStatusColor = (status) => {
+            const normalizedStatus = normalizeStatus(status);
+            const colors = {
+                pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
+                en_revision: "bg-blue-100 text-blue-800 border-blue-200",
+                aprobado: "bg-green-100 text-green-800 border-green-200",
+                observado: "bg-red-100 text-red-800 border-red-200",
+                requiere_correccion: "bg-orange-100 text-orange-800 border-orange-200",
+                publicado: "bg-purple-100 text-purple-800 border-purple-200",
+            };
+            return colors[normalizedStatus] || "bg-gray-100 text-gray-800 border-gray-200";
+        };
+
+        const getStatusIcon = (status: any) => {
+            const normalizedStatus = normalizeStatus(status);
+
+            switch (normalizedStatus) {
+                case "aprobado":
+                case "validado":
+                    return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+                case "observado":
+                case "rechazado":
+                    return <XCircle className="w-4 h-4 text-red-600" />;
+                case "publicado":
+                    return <CheckCircle2 className="w-4 h-4 text-purple-600" />;
+                default:
+                    return <Clock className="w-4 h-4 text-blue-600" />;
+            }
+        };
+
+
+        const getStatusLabel = (status) => {
+            const labels = {
+                pendiente: "Pendiente",
+                en_revision: "En revisión",
+                aprobado: "Aprobado",
+                observado: "Observado",
+                requiere_correccion: "Requiere correcciones",
+                publicado: "Publicado",
+            };
+            return labels[status?.toLowerCase()] || status;
+        };
+
+        // 🎯 FILTRAR SOLO CAMBIOS DE ESTADO GENERAL (sin document_type)
+        const generalHistory = (history || []).filter(
+            (item) => !item.document_type || item.document_type === null || item.document_type === ""
+        );
+
+        // Ordenar por fecha (más reciente primero)
+        const sortedHistory = [...generalHistory].sort(
+            (a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime()
+        );
+
+        const visibleHistory = showAll ? sortedHistory : sortedHistory.slice(0, 3);
+        const hasMore = sortedHistory.length > 3;
+
+        if (!generalHistory || generalHistory.length === 0) {
+            return (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                            <Calendar className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Historial de Estado</h2>
+                            <p className="text-sm text-slate-600">Cambios de estado general de la solicitud</p>
+                        </div>
+                    </div>
+                    <div className="text-center py-12 bg-slate-50 rounded-xl">
+                        <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500 font-medium">No hay historial de cambios</p>
+                        <p className="text-slate-400 text-sm mt-2">Los cambios de estado aparecerán aquí</p>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-lg font-bold text-slate-900">Historial de Estados</h2>
+                        <p className="text-sm text-slate-600">
+                            {sortedHistory.length} {sortedHistory.length === 1 ? "cambio registrado" : "cambios registrados"}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {visibleHistory.map((item, index) => (
+                        <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
+                            <div className="flex flex-col items-center">
+                                <div
+                                    className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
+                                        ? "bg-green-600 border-green-100"
+                                        : item.new_status === "observado"
+                                            ? "bg-red-600 border-red-100"
+                                            : item.new_status === "publicado"
+                                                ? "bg-purple-600 border-purple-100"
+                                                : "bg-blue-600 border-blue-100"
+                                        }`}
+                                ></div>
+                                {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
+                            </div>
+
+                            <div className="flex-1 pb-6">
+                                <div className="bg-slate-50 rounded-lg p-4 border-2 border-slate-200">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            {getStatusIcon(item.new_status)}
+                                            <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
+                                        </div>
+                                    </div>
+
+                                    {item.previous_status && item.previous_status !== item.new_status && (
+                                        <div className="flex items-center gap-2 mb-3 text-xs">
+                                            <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
+                                                {getStatusLabel(item.previous_status)}
+                                            </span>
+                                            <span className="text-slate-400">→</span>
+                                            <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
+                                                {getStatusLabel(item.new_status)}
+                                            </span>
+                                        </div>
+                                    )}
+
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                                            <Clock className="w-3 h-3" />
+                                            <span className="font-mono">{formatDate(item.change_date)}</span>
+                                        </div>
+                                        {item.admin_name && (
+                                            <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                                                <User className="w-3 h-3" />
+                                                <span className="font-medium">{item.admin_name}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {hasMore && (
+                    <button
+                        type="button"
+                        onClick={() => setShowAll(!showAll)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-lg transition-colors text-sm font-semibold text-slate-700 mt-4"
+                    >
+                        <Calendar className="w-4 h-4" />
+                        {showAll ? (
+                            <>
+                                Mostrar menos <ChevronUp className="w-4 h-4" />
+                            </>
+                        ) : (
+                            <>
+                                Ver {sortedHistory.length - 5} cambios más <ChevronDown className="w-4 h-4" />
+                            </>
+                        )}
+                    </button>
+                )}
+
+            </div>
+        );
+    };
+
 
     const ReviewSummaryPanel = () => {
         const summary = getReviewSummary();
@@ -426,7 +657,7 @@ export default function RequestDetailsPage() {
         if (!showDocumentModal) return null;
 
         const rejectedDocs = applicationData.documents.filter(
-            doc => doc.rejection_reason || doc.status === 'rechazado' || doc.status === 'observado'
+            doc => doc.rejection_reason || doc.status === 'observado'
         );
 
         return (
@@ -481,11 +712,11 @@ export default function RequestDetailsPage() {
                                                     </div>
                                                 </div>
                                                 <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
-                                                ${doc.status === 'rechazado'
+                                                ${doc.status === 'observado'
                                                         ? 'bg-red-100 text-red-800'
                                                         : 'bg-orange-100 text-orange-800'
                                                     }`}>
-                                                    { '⚠ Observado'}
+                                                    {doc.status === 'observado'}
                                                 </span>
                                             </div>
                                         </div>
@@ -573,7 +804,7 @@ export default function RequestDetailsPage() {
                                     </svg>
                                 </div>
                                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                                    ¡Todos los documentos están validados!
+                                    ¡Todos los documentos están aprobados!
                                 </h3>
                                 <p className="text-slate-600">No hay documentos con observaciones o rechazos.</p>
                             </div>
@@ -603,7 +834,7 @@ export default function RequestDetailsPage() {
                                 <span className="text-sm font-medium text-blue-700">{formatDate(applicationData.application_date)}</span>
                             </div>
                             <div className={`px-3 py-2 rounded-lg ${getStatusColor(applicationData.status)}`}>
-                                <span className="font-semibold text-sm capitalize">{getStatusLabel(applicationData.status)}</span>
+                                <span className="font-semibold text-sm">{getStatusLabel(applicationData.status)}</span>
                             </div>
                         </div>
                     </div>
@@ -736,84 +967,8 @@ export default function RequestDetailsPage() {
                     </div>
 
                     <div className="space-y-6">
-                        <Section title="Historial de Estado" icon={AlertCircle}>
-                            {applicationData.history && applicationData.history.length > 0 ? (
-                                <>
-                                    {(() => {
-                                        const sortedHistory = [...applicationData.history]
-                                            .sort((a, b) => new Date(b.change_date || b.date) - new Date(a.change_date || a.date));
+                        <GeneralHistorySection history={applicationData.history ?? []} />
 
-                                        const visibleHistory = showAllHistory ? sortedHistory : sortedHistory.slice(0, 5);
-                                        const hasMore = sortedHistory.length > 5;
-
-                                        return (
-                                            <>
-                                                <div className="space-y-4">
-                                                    {visibleHistory.map((item, index) => (
-                                                        <TimelineItem
-                                                            key={index}
-                                                            status={item.new_status == 'rechazado' ? 'Obervado' : item.new_status }
-                                                            title={item.new_status == 'rechazado' ? 'Obervado' : item.new_status || "Sin título"}
-                                                            date={formatDate(item.date || item.change_date)}
-                                                            color={
-                                                                item.new_status === "aprobado"
-                                                                    ? "green"
-                                                                    : item.new_status === "publicado"
-                                                                        ? "blue"
-                                                                        : "red"
-                                                            }
-                                                        />
-                                                    ))}
-                                                </div>
-                                                {hasMore && (
-                                                    <button
-                                                        onClick={() => setShowAllHistory(!showAllHistory)}
-                                                        className="mt-4 w-full flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                                                    >
-                                                        {showAllHistory ? (
-                                                            <>
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                                                </svg>
-                                                                Ver menos
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                                </svg>
-                                                                Ver más ({sortedHistory.length - 5} eventos adicionales)
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
-                                            </>
-                                        );
-                                    })()}
-                                </>
-                            ) : (
-                                <div className="space-y-4">
-                                    <TimelineItem
-                                        status="aprobado"
-                                        title="Solicitud enviada"
-                                        date={formatDate(applicationData.created_at)}
-                                        color="green"
-                                    />
-                                    <TimelineItem
-                                        status="En revisión"
-                                        title="En evaluación documentaria"
-                                        date={formatDate(applicationData.updated_at)}
-                                        color="blue"
-                                    />
-                                    <TimelineItem
-                                        status="Pendiente"
-                                        title="Aprobación final"
-                                        date="Por definir"
-                                        color="gray"
-                                    />
-                                </div>
-                            )}
-                        </Section>
 
                         <div className="lg:col-span-2 mt-6">
                             <PublicationSection
@@ -1180,9 +1335,9 @@ export default function RequestDetailsPage() {
                             >
                                 <AlertCircle className="w-4 h-4" />
                                 Ver Documentos Observados
-                                {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length > 0 && (
+                                {applicationData.documents.filter(d => d.rejection_reason || d.status === 'observado').length > 0 && (
                                     <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
-                                        {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length}
+                                        {applicationData.documents.filter(d => d.rejection_reason || d.status === 'observado').length}
                                     </span>
                                 )}
                             </button>
