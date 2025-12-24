@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { GeneralHistorySection } from "@/shared/components/GeneralHistorySection";
+import { ObservedDocsModal } from "@/shared/components/ObservedDocsModal";
+import { useEffect, useState } from 'react';
 import Logo from "@/shared/ui/Logo"
 import {
     Search,
@@ -40,9 +42,13 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [selectedHistory, setSelectedHistory] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showObservedDocsModal, setShowObservedDocsModal] = useState(false);
+    const [selectedObservedEvent, setSelectedObservedEvent] = useState(null);
 
-    useState(() => {
-        setTimeout(() => setIsLoading(false), 800);
+
+    useEffect(() => {
+        const t = setTimeout(() => setIsLoading(false), 800);
+        return () => clearTimeout(t);
     }, []);
 
     if (isLoading) {
@@ -55,6 +61,8 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
             </div>
         );
     }
+
+    console.log("documents[0]:", tramiteData?.documents?.[0]);
 
     const openImageModal = (images, startIndex) => {
         setAllImages(images);
@@ -76,10 +84,27 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         setSelectedImage(allImages[newIndex]);
     };
 
-    const handleTimelineClick = (historyItem) => {
+    const handleTimelineClick = (historyItem: any) => {
+        const st = String(historyItem?.new_status ?? historyItem?.status ?? "").toLowerCase();
+
+        console.log("CLICK timeline item:", historyItem);
+        console.log("STATUS detectado:", st);
+
+        // ✅ abre el modal nuevo si es observado o rechazado
+        if (st === "observado" || st === "rechazado") {
+            setSelectedObservedEvent(historyItem);
+            setShowObservedDocsModal(true);
+
+            // opcional: cierra el antiguo por si quedó abierto
+            setShowHistoryModal(false);
+            return;
+        }
+
+        // ✅ para otros estados, sí abre el modal antiguo
         setSelectedHistory(historyItem);
         setShowHistoryModal(true);
     };
+
 
     const prevImage = () => {
         const newIndex = currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1;
@@ -125,11 +150,25 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         return labels[status] || status;
     };
 
+    const openObservedDocsModalIfObserved = (item) => {
+        const st = String(item?.new_status ?? item?.status ?? "").toLowerCase();
+        if (st !== "observado") return;
+
+        setSelectedObservedEvent(item);
+        setShowObservedDocsModal(true);
+    };
+
+
+
     const HistoryDetailsModal = () => {
         if (!showHistoryModal || !selectedHistory) return null;
         console.log(selectedHistory)
         const hasImages = selectedHistory.images && selectedHistory.images.length > 0;
         const hasObservations = selectedHistory.description;
+
+
+
+
 
         return (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -256,6 +295,13 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                     </button>
                     <HistoryDetailsModal />
 
+                    <ObservedDocsModal
+                        open={showObservedDocsModal}
+                        onClose={() => setShowObservedDocsModal(false)}
+                        documents={tramiteData?.documents ?? []}
+                        observedEvent={selectedObservedEvent}
+                    />
+
                     <ImageModal
                         show={showImageModal}
                         images={allImages}
@@ -359,10 +405,12 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                         <p className="text-sm text-slate-600">Seguimiento del trámite</p>
                                     </div>
                                 </div>
-                                <Timeline
-                                    timeline={tramiteData.timeline}
-                                    onTimelineClick={handleTimelineClick}
+                                <GeneralHistorySection
+                                    history={tramiteData.timeline ?? []}
+                                    onObservedClick={openObservedDocsModalIfObserved}
                                 />
+
+
                             </div>
                         </div>
 

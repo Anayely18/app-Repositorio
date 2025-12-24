@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast, Toaster } from 'sonner';
+import { Image as ImageIcon, X } from "lucide-react";
+
 import {
     FileText,
     User,
@@ -39,7 +41,8 @@ export default function RequestDetailsPage() {
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
     const [showDocumentModal, setShowDocumentModal] = useState(false);
-    const [showAllHistory, setShowAllHistory] = useState(false);
+    const [selectedObservedEvent, setSelectedObservedEvent] = useState<any>(null);
+
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -412,8 +415,48 @@ export default function RequestDetailsPage() {
         return `${API_URL_DOCUMENTS}/${filePath}`;
     };
 
+    const openObservedDocsModalIfObserved = (item: any) => {
+        const st = String(item?.new_status ?? "").toLowerCase();
+        if (st !== "observado") return;
+
+        setSelectedObservedEvent(item);   // ✅ guardo el observado exacto clickeado
+        setShowDocumentModal(true);
+    };
+
+    const parseSafeDate = (value: any) => {
+        if (!value) return null;
+        const s = String(value);
+        const safe = s.includes(" ") ? s.replace(" ", "T") : s;
+        const d = new Date(safe);
+        return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    // Busca la observación del documento "más cercana" al momento del evento Observado
+    // (porque primero guardas docs y luego guardas estado general, pueden diferir segundos/minutos)
+    const findClosestObservation = (rejectionHistory: any[], targetDate: Date, maxMinutes = 10) => {
+        if (!Array.isArray(rejectionHistory) || rejectionHistory.length === 0) return null;
+
+        const maxMs = maxMinutes * 60 * 1000;
+        let best: any = null;
+        let bestDiff = Infinity;
+
+        for (const r of rejectionHistory) {
+            const d = parseSafeDate(r.rejected_at);
+            if (!d) continue;
+
+            const diff = Math.abs(d.getTime() - targetDate.getTime());
+            if (diff < bestDiff) {
+                bestDiff = diff;
+                best = r;
+            }
+        }
+
+        return bestDiff <= maxMs ? best : null;
+    };
+
+
     // Sección de Historial General (solo cambios de estado de la solicitud completa)
-    const GeneralHistorySection = ({ history = [] }) => {
+    const GeneralHistorySection = ({ history = [], onObservedClick }: any) => {
         const [showAll, setShowAll] = useState(false);
 
         const formatDate = (dateString) => {
@@ -517,6 +560,7 @@ export default function RequestDetailsPage() {
             );
         }
 
+
         return (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -532,61 +576,79 @@ export default function RequestDetailsPage() {
                 </div>
 
                 <div className="space-y-4">
-                    {visibleHistory.map((item, index) => (
-                        <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
-                            <div className="flex flex-col items-center">
-                                <div
-                                    className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
-                                        ? "bg-green-600 border-green-100"
-                                        : item.new_status === "observado"
-                                            ? "bg-red-600 border-red-100"
-                                            : item.new_status === "publicado"
-                                                ? "bg-purple-600 border-purple-100"
-                                                : "bg-blue-600 border-blue-100"
-                                        }`}
-                                ></div>
-                                {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
-                            </div>
+                    {visibleHistory.map((item, index) => {
+                        const isObserved = normalizeStatus(item.new_status) === "observado";
 
-                            <div className="flex-1 pb-6">
-                                <div className="bg-slate-50 rounded-lg p-4 border-2 border-slate-200">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                            {getStatusIcon(item.new_status)}
-                                            <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
+                        return (
+                            <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
+                                <div className="flex flex-col items-center">
+                                    <div
+                                        className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
+                                            ? "bg-green-600 border-green-100"
+                                            : item.new_status === "observado"
+                                                ? "bg-red-600 border-red-100"
+                                                : item.new_status === "publicado"
+                                                    ? "bg-purple-600 border-purple-100"
+                                                    : "bg-blue-600 border-blue-100"
+                                            }`}
+                                    ></div>
+                                    {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
+                                </div>
+
+                                <div className="flex-1 pb-6">
+                                    <div
+                                        className={`bg-slate-50 rounded-lg p-4 border-2 border-slate-200
+                                                ${isObserved ? "cursor-pointer hover:border-red-300 hover:bg-red-50" : ""}
+                                                `}
+                                        onClick={() => {
+                                            if (isObserved) onObservedClick?.(item);
+                                        }}
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                {getStatusIcon(item.new_status)}
+                                                <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {item.previous_status && item.previous_status !== item.new_status && (
-                                        <div className="flex items-center gap-2 mb-3 text-xs">
-                                            <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
-                                                {getStatusLabel(item.previous_status)}
-                                            </span>
-                                            <span className="text-slate-400">→</span>
-                                            <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
-                                                {getStatusLabel(item.new_status)}
-                                            </span>
+                                        {item.previous_status && item.previous_status !== item.new_status && (
+                                            <div className="flex items-center gap-2 mb-3 text-xs">
+                                                <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
+                                                    {getStatusLabel(item.previous_status)}
+                                                </span>
+                                                <span className="text-slate-400">→</span>
+                                                <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
+                                                    {getStatusLabel(item.new_status)}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                <Clock className="w-3 h-3" />
+                                                <span className="font-mono">{formatDate(item.change_date)}</span>
+                                            </div>
+
+                                            {item.admin_name && (
+                                                <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                                                    <User className="w-3 h-3" />
+                                                    <span className="font-medium">{item.admin_name}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
 
-
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                                            <Clock className="w-3 h-3" />
-                                            <span className="font-mono">{formatDate(item.change_date)}</span>
-                                        </div>
-                                        {item.admin_name && (
-                                            <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                                                <User className="w-3 h-3" />
-                                                <span className="font-medium">{item.admin_name}</span>
+                                        {isObserved && (
+                                            <div className="mt-3 text-xs font-semibold text-red-700">
+                                                Ver documentos observados →
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
+
 
                 {hasMore && (
                     <button
@@ -656,9 +718,19 @@ export default function RequestDetailsPage() {
     const DocumentDetailsModal = () => {
         if (!showDocumentModal) return null;
 
-        const rejectedDocs = applicationData.documents.filter(
-            doc => doc.rejection_reason || doc.status === 'observado'
-        );
+        const eventDate = parseSafeDate(selectedObservedEvent?.change_date);
+
+        const rejectedDocs = (applicationData.documents || [])
+            .map((doc: any) => {
+                if (!eventDate) return null;
+
+                const obs = findClosestObservation(doc.rejection_history || [], eventDate, 10);
+                if (!obs) return null; // ✅ este doc NO fue observado en ese momento
+
+                return { ...doc, _obsMoment: obs }; // guardo la observación exacta del momento
+            })
+            .filter(Boolean);
+
 
         return (
             <div className="fixed inset-0 bg-black/80 bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -688,113 +760,129 @@ export default function RequestDetailsPage() {
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                         {rejectedDocs.length > 0 ? (
                             <div className="space-y-6">
-                                {rejectedDocs.map((doc, index) => (
-                                    <div key={index} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
-                                        <div className="bg-white border-b border-red-200 px-5 py-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-                                                        <FileText className="w-6 h-6 text-red-600" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-slate-900 text-lg">
-                                                            {getDocumentTypeLabel(doc.document_type)}
-                                                        </h3>
-                                                        <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
-                                                        <div className="flex items-center gap-3 mt-2">
-                                                            <span className="text-xs text-slate-500">
-                                                                📦 {doc.size_kb} KB
-                                                            </span>
-                                                            <span className="text-xs text-slate-500">
-                                                                📅 {formatDate(doc.upload_date)}
-                                                            </span>
+                                {rejectedDocs.map((doc) => {
+                                    console.log("📌 DOC:", doc.document_id, doc.document_type);
+                                    console.log("📌 rejection_history:", doc.rejection_history);
+                                    return (
+                                        <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
+                                            <div className="bg-white border-b border-red-200 px-5 py-4">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                                            <FileText className="w-6 h-6 text-red-600" />
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
-                                                ${doc.status === 'observado'
-                                                        ? 'bg-red-100 text-red-800'
-                                                        : 'bg-orange-100 text-orange-800'
-                                                    }`}>
-                                                    {doc.status === 'observado'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="px-5 py-4">
-                                            <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
-                                                <div className="flex items-start gap-3">
-                                                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-red-900 text-sm mb-2">
-                                                            Motivo del rechazo:
-                                                        </h4>
-                                                        <p className="text-slate-700 text-sm leading-relaxed">
-                                                            {doc.rejection_reason || 'Sin descripción específica'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {doc.images && doc.images.length > 0 && (
-                                            <div className="px-5 pb-4">
-                                                <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                                                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    Capturas de pantalla ({doc.images.length})
-                                                </h4>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                                    {doc.images.map((image, imgIndex) => (
-                                                        <div key={imgIndex} className="group relative">
-                                                            <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                                                                <img
-                                                                    src={`${API_URL_DOCUMENTS}/${image.image_path}`}
-                                                                    alt={image.file_name}
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                                    onClick={() => window.open(`${API_URL_DOCUMENTS}/${image.image_path}`, '_blank')}
-                                                                />
+                                                        <div>
+                                                            <h3 className="font-semibold text-slate-900 text-lg">
+                                                                {getDocumentTypeLabel(doc.document_type)}
+                                                            </h3>
+                                                            <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                            <div className="flex items-center gap-3 mt-2">
+                                                                <span className="text-xs text-slate-500">
+                                                                    📦 {doc.size_kb} KB
+                                                                </span>
+                                                                <span className="text-xs text-slate-500">
+                                                                    📅 {formatDate(doc.upload_date)}
+                                                                </span>
                                                             </div>
-                                                            <p className="text-xs text-slate-600 mt-1 truncate" title={image.file_name}>
-                                                                {image.file_name}
-                                                            </p>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
+                                                ${doc.status === 'observado'
+                                                            ? 'bg-red-100 text-red-800'
+                                                            : 'bg-orange-100 text-orange-800'
+                                                        }`}>
+                                                        {doc.status === 'observado'}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="px-5 pb-4 flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    const url = getDocumentUrl(doc.file_path);
-                                                    window.open(url, '_blank');
-                                                }}
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                Ver Documento
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const url = getDocumentUrl(doc.file_path);
-                                                    const link = document.createElement('a');
-                                                    link.href = url;
-                                                    link.download = doc.file_name;
-                                                    link.target = '_blank';
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
-                                                }}
-                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                Descargar
-                                            </button>
+                                            <div className="px-5 py-4">
+                                                <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                                    <div className="flex items-start gap-3">
+                                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                                        <div className="flex-1">
+                                                            <h4 className="font-semibold text-red-900 text-sm mb-3">
+                                                                Observaciones (historial):
+                                                            </h4>
+
+                                                            {doc._obsMoment ? (
+                                                                <div className="bg-white rounded-lg p-3 border border-red-200">
+                                                                    <div className="text-xs text-slate-500 mb-1">
+                                                                        {formatDate(doc._obsMoment.rejected_at)}
+                                                                    </div>
+                                                                    <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                                                        {doc._obsMoment.rejection_reason || "Sin observación"}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-slate-500 text-sm">Sin observaciones previas</p>
+                                                            )}
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                            {doc.images && doc.images.length > 0 && (
+                                                <div className="px-5 pb-4">
+                                                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        Capturas de pantalla ({doc.images.length})
+                                                    </h4>
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                        {doc.images.map((image, imgIndex) => (
+                                                            <div key={imgIndex} className="group relative">
+                                                                <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                                                                    <img
+                                                                        src={`${API_URL_DOCUMENTS}/${image.image_path}`}
+                                                                        alt={image.file_name}
+                                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(`${API_URL_DOCUMENTS}/${image.image_path}`, '_blank')}
+                                                                    />
+                                                                </div>
+                                                                <p className="text-xs text-slate-600 mt-1 truncate" title={image.file_name}>
+                                                                    {image.file_name}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="px-5 pb-4 flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const url = getDocumentUrl(doc.file_path);
+                                                        window.open(url, '_blank');
+                                                    }}
+                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    Ver Documento
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = getDocumentUrl(doc.file_path);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = doc.file_name;
+                                                        link.target = '_blank';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                    }}
+                                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                    Descargar
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-12">
@@ -967,8 +1055,10 @@ export default function RequestDetailsPage() {
                     </div>
 
                     <div className="space-y-6">
-                        <GeneralHistorySection history={applicationData.history ?? []} />
-
+                        <GeneralHistorySection
+                            history={applicationData.history ?? []}
+                            onObservedClick={openObservedDocsModalIfObserved}
+                        />
 
                         <div className="lg:col-span-2 mt-6">
                             <PublicationSection
@@ -1330,8 +1420,21 @@ export default function RequestDetailsPage() {
                     <Section title="Historial Detallado de la Solicitud" icon={Calendar}>
                         <div className="mb-4 flex justify-end">
                             <button
-                                onClick={() => setShowDocumentModal(true)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                onClick={() => {
+                                    const observedEvents = (applicationData.history ?? [])
+                                        .filter(h => !h?.document_type)
+                                        .filter(h => String(h?.new_status ?? "").toLowerCase() === "observado")
+                                        .sort((a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime());
+
+                                    if (observedEvents.length === 0) {
+                                        toast.info("No hay estados 'Observado' registrados.");
+                                        return;
+                                    }
+
+                                    setSelectedObservedEvent(observedEvents[0]); // ✅ el más reciente
+                                    setShowDocumentModal(true);
+                                }}
+
                             >
                                 <AlertCircle className="w-4 h-4" />
                                 Ver Documentos Observados
