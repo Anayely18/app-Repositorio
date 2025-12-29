@@ -736,6 +736,25 @@ export default function RequestDetailsPage() {
         const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
 
 
+        const documentsWithHistoricalPaths = rejectedDocs.map((doc: any) => {
+            const observationDate = new Date(selectedObservedEvent?.change_date ?? "");
+
+            const historicalEntry = (applicationData?.history ?? []).find((h: any) =>
+                h.id_documento === doc.document_id &&
+                Math.abs(
+                    new Date(h.fecha_cambio || h.change_date).getTime() -
+                    observationDate.getTime()
+                ) < 600000
+            );
+
+            return {
+                ...doc,
+                _historicalPath: historicalEntry?.file_path_historico || doc.file_path
+            };
+        });
+
+
+
         return (
             <div className="fixed inset-0 bg-black/80 bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
@@ -764,7 +783,7 @@ export default function RequestDetailsPage() {
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                         {rejectedDocs.length > 0 ? (
                             <div className="space-y-6">
-                                {rejectedDocs.map((doc) => {
+                                {documentsWithHistoricalPaths.map((doc) => {
                                     console.log("📌 DOC:", doc.document_id, doc.document_type);
                                     console.log("📌 rejection_history:", doc.rejection_history);
                                     return (
@@ -858,7 +877,7 @@ export default function RequestDetailsPage() {
                                             <div className="px-5 pb-4 flex gap-2">
                                                 <button
                                                     onClick={() => {
-                                                        const url = getDocumentUrl(doc.file_path);
+                                                        const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                         window.open(url, '_blank');
                                                     }}
                                                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -868,7 +887,7 @@ export default function RequestDetailsPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => {
-                                                        const url = getDocumentUrl(doc.file_path);
+                                                        const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                         const link = document.createElement('a');
                                                         link.href = url;
                                                         link.download = doc.file_name;
@@ -1138,7 +1157,7 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const url = getDocumentUrl(doc.file_path);
+                                                            const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                             window.open(url, '_blank');
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
@@ -1149,7 +1168,7 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const url = getDocumentUrl(doc.file_path);
+                                                            const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                             const link = document.createElement('a');
                                                             link.href = url;
                                                             link.download = `${getDocumentTypeLabel(doc.document_type)}.pdf`;

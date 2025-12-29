@@ -81,7 +81,7 @@ export function ObservedDocsModal({
     const eventDate = parseSafeDate(observedEvent?.change_date ?? observedEvent?.date);
     
     // 🔥 Filtrar documentos que fueron observados en este evento específico
-    const rejectedDocs = (documents || [])
+    const documentsWithHistoricalPaths = (documents || [])
         .map((doc: any) => {
             if (!eventDate) return null;
             const obs = findClosestObservation(doc.rejection_history || [], eventDate, 10);
@@ -95,6 +95,8 @@ export function ObservedDocsModal({
             };
         })
         .filter(Boolean);
+
+        
 
     return (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
