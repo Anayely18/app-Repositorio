@@ -1,7 +1,9 @@
+import { ResubmitModal } from "@/shared/components/ResubmitModal";
 import { GeneralHistorySection } from "@/shared/components/GeneralHistorySection";
 import { ObservedDocsModal } from "@/shared/components/ObservedDocsModal";
 import { useEffect, useState } from 'react';
 import Logo from "@/shared/ui/Logo"
+import { Link } from "react-router-dom";
 import {
     Search,
     FileText,
@@ -14,6 +16,7 @@ import {
     Loader2,
     ArrowLeft,
     User,
+    RefreshCw,
     Mail,
     Phone,
     ImageIcon,
@@ -44,12 +47,14 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const [isLoading, setIsLoading] = useState(true);
     const [showObservedDocsModal, setShowObservedDocsModal] = useState(false);
     const [selectedObservedEvent, setSelectedObservedEvent] = useState(null);
+    const [showResubmitModal, setShowResubmitModal] = useState(false);
 
 
     useEffect(() => {
         const t = setTimeout(() => setIsLoading(false), 800);
         return () => clearTimeout(t);
     }, []);
+
 
     if (isLoading) {
         return (
@@ -62,7 +67,31 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         );
     }
 
+    const norm = (v: any) => String(v ?? "").toLowerCase().trim();
+
+    const getDocStatus = (d: any) =>
+        norm(d?.status ?? d?.document_status ?? d?.current_status);
+
+    const hasObservedDocs = (tramiteData?.documents ?? []).some((d: any) => {
+        const st = getDocStatus(d);
+        return (
+            st === "observado" ||
+            st === "rechazado" ||
+            st === "requiere_correccion" ||
+            Boolean(d?.rejection_reason || d?.observation || d?.observations)
+        );
+    });
+
+    const rawStatus = norm(tramiteData?.status);
+    const uiStatus = hasObservedDocs ? "observado" : rawStatus;
+
+    // úsalo para “Publicado”
+    const isPublicado = uiStatus === "publicado";
+
     console.log("documents[0]:", tramiteData?.documents?.[0]);
+
+    
+
 
     const openImageModal = (images, startIndex) => {
         setAllImages(images);
@@ -105,7 +134,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         setShowHistoryModal(true);
     };
 
-
     const prevImage = () => {
         const newIndex = currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1;
         setCurrentImageIndex(newIndex);
@@ -123,6 +151,14 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
 
+    const isCorrectionStatus = ["observado", "requiere_correccion"].includes(
+        String(tramiteData?.status ?? "").toLowerCase()
+    );
+    const resubmitPath =
+        activeTab === "docente"
+            ? "/teacher-research-report-request"
+            : "/student-research-report-request";
+
     const getStatusIcon = (status) => {
         switch (status) {
             case 'aprobado':
@@ -137,6 +173,40 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                 return <Clock className="w-5 h-5 text-gray-600" />;
         }
     };
+
+    const pick = (v: any) => (v ?? "").toString().trim();
+
+    const normalizeAuthor = (a: any) => ({
+        first_name: pick(a?.first_name ?? a?.firstName ?? a?.name ?? a?.nombres),
+        last_name: pick(a?.last_name ?? a?.lastName ?? a?.surname ?? a?.apellidos),
+        dni: pick(a?.dni ?? a?.documentNumber ?? a?.document_number),
+    });
+
+    const resubmitAuthors =
+        Array.isArray(tramiteData?.authors) && tramiteData.authors.length > 0
+            ? tramiteData.authors.map(normalizeAuthor)
+            : tramiteData?.applicant
+                ? [normalizeAuthor(tramiteData.applicant)]
+                : [];
+
+
+    const observedDocsForResubmit = (tramiteData?.documents ?? [])
+        .filter((d) => {
+            const st = String(d?.status ?? d?.document_status ?? "").toLowerCase();
+            return st === "observado" || Boolean(d?.rejection_reason || d?.observation || d?.observations);
+        })
+        .map((d) => ({
+            document_type: d?.document_type ?? d?.type ?? d?.key ?? d?.name ?? "documento",
+            rejection_reason: d?.rejection_reason ?? d?.observation ?? d?.observations ?? d?.description ?? "",
+            images: Array.isArray(d?.images) ? d.images : (Array.isArray(d?.evidence_images) ? d.evidence_images : [])
+        }));
+
+    const handleResubmitClose = () => setShowResubmitModal(false);
+    const handleResubmitSuccess = () => {
+        setShowResubmitModal(false);
+        // si quieres refrescar datos luego del envío, aquí es el lugar
+    };
+
 
     const getStatusLabel = (status) => {
         const labels = {
@@ -158,6 +228,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         setShowObservedDocsModal(true);
     };
 
+    
 
 
     const HistoryDetailsModal = () => {
@@ -165,10 +236,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         console.log(selectedHistory)
         const hasImages = selectedHistory.images && selectedHistory.images.length > 0;
         const hasObservations = selectedHistory.description;
-
-
-
-
 
         return (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -311,6 +378,17 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                         onPrev={prevImage}
                     />
 
+                    {showResubmitModal && (
+                        <ResubmitModal
+                            applicationId={tramiteData?.applicationId}
+                            projectTitle={tramiteData?.projectName}
+                            authors={resubmitAuthors}
+                            observedDocuments={observedDocsForResubmit}
+                            onClose={handleResubmitClose}
+                            onSuccess={handleResubmitSuccess}
+                        />
+                    )}
+
                     <main className="max-w-5xl mx-auto p-6 md:p-8">
                         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
                             <div className="flex items-center gap-2 mb-6">
@@ -341,9 +419,9 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                         {tramiteData.applicationId}
                                     </p>
                                 </div>
-                                <div className={`px-4 py-2 rounded-lg ${getStatusColor(tramiteData.status)} text-sm font-bold border-2 flex items-center gap-2`}>
-                                    {getStatusIcon(tramiteData.status)}
-                                    <span className="text-base capitalize">{getStatusLabel(tramiteData.status)}</span>
+                                <div className={`px-4 py-2 rounded-lg ${getStatusColor(uiStatus)} text-sm font-bold border-2 flex items-center gap-2`}>
+                                    {getStatusIcon(uiStatus)}
+                                    <span className="text-base capitalize">{getStatusLabel(uiStatus)}</span>
                                 </div>
                             </div>
 
@@ -390,9 +468,12 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     </div>
                                 </div>
                                 <ConstanciaStatus
-                                    status={tramiteData.status}
+                                    status={uiStatus}
                                     publicationLink={tramiteData.publication_link}
+                                    showResubmitButton={hasObservedDocs}
+                                    onOpenResubmit={() => setShowResubmitModal(true)}
                                 />
+
                             </div>
 
                             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
@@ -423,17 +504,15 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 <div className="text-sm">
                                     <p className="font-bold text-blue-900 mb-3 text-base">Información importante</p>
                                     <ul className="space-y-2 text-blue-800">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold mt-1">•</span>
-                                            <span>Recibirá notificaciones por correo sobre cualquier cambio en su trámite</span>
-                                        </li>
+                                        
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
                                             <span>El tiempo de procesamiento es de 5 días hábiles</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
-                                            <span>Si tiene dudas, puede contactar a la Unidad de Investigación</span>
+                                            <span>Si tiene dudas, puede contactar a la Unidad de Investigación: </span>
+                                             <span>repositorio@unamba.edu.pe</span>
                                         </li>
                                     </ul>
                                 </div>
