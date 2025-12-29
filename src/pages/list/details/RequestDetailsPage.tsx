@@ -88,6 +88,12 @@ export default function RequestDetailsPage() {
         }));
     };
 
+
+    const fetchHistory = async (applicationId: string) => {
+        const response = await fetch(`${API_URL}/applications/${applicationId}/history-with-paths`);
+        const data = await response.json();
+        return data;
+    };
     const removeImage = (index) => {
         if (!selectedDocument) return;
 
@@ -423,35 +429,44 @@ export default function RequestDetailsPage() {
         setShowDocumentModal(true);
     };
 
-    const parseSafeDate = (value: any) => {
-        if (!value) return null;
-        const s = String(value);
+    const norm = (v: any) => String(v ?? "").toLowerCase();
+
+    const toTime = (v: any) => {
+        const s = String(v ?? "");
         const safe = s.includes(" ") ? s.replace(" ", "T") : s;
         const d = new Date(safe);
-        return Number.isNaN(d.getTime()) ? null : d;
+        return Number.isNaN(d.getTime()) ? null : d.getTime();
     };
 
-    // Busca la observación del documento "más cercana" al momento del evento Observado
-    // (porque primero guardas docs y luego guardas estado general, pueden diferir segundos/minutos)
-    const findClosestObservation = (rejectionHistory: any[], targetDate: Date, maxMinutes = 10) => {
-        if (!Array.isArray(rejectionHistory) || rejectionHistory.length === 0) return null;
+    const getObservedDocumentsForEvent = (event: any) => {
+        if (!event || !applicationData) return [];
 
-        const maxMs = maxMinutes * 60 * 1000;
-        let best: any = null;
-        let bestDiff = Infinity;
+        const eventTime = toTime(event.change_date);
+        if (eventTime === null) return [];
 
-        for (const r of rejectionHistory) {
-            const d = parseSafeDate(r.rejected_at);
-            if (!d) continue;
+        // 1) Historial SOLO de documentos (document_id) del mismo momento
+        // 2) y SOLO los que quedaron OBSERVADO
+        const relatedObservedHistory = (applicationData.history ?? []).filter((item: any) => {
+            const itemTime = toTime(item.change_date);
+            if (!item.document_id || itemTime === null) return false;
+            if (itemTime !== eventTime) return false;
+            return norm(item.new_status) === "observado";
+        });
 
-            const diff = Math.abs(d.getTime() - targetDate.getTime());
-            if (diff < bestDiff) {
-                bestDiff = diff;
-                best = r;
-            }
+        // evitar duplicados por document_id (por si hay más de 1 registro)
+        const byDoc = new Map<string, any>();
+        for (const h of relatedObservedHistory) {
+            if (!byDoc.has(h.document_id)) byDoc.set(h.document_id, h);
         }
 
-        return bestDiff <= maxMs ? best : null;
+        return Array.from(byDoc.values())
+            .map((h: any) => {
+                const doc = (applicationData.documents ?? []).find(
+                    (d: any) => d.document_id === h.document_id
+                );
+                return doc ? { ...doc, _history: h } : null;
+            })
+            .filter(Boolean);
     };
 
 
@@ -718,18 +733,7 @@ export default function RequestDetailsPage() {
     const DocumentDetailsModal = () => {
         if (!showDocumentModal) return null;
 
-        const eventDate = parseSafeDate(selectedObservedEvent?.change_date);
-
-        const rejectedDocs = (applicationData.documents || [])
-            .map((doc: any) => {
-                if (!eventDate) return null;
-
-                const obs = findClosestObservation(doc.rejection_history || [], eventDate, 10);
-                if (!obs) return null; // ✅ este doc NO fue observado en ese momento
-
-                return { ...doc, _obsMoment: obs }; // guardo la observación exacta del momento
-            })
-            .filter(Boolean);
+        const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
 
 
         return (
@@ -786,12 +790,13 @@ export default function RequestDetailsPage() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
-                                                ${doc.status === 'observado'
+                                                    <span
+                                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
                                                             ? 'bg-red-100 text-red-800'
                                                             : 'bg-orange-100 text-orange-800'
-                                                        }`}>
-                                                        {doc.status === 'observado'}
+                                                            }`}
+                                                    >
+                                                        {getStatusLabel(doc._history?.new_status || doc.status)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -805,19 +810,17 @@ export default function RequestDetailsPage() {
                                                                 Observaciones (historial):
                                                             </h4>
 
-                                                            {doc._obsMoment ? (
-                                                                <div className="bg-white rounded-lg p-3 border border-red-200">
-                                                                    <div className="text-xs text-slate-500 mb-1">
-                                                                        {formatDate(doc._obsMoment.rejected_at)}
-                                                                    </div>
-                                                                    <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                                                                        {doc._obsMoment.rejection_reason || "Sin observación"}
-                                                                    </div>
+                                                            <div className="bg-white rounded-lg p-3 border border-red-200">
+                                                                <div className="text-xs text-slate-500 mb-1">
+                                                                    {formatDate(doc._history?.change_date)}
                                                                 </div>
-                                                            ) : (
-                                                                <p className="text-slate-500 text-sm">Sin observaciones previas</p>
-                                                            )}
-
+                                                                <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                                                    {doc._history?.comment ||
+                                                                        doc._history?.observations ||
+                                                                        doc.rejection_reason ||
+                                                                        "Sin observación"}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -886,15 +889,15 @@ export default function RequestDetailsPage() {
                             </div>
                         ) : (
                             <div className="text-center py-12">
-                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m-7 5h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 </div>
                                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                                    ¡Todos los documentos están aprobados!
+                                    Sin documentos para esta observación
                                 </h3>
-                                <p className="text-slate-600">No hay documentos con observaciones o rechazos.</p>
+                                <p className="text-slate-600">No se encontraron documentos asociados al evento seleccionado.</p>
                             </div>
                         )}
                     </div>
@@ -1021,7 +1024,12 @@ export default function RequestDetailsPage() {
                                         <tbody className="divide-y divide-slate-200">
                                             {applicationData.advisors.map((advisor, index) => (
                                                 <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">{advisor.full_name || "N/A"}</td>
+                                                    <td className="py-3 px-4">
+                                                        {advisor.full_name ||
+                                                            [advisor.nombre, advisor.apellido].filter(Boolean).join(" ") ||
+                                                            "N/A"}
+                                                    </td>
+
                                                     <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
                                                     <td className="py-3 px-4 font-mono text-xs">{advisor.orcid || "N/A"}</td>
                                                 </tr>
@@ -1416,84 +1424,7 @@ export default function RequestDetailsPage() {
                     </div>
 
                 </div>
-                <div className="mt-6">
-                    <Section title="Historial Detallado de la Solicitud" icon={Calendar}>
-                        <div className="mb-4 flex justify-end">
-                            <button
-                                onClick={() => {
-                                    const observedEvents = (applicationData.history ?? [])
-                                        .filter(h => !h?.document_type)
-                                        .filter(h => String(h?.new_status ?? "").toLowerCase() === "observado")
-                                        .sort((a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime());
 
-                                    if (observedEvents.length === 0) {
-                                        toast.info("No hay estados 'Observado' registrados.");
-                                        return;
-                                    }
-
-                                    setSelectedObservedEvent(observedEvents[0]); // ✅ el más reciente
-                                    setShowDocumentModal(true);
-                                }}
-
-                            >
-                                <AlertCircle className="w-4 h-4" />
-                                Ver Documentos Observados
-                                {applicationData.documents.filter(d => d.rejection_reason || d.status === 'observado').length > 0 && (
-                                    <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
-                                        {applicationData.documents.filter(d => d.rejection_reason || d.status === 'observado').length}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-                        {applicationData.history && applicationData.history.length > 0 ? (
-                            <div className="overflow-x-auto rounded-lg border border-slate-200">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr className="text-left text-slate-600">
-                                            <th className="py-3 px-4 font-semibold">Fecha</th>
-                                            <th className="py-3 px-4 font-semibold">Estado Anterior</th>
-                                            <th className="py-3 px-4 font-semibold">Estado Nuevo</th>
-                                            <th className="py-3 px-4 font-semibold">Comentario</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        {[...applicationData.history]
-                                            .sort((a, b) => new Date(b.change_date) - new Date(a.change_date))
-                                            .map((item, index) => (
-                                                <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4 whitespace-nowrap">
-                                                        <div className="text-sm font-medium text-slate-900">
-                                                            {formatDate(item.change_date)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.previous_status)}`}>
-                                                            {getStatusLabel(item.previous_status)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.new_status)}`}>
-                                                            {getStatusLabel(item.new_status)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 max-w-xs">
-                                                        <p className="text-slate-600 text-xs line-clamp-2">
-                                                            {item.comment || item.observations || "—"}
-                                                        </p>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-slate-500">No hay historial registrado</p>
-                            </div>
-                        )}
-                    </Section>
-                </div>
                 <DocumentDetailsModal />
             </main>
         </div>

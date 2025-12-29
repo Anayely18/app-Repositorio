@@ -5,7 +5,7 @@ import { Link } from "react-router-dom"
 export default function Home() {
     return (
         <div className="h-svh overflow-hidden">
-            <div className="h-16 bg-secondary flex m-auto items-center justify-around">
+            <div className="h-16 bg-secondary flex m-auto items-flex justify-around">
                 <Logo />
 
             </div>
