@@ -88,6 +88,138 @@ export default function RequestDetailsPage() {
         }));
     };
 
+    const clean = (v: any) => String(v ?? "").trim().replace(/\s+/g, " ");
+
+    const toTitleCase = (s: string) => {
+        const small = new Set(["de", "del", "la", "las", "los", "y", "e"]);
+        return clean(s)
+            .split(" ")
+            .map((w, i) => {
+                const lw = w.toLowerCase();
+                if (i > 0 && small.has(lw)) return lw;
+                // soporta "Wibrow-Pérez"
+                return lw
+                    .split("-")
+                    .map(p => (p ? p[0].toUpperCase() + p.slice(1) : p))
+                    .join("-");
+            })
+            .join(" ");
+    };
+
+    const toMetadataName = (p: any) => {
+        const last = toTitleCase(p?.last_name ?? p?.surname ?? p?.apellidos ?? p?.lastName ?? "");
+        const first = toTitleCase(p?.first_name ?? p?.name ?? p?.nombres ?? p?.firstName ?? "");
+
+        if (!last && !first) {
+            // fallback si solo llega un full_name
+            const full = toTitleCase(p?.full_name ?? p?.fullName ?? "");
+            return full || "—";
+        }
+
+        if (!last) return first;
+        if (!first) return last;
+        return `${last}, ${first}`; // ✅ Apellido(s), Nombre(s)
+    };
+
+
+    // Pone cada palabra con inicial en mayúscula (con acentos/ñ)
+    const titleCaseName = (value: string) => {
+        const s = clean(value).toLowerCase();
+        if (!s) return "";
+
+        // separa por espacios y también mantiene guiones/apóstrofes bien
+        return s
+            .split(" ")
+            .filter(Boolean)
+            .map((w) =>
+                w
+                    .split("-")
+                    .map((p) =>
+                        p
+                            .split("'")
+                            .map((q) => (q ? q[0].toUpperCase() + q.slice(1) : ""))
+                            .join("'")
+                    )
+                    .join("-")
+            )
+            .join(" ");
+    };
+
+    const toMetadataFromSingleField = (fullName: string) => {
+        const s = clean(fullName);
+        if (!s) return "—";
+
+        // si ya viene "Apellido, Nombre" lo respetamos
+        if (s.includes(",")) {
+            const [lastRaw, firstRaw] = s.split(",", 2);
+            const last = titleCaseName(lastRaw);
+            const first = titleCaseName(firstRaw);
+            return `${last}, ${first}`.replace(/\s+,/g, ",").replace(/,\s+/g, ", ");
+        }
+
+        // si viene "Nombres Apellidos" (sin coma): asumimos 2 últimos = apellidos
+        const parts = s.split(" ").filter(Boolean);
+        if (parts.length === 1) return titleCaseName(parts[0]);
+        if (parts.length === 2) return `${titleCaseName(parts[1])}, ${titleCaseName(parts[0])}`;
+
+        const last = parts.slice(-2).join(" ");
+        const first = parts.slice(0, -2).join(" ");
+        return `${titleCaseName(last)}, ${titleCaseName(first)}`;
+    };
+
+    const normalizeTitleForRepo = (title: any) => {
+        const s = clean(title);
+        if (!s) return "Sin título";
+
+        const makeSentenceCase = (t: string) => {
+            const trimmed = t.trim();
+            if (!trimmed) return trimmed;
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        };
+
+        // si lo escribieron TODO EN MAYÚSCULAS, lo bajamos y dejamos estilo frase
+        const letters = s.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, "");
+        const looksAllCaps = letters && letters === letters.toUpperCase();
+
+        const base = looksAllCaps ? s.toLowerCase() : s;
+
+        // capitalizar inicio y después de ":" (subtítulo)
+        const parts = base.split(":");
+        const fixed = parts.map((p, i) => makeSentenceCase(p));
+        return fixed.join(": ");
+    };
+
+    const cleanObservationText = (text: any) => {
+        const s = String(text ?? "").trim();
+        if (!s) return "";
+
+        return s
+            .replace(
+                /^\s*[\w]+(?:_[\w]+)+\s*-\s*(?:observado|rechazado|requiere_correccion)\s*:\s*/i,
+                ""
+            )
+            .trim();
+    };
+
+    const pickDocObservation = (doc: any) => {
+        const h = doc?._history ?? {};
+
+        const raw =
+            h.observation ??            // <- si el backend manda "observation"
+            h.rejection_reason ??       // <- si manda "rejection_reason"
+            h.razon_rechazo ??          // <- si manda "razon_rechazo"
+            h.comment ??                // <- si manda "comment"
+            h.description ??            // <- si manda "description"
+            h.observations ??           // <- si manda "observations"
+            doc.rejection_reason ??     // <- si viene en el doc
+            doc.razon_rechazo ??
+            doc.observation ??
+            doc.observations ??
+            "";
+
+        return cleanObservationText(raw);
+    };
+
 
     const fetchHistory = async (applicationId: string) => {
         const response = await fetch(`${API_URL}/applications/${applicationId}/history-with-paths`);
@@ -128,7 +260,8 @@ export default function RequestDetailsPage() {
             aprobado: "bg-green-100 text-green-800",
             observado: "bg-red-100 text-red-800",
             en_revision: "bg-blue-100 text-amber-800",
-            publicado: "bg-blue-100 text-blue-800"
+            requiere_correccion: "bg-orange-100 text-orange-800",
+            publicado: "bg-purple-100 text-purple-900"
         };
 
         return colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
@@ -142,6 +275,7 @@ export default function RequestDetailsPage() {
             aprobado: "Aprobado",
             observado: "Observado",
             en_revision: "En revisión",
+            requiere_correccion: "requiere corrección",
             publicado: "Publicado"
         };
 
@@ -229,7 +363,11 @@ export default function RequestDetailsPage() {
                     const mappedStatus = mapStatusToDatabase(decision);
 
                     formData.append('status', mappedStatus);
-                    formData.append('observation', documentObservations[documentId] || '');
+                    const obs = documentObservations[documentId] || "";
+                    formData.append("observation", obs);
+                    formData.append("rejection_reason", obs); // alias por si el backend usa ese nombre
+                    formData.append("observations", obs);     // otro alias común
+
 
                     const imgs = documentImages[documentId] || [];
                     imgs.forEach((image) => {
@@ -278,8 +416,8 @@ export default function RequestDetailsPage() {
                 } else if (approvedDocs > 0) {
                     finalStatus = 'en_revision';
                     statusMessage = `${approvedDocs} documento(s) aprobado(s), ${totalDocs - approvedDocs} pendiente(s)`;
-                } else if (approvedDocs > 0) {
-                    finalStatus = 'en_revision';
+                } else if (publishedDocs > 0) {
+                    finalStatus = 'publicado';
                     statusMessage = `${publishedDocs} documento(s) aprobado(s), ${totalDocs - publishedDocs} pendiente(s)`;
                 }
 
@@ -438,6 +576,8 @@ export default function RequestDetailsPage() {
         return Number.isNaN(d.getTime()) ? null : d.getTime();
     };
 
+    const WINDOW_MS = 10 * 60 * 1000; // 10 minutos
+
     const getObservedDocumentsForEvent = (event: any) => {
         if (!event || !applicationData) return [];
 
@@ -469,6 +609,27 @@ export default function RequestDetailsPage() {
             .filter(Boolean);
     };
 
+
+
+    const normalizeKey = (v: any) =>
+        String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+    const CAREER_TO_FACULTY: Record<string, string> = {
+        "ingeniería informática y sistemas": "Facultad de Ingeniería",
+        "ingeniería civil": "Facultad de Ingeniería",
+        "ingeniería de minas": "Facultad de Ingeniería",
+        "ingeniería agroindustrial": "Facultad de Ingeniería",
+        "ingeniería agroecológica y desarrollo rural": "Facultad de Ingeniería",
+
+        "administración": "Facultad de Administración",
+
+        "ciencia política y gobernabilidad": "Facultad de Educación y Ciencias Sociales",
+        "educación inicial intercultural y bilingüe 1ra y 2da infancia": "Facultad de Educación y Ciencias Sociales",
+        "medicina veterinaria y zootécnia": "Facultad de Medicina Veterinaria y Zootecnia",
+    };
+
+    const getFacultyFromCareer = (career: any) =>
+        CAREER_TO_FACULTY[normalizeKey(career)] || "";
 
     // Sección de Historial General (solo cambios de estado de la solicitud completa)
     const GeneralHistorySection = ({ history = [], onObservedClick }: any) => {
@@ -520,6 +681,7 @@ export default function RequestDetailsPage() {
                     return <CheckCircle2 className="w-4 h-4 text-green-600" />;
                 case "observado":
                 case "rechazado":
+                case "requiere_correccion":
                     return <XCircle className="w-4 h-4 text-red-600" />;
                 case "publicado":
                     return <CheckCircle2 className="w-4 h-4 text-purple-600" />;
@@ -556,13 +718,14 @@ export default function RequestDetailsPage() {
 
         if (!generalHistory || generalHistory.length === 0) {
             return (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 lg:min-h-[520px]">
+
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
                             <Calendar className="w-6 h-6 text-amber-600" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-slate-900">Historial de Estado</h2>
+                            <h2 className="text-lg font-bold text-slate-900">Historial</h2>
                             <p className="text-sm text-slate-600">Cambios de estado general de la solicitud</p>
                         </div>
                     </div>
@@ -577,94 +740,96 @@ export default function RequestDetailsPage() {
 
 
         return (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col h-[700px]">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
                         <Calendar className="w-6 h-6 text-amber-600" />
                     </div>
                     <div className="flex-1">
-                        <h2 className="text-lg font-bold text-slate-900">Historial de Estados</h2>
+                        <h2 className="text-lg font-bold text-slate-900">Historial</h2>
                         <p className="text-sm text-slate-600">
                             {sortedHistory.length} {sortedHistory.length === 1 ? "cambio registrado" : "cambios registrados"}
                         </p>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {visibleHistory.map((item, index) => {
-                        const isObserved = normalizeStatus(item.new_status) === "observado";
+                {/* 👇 Zona scrolleable */}
+                <div className="flex-1 min-h-0">
+                    <div className={`h-full pr-2 space-y-4 ${showAll ? "overflow-y-auto" : ""}`}>
+                        {visibleHistory.map((item, index) => {
+                            const isObserved = normalizeStatus(item.new_status) === "observado";
 
-                        return (
-                            <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
-                                <div className="flex flex-col items-center">
-                                    <div
-                                        className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
-                                            ? "bg-green-600 border-green-100"
-                                            : item.new_status === "observado"
-                                                ? "bg-red-600 border-red-100"
-                                                : item.new_status === "publicado"
-                                                    ? "bg-purple-600 border-purple-100"
-                                                    : "bg-blue-600 border-blue-100"
-                                            }`}
-                                    ></div>
-                                    {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
-                                </div>
+                            return (
+                                <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                        <div
+                                            className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
+                                                ? "bg-green-600 border-green-100"
+                                                : item.new_status === "observado"
+                                                    ? "bg-red-600 border-red-100"
+                                                    : item.new_status === "publicado"
+                                                        ? "bg-purple-600 border-purple-100"
+                                                        : "bg-blue-600 border-blue-100"
+                                                }`}
+                                        />
+                                        {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1" />}
+                                    </div>
 
-                                <div className="flex-1 pb-6">
-                                    <div
-                                        className={`bg-slate-50 rounded-lg p-4 border-2 border-slate-200
-                                                ${isObserved ? "cursor-pointer hover:border-red-300 hover:bg-red-50" : ""}
-                                                `}
-                                        onClick={() => {
-                                            if (isObserved) onObservedClick?.(item);
-                                        }}
-                                    >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                {getStatusIcon(item.new_status)}
-                                                <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
-                                            </div>
-                                        </div>
-
-                                        {item.previous_status && item.previous_status !== item.new_status && (
-                                            <div className="flex items-center gap-2 mb-3 text-xs">
-                                                <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
-                                                    {getStatusLabel(item.previous_status)}
-                                                </span>
-                                                <span className="text-slate-400">→</span>
-                                                <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
-                                                    {getStatusLabel(item.new_status)}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                <Clock className="w-3 h-3" />
-                                                <span className="font-mono">{formatDate(item.change_date)}</span>
+                                    <div className="flex-1 pb-6">
+                                        <div
+                                            className={`bg-slate-50 rounded-lg p-4 border-2 border-slate-200 ${isObserved ? "cursor-pointer hover:border-red-300 hover:bg-red-50" : ""
+                                                }`}
+                                            onClick={() => {
+                                                if (isObserved) onObservedClick?.(item);
+                                            }}
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    {getStatusIcon(item.new_status)}
+                                                    <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
+                                                </div>
                                             </div>
 
-                                            {item.admin_name && (
-                                                <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                                                    <User className="w-3 h-3" />
-                                                    <span className="font-medium">{item.admin_name}</span>
+                                            {item.previous_status && item.previous_status !== item.new_status && (
+                                                <div className="flex items-center gap-2 mb-3 text-xs">
+                                                    <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
+                                                        {getStatusLabel(item.previous_status)}
+                                                    </span>
+                                                    <span className="text-slate-400">→</span>
+                                                    <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
+                                                        {getStatusLabel(item.new_status)}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span className="font-mono">{formatDate(item.change_date)}</span>
+                                                </div>
+
+                                                {item.admin_name && (
+                                                    <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                                                        <User className="w-3 h-3" />
+                                                        <span className="font-medium">{item.admin_name}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isObserved && (
+                                                <div className="mt-3 text-xs font-semibold text-red-700">
+                                                    Ver documentos observados →
                                                 </div>
                                             )}
                                         </div>
-
-                                        {isObserved && (
-                                            <div className="mt-3 text-xs font-semibold text-red-700">
-                                                Ver documentos observados →
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
 
-
+                {/* Footer fijo */}
                 {hasMore && (
                     <button
                         type="button"
@@ -673,19 +838,15 @@ export default function RequestDetailsPage() {
                     >
                         <Calendar className="w-4 h-4" />
                         {showAll ? (
-                            <>
-                                Mostrar menos <ChevronUp className="w-4 h-4" />
-                            </>
+                            <>Mostrar menos <ChevronUp className="w-4 h-4" /></>
                         ) : (
-                            <>
-                                Ver {sortedHistory.length - 5} cambios más <ChevronDown className="w-4 h-4" />
-                            </>
+                            <>Ver {sortedHistory.length - 3} cambios más <ChevronDown className="w-4 h-4" /></>
                         )}
                     </button>
                 )}
-
             </div>
         );
+
     };
 
 
@@ -735,8 +896,7 @@ export default function RequestDetailsPage() {
 
         const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
 
-
-        const documentsWithHistoricalPaths = rejectedDocs.map((doc: any) => {
+        /*const documentsWithHistoricalPaths = rejectedDocs.map((doc: any) => {
             const observationDate = new Date(selectedObservedEvent?.change_date ?? "");
 
             const historicalEntry = (applicationData?.history ?? []).find((h: any) =>
@@ -751,8 +911,7 @@ export default function RequestDetailsPage() {
                 ...doc,
                 _historicalPath: historicalEntry?.file_path_historico || doc.file_path
             };
-        });
-
+        });*/
 
 
         return (
@@ -783,70 +942,70 @@ export default function RequestDetailsPage() {
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                         {rejectedDocs.length > 0 ? (
                             <div className="space-y-6">
-                                {documentsWithHistoricalPaths.map((doc) => {
+                                {rejectedDocs.map((doc: any) => (
+                                    /*console.log("🧾 _history:", doc._history);
+                                    console.log("🧾 keys:", Object.keys(doc._history ?? {}));
                                     console.log("📌 DOC:", doc.document_id, doc.document_type);
-                                    console.log("📌 rejection_history:", doc.rejection_history);
-                                    return (
-                                        <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
-                                            <div className="bg-white border-b border-red-200 px-5 py-4">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-                                                            <FileText className="w-6 h-6 text-red-600" />
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-semibold text-slate-900 text-lg">
-                                                                {getDocumentTypeLabel(doc.document_type)}
-                                                            </h3>
-                                                            <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
-                                                            <div className="flex items-center gap-3 mt-2">
-                                                                <span className="text-xs text-slate-500">
-                                                                    📦 {doc.size_kb} KB
-                                                                </span>
-                                                                <span className="text-xs text-slate-500">
-                                                                    📅 {formatDate(doc.upload_date)}
-                                                                </span>
-                                                            </div>
+                                    console.log("📌 rejection_history:", doc.rejection_history);*/
+
+                                    <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
+                                        <div className="bg-white border-b border-red-200 px-5 py-4">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                                        <FileText className="w-6 h-6 text-red-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-slate-900 text-lg">
+                                                            {getDocumentTypeLabel(doc.document_type)}
+                                                        </h3>
+                                                        <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                        <div className="flex items-center gap-3 mt-2">
+                                                            <span className="text-xs text-slate-500">
+                                                                📦 {doc.size_kb} KB
+                                                            </span>
+                                                            <span className="text-xs text-slate-500">
+                                                                📅 {formatDate(doc.upload_date)}
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <span
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
-                                                            ? 'bg-red-100 text-red-800'
-                                                            : 'bg-orange-100 text-orange-800'
-                                                            }`}
-                                                    >
-                                                        {getStatusLabel(doc._history?.new_status || doc.status)}
-                                                    </span>
                                                 </div>
+                                                <span
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-orange-100 text-orange-800'
+                                                        }`}
+                                                >
+                                                    {getStatusLabel(doc._history?.new_status || doc.status)}
+                                                </span>
                                             </div>
 
-                                            <div className="px-5 py-4">
-                                                <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
-                                                    <div className="flex items-start gap-3">
-                                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                                                        <div className="flex-1">
-                                                            <h4 className="font-semibold text-red-900 text-sm mb-3">
-                                                                Observaciones (historial):
-                                                            </h4>
+                                        </div>
 
-                                                            <div className="bg-white rounded-lg p-3 border border-red-200">
-                                                                <div className="text-xs text-slate-500 mb-1">
-                                                                    {formatDate(doc._history?.change_date)}
-                                                                </div>
-                                                                <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                                                                    {doc._history?.comment ||
-                                                                        doc._history?.observations ||
-                                                                        doc.rejection_reason ||
-                                                                        "Sin observación"}
-                                                                </div>
-                                                            </div>
+                                        <div className="px-5 py-4">
+                                            <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                                <div className="flex items-start gap-3">
+                                                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-red-900 text-sm mb-3">
+                                                            Observaciones (historial):
+                                                        </h4>
+
+                                                        <div className="text-xs text-slate-500 mb-1">
+                                                            {formatDate(doc._history?.change_date || doc._history?.fecha_cambio || doc.upload_date)}
+                                                        </div>
+
+                                                        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                                            {pickDocObservation(doc) || "Sin observación"}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
 
-                                            {doc.images && doc.images.length > 0 && (
+                                        {
+                                            doc.images && doc.images.length > 0 && (
                                                 <div className="px-5 pb-4">
                                                     <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
                                                         <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -872,8 +1031,9 @@ export default function RequestDetailsPage() {
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
-
+                                            )
+                                        }
+                                        {/*
                                             <div className="px-5 pb-4 flex gap-2">
                                                 <button
                                                     onClick={() => {
@@ -901,10 +1061,10 @@ export default function RequestDetailsPage() {
                                                     <Download className="w-4 h-4" />
                                                     Descargar
                                                 </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                            </div>*/}
+                                    </div>
+
+                                ))}
                             </div>
                         ) : (
                             <div className="text-center py-12">
@@ -921,7 +1081,7 @@ export default function RequestDetailsPage() {
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -954,8 +1114,13 @@ export default function RequestDetailsPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <Section title="Información del Proyecto" icon={BookOpen}>
                             <div className="space-y-4">
-                                <InfoRow label="Título" value={applicationData.project_name || "Sin título"} />
-                                <InfoRow label="Facultad" value={applicationData.professional_school || "No especificada"} />
+                                <InfoRow label="Título" value={normalizeTitleForRepo(applicationData.project_name)} />
+                                <InfoRow label="Escuela Profesional" value={applicationData.professional_school || "No especificada"} />
+                                <InfoRow
+                                    label="Facultad"
+                                    value={getFacultyFromCareer(applicationData.professional_school) || "No especificada"}
+                                />
+
                                 <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Tesis de posgrado'} />
                                 {applicationData.application_type === 'docente' && (
                                     <InfoRow label="Tipo de financiamiento" value={applicationData.funding_type || "No especificado"} />
@@ -969,28 +1134,25 @@ export default function RequestDetailsPage() {
                                     <table className="w-full text-sm">
                                         <thead className="bg-slate-50">
                                             <tr className="text-left text-slate-600">
-                                                <th className="py-3 px-4 font-semibold">Nombres</th>
-                                                <th className="py-3 px-4 font-semibold">Apellidos</th>
+                                                <th className="py-3 px-4 font-semibold">Nombre Completo</th>
                                                 <th className="py-3 px-4 font-semibold">DNI</th>
                                                 <th className="py-3 px-4 font-semibold">Escuela</th>
-                                                <th className="py-3 px-4 font-semibold">Rol</th>
                                             </tr>
                                         </thead>
+
                                         <tbody className="divide-y divide-slate-200">
                                             {applicationData.authors.map((author, index) => (
                                                 <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">{author.first_name || "N/A"}</td>
-                                                    <td className="py-3 px-4">{author.last_name || "N/A"}</td>
+                                                    <td className="py-3 px-4">{toMetadataName(author)}</td>
                                                     <td className="py-3 px-4">{author.dni || "N/A"}</td>
                                                     <td className="py-3 px-4">{author.professional_school || "N/A"}</td>
                                                     <td className="py-3 px-4">
-                                                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                            {author.author_order === 'principal' ? 'Autor Principal' : 'Coautor'}
-                                                        </span>
+
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
+
                                     </table>
                                 </div>
                             ) : (
@@ -1005,8 +1167,7 @@ export default function RequestDetailsPage() {
                                         <table className="w-full text-sm">
                                             <thead className="bg-slate-50">
                                                 <tr className="text-left text-slate-600">
-                                                    <th className="py-3 px-4 font-semibold">Nombres</th>
-                                                    <th className="py-3 px-4 font-semibold">Apellidos</th>
+                                                    <th className="py-3 px-4 font-semibold">Nombre</th>
                                                     <th className="py-3 px-4 font-semibold">DNI</th>
                                                     <th className="py-3 px-4 font-semibold">Correo</th>
                                                 </tr>
@@ -1014,10 +1175,10 @@ export default function RequestDetailsPage() {
                                             <tbody className="divide-y divide-slate-200">
                                                 {applicationData.coauthors.map((coauthor, index) => (
                                                     <tr key={index} className="hover:bg-slate-50">
-                                                        <td className="py-3 px-4">{coauthor.first_name || "N/A"}</td>
-                                                        <td className="py-3 px-4">{coauthor.last_name || "N/A"}</td>
+                                                        <td className="py-3 px-4">{toMetadataName(coauthor)}</td>
                                                         <td className="py-3 px-4">{coauthor.dni || "N/A"}</td>
                                                         <td className="py-3 px-4">{coauthor.email || "N/A"}</td>
+                                                        <td className="py-3 px-4"></td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1043,12 +1204,7 @@ export default function RequestDetailsPage() {
                                         <tbody className="divide-y divide-slate-200">
                                             {applicationData.advisors.map((advisor, index) => (
                                                 <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">
-                                                        {advisor.full_name ||
-                                                            [advisor.nombre, advisor.apellido].filter(Boolean).join(" ") ||
-                                                            "N/A"}
-                                                    </td>
-
+                                                    <td className="py-3 px-4 font-medium text-slate-900">{toMetadataName(advisor)}</td>
                                                     <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
                                                     <td className="py-3 px-4 font-mono text-xs">{advisor.orcid || "N/A"}</td>
                                                 </tr>
@@ -1068,11 +1224,12 @@ export default function RequestDetailsPage() {
                                         .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
                                         .map((juryMember, index) => (
                                             <JuryItem
-                                                key={index}
+                                                key={juryMember.jury_id ?? index}
                                                 rol={getJuryRoleLabel(juryMember.jury_role)}
-                                                nombre={juryMember.full_name || "No asignado"}
-                                                badge={juryMember.jury_role === 'presidente' ? 'Principal' : 'Miembro'}
+                                                nombre={toMetadataFromSingleField(juryMember.full_name) || "No asignado"}
+                                                badge={juryMember.jury_role === "presidente" ? "Principal" : "Miembro"}
                                             />
+
                                         ))}
                                 </div>
                             ) : (
@@ -1083,8 +1240,11 @@ export default function RequestDetailsPage() {
 
                     <div className="space-y-6">
                         <GeneralHistorySection
-                            history={applicationData.history ?? []}
-                            onObservedClick={openObservedDocsModalIfObserved}
+                            history={applicationData?.history ?? []}
+                            onObservedClick={(item) => {
+                                console.log("🧾 ITEM HISTORIAL (onObservedClick):", item);
+                                openObservedDocsModalIfObserved(item);
+                            }}
                         />
 
                         <div className="lg:col-span-2 mt-6">
@@ -1101,6 +1261,8 @@ export default function RequestDetailsPage() {
                                             body: JSON.stringify({ publicationLink: link })
                                         }
                                     );
+                                    const json = await response.json();
+                                    console.log("✅ publication-link response:", json);
 
                                     if (!response.ok) {
                                         throw new Error('Error al guardar');
@@ -1389,53 +1551,6 @@ export default function RequestDetailsPage() {
                     <div className="lg:col-span-2 mt-6">
 
                     </div>
-
-                    {/*applicationData.documents && applicationData.documents.some(doc => doc.images && doc.images.length > 0) && (
-                        <div className="mt-6 border-t pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Imágenes Adjuntas a los Documentos
-                            </h3>
-
-                            <div className="space-y-6">
-                                {applicationData.documents.map((doc) => (
-                                    doc.images && doc.images.length > 0 && (
-                                        <div key={doc.document_id} className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-700 mb-3">
-                                                📄 {doc.file_name}
-                                            </h4>
-
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                                {doc.images.map((image) => (
-                                                    <div key={image.image_id} className="group relative">
-                                                        <div className="aspect-square rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                                            <img
-                                                                src={`${API_URL_DOCUMENTS}/${image.image_path}`}
-                                                                alt={image.file_name}
-                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(image.image_path, '_blank')}
-                                                            />
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <p className="text-xs text-gray-600 truncate" title={image.file_name}>
-                                                                {image.file_name}
-                                                            </p>
-                                                            <p className="text-xs text-gray-400">
-                                                                {new Date(image.created_at).toLocaleDateString('es-PE')}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    )*/}
-
                     <div className="lg:col-span-2 mt-6"></div>
 
                     <div className="space-y-4">

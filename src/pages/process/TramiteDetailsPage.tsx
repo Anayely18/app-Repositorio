@@ -476,23 +476,13 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
 
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                                        <Calendar className="w-6 h-6 text-amber-600" />
-                                    </div>
-                                    <div>
-                                        <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Historial</h2>
-                                        <p className="text-sm text-slate-600">Seguimiento del trámite</p>
-                                    </div>
-                                </div>
+                        
                                 <GeneralHistorySection
+                                
                                     history={tramiteData.timeline ?? []}
                                     onObservedClick={openObservedDocsModalIfObserved}
                                 />
 
-
-                            </div>
                         </div>
 
                         {/* Información adicional */}
@@ -524,4 +514,3 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         </>
     );
 }
-

@@ -4,25 +4,37 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
-import { LucideIcon } from "lucide-react"
+import { LucideIcon } from "lucide-react";
 
 interface FormSelectProps {
-  icon: LucideIcon
-  label: string
-  options: string[]
-  value?: string
-  onChange?: (value: string) => void
+  icon: LucideIcon;
+  label: string;
+  options: string[];
+  value?: string;
+  onChange?: (value: string) => void;
+
+  /** ✅ nuevo */
+  invalid?: boolean;
+  /** ✅ nuevo */
+  error?: string;
+  /** compat */
+  errorMessage?: string;
 }
 
-export function FormSelect({ 
-  icon: Icon, 
-  label, 
+export function FormSelect({
+  icon: Icon,
+  label,
   options,
   value,
-  onChange 
+  onChange,
+  invalid = false,
+  error,
+  errorMessage,
 }: FormSelectProps) {
+  const err = error ?? errorMessage;
+
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -31,7 +43,11 @@ export function FormSelect({
       </label>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger
+          className={`w-full ${
+            (invalid || err) ? "border-red-500 focus:ring-red-100" : ""
+          }`}
+        >
           <SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} />
         </SelectTrigger>
 
@@ -43,6 +59,10 @@ export function FormSelect({
           ))}
         </SelectContent>
       </Select>
+
+      {(invalid || err) && err && (
+        <p className="text-xs text-red-600 font-medium">{err}</p>
+      )}
     </div>
-  )
+  );
 }

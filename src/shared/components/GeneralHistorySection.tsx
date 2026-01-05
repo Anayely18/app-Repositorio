@@ -106,7 +106,7 @@ export function GeneralHistorySection({
             <Calendar className="w-6 h-6 text-amber-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Historial de Estados</h2>
+            <h2 className="text-lg font-bold text-slate-900">Historial</h2>
             <p className="text-sm text-slate-600">Cambios de estado del trámite</p>
           </div>
         </div>
@@ -120,20 +120,22 @@ export function GeneralHistorySection({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-          <Calendar className="w-6 h-6 text-amber-600" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-slate-900">Historial de Estados</h2>
-          <p className="text-sm text-slate-600">
-            {sortedHistory.length} {sortedHistory.length === 1 ? "cambio registrado" : "cambios registrados"}
-          </p>
-        </div>
+  <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 flex flex-col h-[700px]">
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+        <Calendar className="w-6 h-6 text-amber-600" />
       </div>
+      <div className="flex-1">
+        <h2 className="text-lg font-bold text-slate-900">Historial de Estados</h2>
+        <p className="text-sm text-slate-600">
+          {sortedHistory.length} {sortedHistory.length === 1 ? "cambio registrado" : "cambios registrados"}
+        </p>
+      </div>
+    </div>
 
-      <div className="space-y-4">
+    {/* ✅ Zona scrolleable */}
+    <div className="flex-1 min-h-0">
+      <div className="h-full overflow-y-auto pr-2 space-y-4">
         {visibleHistory.map((item, index) => {
           const ns = getNewStatus(item);
           const ps = getPrevStatus(item);
@@ -207,25 +209,28 @@ export function GeneralHistorySection({
           );
         })}
       </div>
-
-      {hasMore && (
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-lg transition-colors text-sm font-semibold text-slate-700 mt-4"
-        >
-          <Calendar className="w-4 h-4" />
-          {showAll ? (
-            <>
-              Mostrar menos <ChevronUp className="w-4 h-4" />
-            </>
-          ) : (
-            <>
-              Ver {sortedHistory.length - 3} cambios más <ChevronDown className="w-4 h-4" />
-            </>
-          )}
-        </button>
-      )}
     </div>
-  );
+
+    {/* Footer fijo */}
+    {hasMore && (
+      <button
+        type="button"
+        onClick={() => setShowAll(!showAll)}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-lg transition-colors text-sm font-semibold text-slate-700 mt-4"
+      >
+        <Calendar className="w-4 h-4" />
+        {showAll ? (
+          <>
+            Mostrar menos <ChevronUp className="w-4 h-4" />
+          </>
+        ) : (
+          <>
+            Ver {sortedHistory.length - 3} cambios más <ChevronDown className="w-4 h-4" />
+          </>
+        )}
+      </button>
+    )}
+  </div>
+);
+
 }
