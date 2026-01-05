@@ -138,6 +138,8 @@ export default function ListThesisWorks() {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
         });
     };
 
@@ -164,7 +166,7 @@ export default function ListThesisWorks() {
         if (s === "pendiente") return "bg-amber-100 text-amber-800 border border-amber-200";
         if (s === "aprobado") return "bg-green-100 text-green-800 border border-green-200";
         if (s === "observado") return "bg-red-100 text-red-800 border border-red-200";
-        if (s === "publicado") return "bg-indigo-100 text-indigo-800 border border-indigo-200";
+        if (s === "publicado") return "bg-purple-100 text-purple-800 border border-purple-200";
 
         return "bg-slate-100 text-slate-700 border border-slate-200";
     };

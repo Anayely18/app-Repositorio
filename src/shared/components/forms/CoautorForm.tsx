@@ -1,34 +1,351 @@
-import { CreditCard, FileText, User, Trash2, MapPinned } from "lucide-react"
-import { FormInput } from "./FormInput"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CreditCard, FileText, User, Trash2, MapPinned, Hash } from "lucide-react";
+import { FormInput } from "./FormInput";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { API_URL } from "@/utils/api";
 
 interface CoautorData {
-  tipoUbicacion?: 'externo' | 'interno' 
-  tipoRol?: 'estudiante' | 'docente'
-  nombre?: string
-  apellido?: string
-  dni?: string
-  orcid?: string
+  tipoUbicacion?: "externo" | "interno";
+  tipoRol?: "estudiante" | "docente";
+  nombre?: string;
+  apellido?: string;
+  orcid?: string;
+
+  // ⚠️ existe en el tipo, pero NO se persiste
+  dni?: string;
+  codigo?: string;
+  showValidation?: boolean;
+
 }
 
 interface CoautorFormProps {
-  number: number
-  onRemove: () => void
-  canRemove: boolean
-  data: CoautorData
-  onChange: (data: CoautorData) => void
+  number: number;
+  onRemove: () => void;
+  canRemove: boolean;
+  data: CoautorData;
+  onChange: (data: CoautorData) => void;
+  realTimeErrors?: { nombre?: string; apellido?: string; dni?: string; orcid?: string; codigo?: string };
+  onRealTimeErrorChange?: (field: "nombre" | "apellido" | "dni" | "orcid" | "codigo", value: string) => void;
+
+  /** ✅ nuevo: el padre lo pone true al intentar enviar */
+  showValidation?: boolean;
 }
 
-export function CoautorForm({ 
-  number, 
-  onRemove, 
-  canRemove, 
-  data={}, 
-  onChange 
+type FieldKey =
+  | "tipoUbicacion"
+  | "tipoRol"
+  | "codigo"
+  | "dni"
+  | "nombre"
+  | "apellido"
+  | "orcid";
 
+export function CoautorForm({
+  number,
+  onRemove,
+  canRemove,
+  data = {},
+  onChange,
+  realTimeErrors,
+  onRealTimeErrorChange,
+  showValidation ,
 }: CoautorFormProps) {
-  
+  // ✅ Solo UI/lookup (NO se guarda en "data")
+  const [codigoLookup, setCodigoLookup] = useState<string>("");
+  const [dniLookup, setDniLookup] = useState<string>("");
+
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+
+  const timerRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const lastKeyRef = useRef<string>(""); // evita repetir la misma búsqueda
+
+  const [touched, setTouched] = useState<Record<FieldKey, boolean>>({
+    tipoUbicacion: false,
+    tipoRol: false,
+    codigo: false,
+    dni: false,
+    nombre: false,
+    apellido: false,
+    orcid: false,
+  });
+
+  const touch = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
+  const showErr = (k: FieldKey) => showValidation || touched[k];
+
+  const onlyDigits = (v: string, max: number) => v.replace(/\D/g, "").slice(0, max);
+
+  const pickNames = (payload: any) => {
+    const p = payload?.data ?? payload;
+    const nombres = p?.nombres ?? p?.nombre ?? p?.name ?? p?.first_name ?? p?.firstName ?? "";
+    const apellidos = p?.apellidos ?? p?.apellido ?? p?.surname ?? p?.last_name ?? p?.lastName ?? "";
+    const full = p?.full_name ?? p?.fullName ?? "";
+    return { nombres, apellidos, full };
+  };
+
+  const isInternalStudent = data.tipoUbicacion === "interno" && data.tipoRol === "estudiante";
+  const isInternalTeacher = data.tipoUbicacion === "interno" && data.tipoRol === "docente";
+
+  const mustManualFill =
+    !data.tipoUbicacion ||
+    !data.tipoRol ||
+    data.tipoUbicacion === "externo" ||
+    (data.tipoUbicacion === "interno" && (data.tipoRol !== "estudiante" && data.tipoRol !== "docente"));
+
+  const isValidOrcid = (v: string) => {
+    const s = String(v ?? "").trim();
+    if (!s) return true; // ✅ opcional
+    const re = /^(https?:\/\/orcid\.org\/)?\d{4}-\d{4}-\d{4}-\d{3}(\d|X)$/i;
+    return re.test(s);
+  };
+
+  // ✅ Cuando cambia rol/ubicación: limpia búsquedas y errores
+  useEffect(() => {
+    setLookupError("");
+    setIsLookingUp(false);
+    lastKeyRef.current = "";
+
+    setCodigoLookup("");
+    setDniLookup("");
+
+    if (abortRef.current) abortRef.current.abort();
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+  }, [data.tipoRol, data.tipoUbicacion]);
+
+  // =========================
+  // VALIDACIONES (dinámicas)
+  // =========================
+  const computedErrors = useMemo(() => {
+    const e: Partial<Record<FieldKey, string>> = {};
+
+    const tu = data.tipoUbicacion;
+    const tr = data.tipoRol;
+
+    const nombre = String(data.nombre ?? "").trim();
+    const apellido = String(data.apellido ?? "").trim();
+
+    const codigo = onlyDigits(codigoLookup ?? "", 6);
+    const dni = onlyDigits(dniLookup ?? "", 8);
+
+    if (!tu) e.tipoUbicacion = "Selecciona la ubicación del coautor.";
+    if (!tr) e.tipoRol = "Selecciona el rol del coautor.";
+
+    // requisito de lookup según rol/ubicación
+    if (isInternalStudent) {
+      if (!codigo) e.codigo = "El código es obligatorio.";
+      else if (!/^\d{6}$/.test(codigo)) e.codigo = "El código debe tener 6 dígitos.";
+      else if (!isLookingUp && lookupError) e.codigo = lookupError;
+    }
+
+    if (isInternalTeacher) {
+      if (!dni) e.dni = "El DNI es obligatorio.";
+      else if (!/^\d{8}$/.test(dni)) e.dni = "El DNI debe tener 8 dígitos.";
+      else if (!isLookingUp && lookupError) e.dni = lookupError;
+    }
+
+    // nombre/apellido siempre necesarios (interno se autocompleta, externo manual)
+    if (!nombre) e.nombre = "Los nombres son obligatorios.";
+    else if (nombre.length < 2) e.nombre = "Escribe al menos 2 caracteres.";
+
+    if (!apellido) e.apellido = "Los apellidos son obligatorios.";
+    else if (apellido.length < 2) e.apellido = "Escribe al menos 2 caracteres.";
+
+    // ORCID opcional, pero si escribe debe ser válido
+    if (!isValidOrcid(data.orcid)) e.orcid = "ORCID no válido (ej: 0000-0000-0000-0000).";
+
+    return e;
+  }, [
+    data.tipoUbicacion,
+    data.tipoRol,
+    data.nombre,
+    data.apellido,
+    data.orcid,
+    codigoLookup,
+    dniLookup,
+    lookupError,
+    isLookingUp,
+    isInternalStudent,
+    isInternalTeacher,
+  ]);
+
+  const fieldError = (k: FieldKey) => {
+    // prioridad: realtime > computed
+    const rt =
+      k === "codigo"
+        ? realTimeErrors?.codigo
+        : k === "dni"
+        ? realTimeErrors?.dni
+        : k === "nombre"
+        ? realTimeErrors?.nombre
+        : k === "apellido"
+        ? realTimeErrors?.apellido
+        : k === "orcid"
+        ? realTimeErrors?.orcid
+        : undefined;
+
+    if (rt) return rt;
+    if (!showErr(k)) return "";
+    return computedErrors[k] ?? "";
+  };
+
+  // =========================
+  // 1) LOOKUP ESTUDIANTE por CÓDIGO (6 dígitos) SOLO si es interno
+  // =========================
+  useEffect(() => {
+    if (!isInternalStudent) return;
+
+    const codigo = onlyDigits(codigoLookup ?? "", 6);
+
+    if (codigo.length !== 6) {
+      setLookupError("");
+      lastKeyRef.current = "";
+      if (abortRef.current) abortRef.current.abort();
+      return;
+    }
+
+    const key = `student:${codigo}`;
+    if (key === lastKeyRef.current) return;
+
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+
+    timerRef.current = window.setTimeout(async () => {
+      try {
+        setLookupError("");
+        setIsLookingUp(true);
+
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        const LOOKUP_URL = `${API_URL}/lookup/students/${codigo}`;
+
+        const res = await fetch(LOOKUP_URL, { signal: controller.signal });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "Código no encontrado");
+        }
+
+        const { nombres, apellidos, full } = pickNames(json);
+
+        let finalNombres = String(nombres ?? "").trim();
+        let finalApellidos = String(apellidos ?? "").trim();
+
+        if ((!finalNombres || !finalApellidos) && full) {
+          const parts = String(full).trim().split(/\s+/);
+          if (parts.length >= 2) {
+            finalApellidos = parts.slice(-2).join(" ");
+            finalNombres = parts.slice(0, -2).join(" ");
+          } else {
+            finalNombres = full;
+          }
+        }
+
+        if (!finalNombres && !finalApellidos) {
+          throw new Error("El servicio no devolvió nombre/apellido");
+        }
+
+        lastKeyRef.current = key;
+
+        onRealTimeErrorChange?.("codigo", "");
+        onChange({
+          ...data,
+          nombre: finalNombres || data.nombre || "",
+          apellido: finalApellidos || data.apellido || "",
+        });
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        setLookupError(err?.message || "Error consultando código");
+      } finally {
+        setIsLookingUp(false);
+      }
+    }, 450);
+
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [codigoLookup, isInternalStudent]); // importante
+
+  // =========================
+  // 2) LOOKUP DOCENTE por DNI (8 dígitos) SOLO si es interno
+  // =========================
+  useEffect(() => {
+    if (!isInternalTeacher) return;
+
+    const dni = onlyDigits(dniLookup ?? "", 8);
+
+    if (dni.length !== 8) {
+      setLookupError("");
+      lastKeyRef.current = "";
+      if (abortRef.current) abortRef.current.abort();
+      return;
+    }
+
+    const key = `teacher:${dni}`;
+    if (key === lastKeyRef.current) return;
+
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+
+    timerRef.current = window.setTimeout(async () => {
+      try {
+        setLookupError("");
+        setIsLookingUp(true);
+
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        const LOOKUP_URL = `${API_URL}/personas/dni/${dni}`;
+
+        const res = await fetch(LOOKUP_URL, { signal: controller.signal });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "DNI no encontrado");
+        }
+
+        const { nombres, apellidos, full } = pickNames(json);
+
+        let finalNombres = String(nombres ?? "").trim();
+        let finalApellidos = String(apellidos ?? "").trim();
+
+        if ((!finalNombres || !finalApellidos) && full) {
+          const parts = String(full).trim().split(/\s+/);
+          if (parts.length >= 2) {
+            finalApellidos = parts.slice(-2).join(" ");
+            finalNombres = parts.slice(0, -2).join(" ");
+          } else {
+            finalNombres = full;
+          }
+        }
+
+        if (!finalNombres && !finalApellidos) {
+          throw new Error("El servicio no devolvió nombre/apellido");
+        }
+
+        lastKeyRef.current = key;
+
+        onRealTimeErrorChange?.("dni", "");
+        onChange({
+          ...data,
+          nombre: finalNombres || data.nombre || "",
+          apellido: finalApellidos || data.apellido || "",
+        });
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        setLookupError(err?.message || "Error consultando DNI");
+      } finally {
+        setIsLookingUp(false);
+      }
+    }, 450);
+
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [dniLookup, isInternalTeacher]); // importante
 
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 flex flex-col gap-y-6 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
@@ -50,10 +367,14 @@ export function CoautorForm({
         )}
       </div>
 
+      {/* UBICACIÓN */}
       <div>
-        <RadioGroup 
-          value={data.tipoUbicacion || ""} 
-          onValueChange={(value) => onChange({...data, tipoUbicacion: value as 'externo' | 'interno'})}
+        <RadioGroup
+          value={data.tipoUbicacion || ""}
+          onValueChange={(value) => {
+            onChange({ ...data, tipoUbicacion: value as "externo" | "interno" });
+            touch("tipoUbicacion");
+          }}
         >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
@@ -61,29 +382,33 @@ export function CoautorForm({
           </div>
           <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
-              <RadioGroupItem 
-                value="externo" 
-                id={`ubicacion-externo-${number}`} 
-                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
-              />
-              <Label htmlFor={`ubicacion-externo-${number}`} className="font-normal capitalize">Externo</Label>
+              <RadioGroupItem value="externo" id={`ubicacion-externo-${number}`} />
+              <Label htmlFor={`ubicacion-externo-${number}`} className="font-normal capitalize">
+                Externo
+              </Label>
             </div>
             <div className="flex items-center gap-3">
-              <RadioGroupItem 
-                value="interno" 
-                id={`ubicacion-interno-${number}`} 
-                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
-              />
-              <Label htmlFor={`ubicacion-interno-${number}`} className="font-normal capitalize">Interno</Label>
+              <RadioGroupItem value="interno" id={`ubicacion-interno-${number}`} />
+              <Label htmlFor={`ubicacion-interno-${number}`} className="font-normal capitalize">
+                Interno
+              </Label>
             </div>
           </div>
         </RadioGroup>
+
+        {fieldError("tipoUbicacion") && (
+          <p className="text-xs text-red-600 mt-1">{fieldError("tipoUbicacion")}</p>
+        )}
       </div>
 
+      {/* ROL */}
       <div>
-        <RadioGroup 
-          value={data.tipoRol||"  "} 
-          onValueChange={(value) => onChange({...data, tipoRol: value as 'estudiante' | 'docente'})}
+        <RadioGroup
+          value={data.tipoRol || ""}
+          onValueChange={(value) => {
+            onChange({ ...data, tipoRol: value as "estudiante" | "docente" });
+            touch("tipoRol");
+          }}
         >
           <div className="flex items-center px-1 gap-2">
             <MapPinned className="w-4 h-4 text-blue-500" />
@@ -91,62 +416,137 @@ export function CoautorForm({
           </div>
           <div className="grid grid-cols-3 w-full px-2">
             <div className="flex items-center gap-3">
-              <RadioGroupItem 
-                value="estudiante" 
-                id={`rol-estudiante-${number}`} 
-                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
-              />
-              <Label htmlFor={`rol-estudiante-${number}`} className="font-normal capitalize">Estudiante</Label>
+              <RadioGroupItem value="estudiante" id={`rol-estudiante-${number}`} />
+              <Label htmlFor={`rol-estudiante-${number}`} className="font-normal capitalize">
+                Estudiante
+              </Label>
             </div>
             <div className="flex items-center gap-3">
-              <RadioGroupItem 
-                value="docente" 
-                id={`rol-docente-${number}`} 
-                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" 
-              />
-              <Label htmlFor={`rol-docente-${number}`} className="font-normal capitalize">Docente</Label>
+              <RadioGroupItem value="docente" id={`rol-docente-${number}`} />
+              <Label htmlFor={`rol-docente-${number}`} className="font-normal capitalize">
+                Docente
+              </Label>
             </div>
           </div>
         </RadioGroup>
+
+        {fieldError("tipoRol") && (
+          <p className="text-xs text-red-600 mt-1">{fieldError("tipoRol")}</p>
+        )}
       </div>
 
+      {/* ✅ Aviso si es externo o si falta selección */}
+      {mustManualFill && (
+        <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 text-xs text-amber-800">
+          Para coautor <b>externo</b> o si no se eligió correctamente el rol/ubicación, completa <b>nombre y apellido</b> manualmente.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* ✅ Campo dinámico: Código si estudiante interno / DNI si docente interno */}
+        {isInternalStudent && (
+          <div className="space-y-1">
+            <FormInput
+              icon={Hash}
+              label="Código"
+              sublabel="Ingrese 6 dígitos para autocompletar"
+              type="text"
+              placeholder="123456"
+              maxLength={6}
+              value={codigoLookup}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const v = onlyDigits(raw, 6);
+                setCodigoLookup(v);
+                setLookupError("");
+                onRealTimeErrorChange?.("codigo", "");
+              }}
+              onBlur={() => touch("codigo")}
+              inputType="number"
+              error={fieldError("codigo")}
+            />
+            {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del código...</p>}
+          </div>
+        )}
+
+        {isInternalTeacher && (
+          <div className="space-y-1">
+            <FormInput
+              icon={CreditCard}
+              label="DNI"
+              sublabel="Ingrese 8 dígitos para autocompletar"
+              type="text"
+              placeholder="12345678"
+              maxLength={8}
+              value={dniLookup}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const v = onlyDigits(raw, 8);
+                setDniLookup(v);
+                setLookupError("");
+                onRealTimeErrorChange?.("dni", "");
+              }}
+              onBlur={() => touch("dni")}
+              inputType="number"
+              error={fieldError("dni")}
+            />
+            {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del DNI...</p>}
+          </div>
+        )}
+
         <FormInput
           icon={User}
           label="Nombres"
-          sublabel="(En mayúsculas y minúsculas según corresponda)"
+          sublabel="Solo se aceptan letras"
           type="text"
-          placeholder="Ejem: Gustavo"
-          value={data.nombre|| ""}
-          onChange={(e) => onChange({ ...data, nombre: e.target.value })}
+          placeholder="Ej.: Gustavo"
+          value={data.nombre || ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            const hasNumbers = /\d/.test(value);
+            onRealTimeErrorChange?.("nombre", hasNumbers ? "Solo se aceptan letras" : "");
+            onChange({ ...data, nombre: value });
+          }}
+          onBlur={() => touch("nombre")}
+          inputType="text"
+          error={fieldError("nombre")}
         />
+
         <FormInput
           icon={User}
           label="Apellidos"
-          sublabel="(En mayúsculas y minúsculas según corresponda)"
+          sublabel="Solo se aceptan letras"
           type="text"
-          placeholder="Ejem:vRobles Rojas"
+          placeholder="Ej.: Robles Rojas"
           value={data.apellido || ""}
-          onChange={(e) => onChange({ ...data, apellido: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            const hasNumbers = /\d/.test(value);
+            onRealTimeErrorChange?.("apellido", hasNumbers ? "Solo se aceptan letras" : "");
+            onChange({ ...data, apellido: value });
+          }}
+          onBlur={() => touch("apellido")}
+          inputType="text"
+          error={fieldError("apellido")}
         />
-        <FormInput
-          icon={CreditCard}
-          label="Número de DNI"
-          type="text"
-          placeholder="Ejem: 78345758"
-          maxLength={8}
-          value={data.dni || ""}
-          onChange={(e) => onChange({ ...data, dni: e.target.value })}
-        />
+
         <FormInput
           icon={FileText}
           label="Url de ORCID"
           type="text"
           placeholder="0000-0000-0000-0000"
           value={data.orcid || ""}
-          onChange={(e) => onChange({ ...data, orcid: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value.trim() && !isValidOrcid(value)) onRealTimeErrorChange?.("orcid", "ORCID no válido");
+            else onRealTimeErrorChange?.("orcid", "");
+            onChange({ ...data, orcid: value });
+          }}
+          onBlur={() => touch("orcid")}
+          inputType="alphanumeric"
+          error={fieldError("orcid")}
         />
       </div>
     </div>
-  )
+  );
 }

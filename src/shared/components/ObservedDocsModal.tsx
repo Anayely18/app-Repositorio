@@ -68,41 +68,25 @@ export function ObservedDocsModal({
         return bestDiff <= maxMs ? best : null;
     };
 
-    // 🔥 ESTA FUNCIÓN CONSTRUYE LA URL CORRECTA DEL DOCUMENTO
     const getDocumentUrl = (filePath: string) => {
         if (!filePath) return "";
         if (filePath.startsWith("http")) return filePath;
-        
-        // Si es una ruta relativa, construir URL completa
-        const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-        return `${API_URL_DOCUMENTS}/${cleanPath}`;
+        return `${API_URL_DOCUMENTS}/${filePath}`;
     };
 
     const eventDate = parseSafeDate(observedEvent?.change_date ?? observedEvent?.date);
-    
-    // 🔥 Filtrar documentos que fueron observados en este evento específico
-    const documentsWithHistoricalPaths = (documents || [])
+    const rejectedDocs = (documents || [])
         .map((doc: any) => {
             if (!eventDate) return null;
             const obs = findClosestObservation(doc.rejection_history || [], eventDate, 10);
             if (!obs) return null;
-            
-            // 🔥 IMPORTANTE: Retornamos el documento CON su file_path original
-            return { 
-                ...doc, 
-                _obsMoment: obs,
-                _originalFilePath: doc.file_path // ⚠️ Este es el path del PDF en esa versión
-            };
+            return { ...doc, _obsMoment: obs };
         })
         .filter(Boolean);
-
-        
 
     return (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
-                
-                {/* Header */}
                 <div className="bg-secondary px-6 py-4 flex items-center justify-between rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -111,7 +95,7 @@ export function ObservedDocsModal({
                         <div>
                             <h2 className="text-xl font-bold text-white">Documentos con Observaciones</h2>
                             <p className="text-red-100 text-sm">
-                                {rejectedDocs.length} {rejectedDocs.length === 1 ? 'documento' : 'documentos'} con observaciones
+                                {rejectedDocs.length} {rejectedDocs.length === 1 ? "documento" : "documentos"} con observaciones
                             </p>
                         </div>
                     </div>
@@ -124,25 +108,16 @@ export function ObservedDocsModal({
                     </button>
                 </div>
 
-                {/* Content */}
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                     {rejectedDocs.length > 0 ? (
                         <div className="space-y-6">
                             {rejectedDocs.map((doc: any) => {
                                 const docType = doc.document_type ?? doc.name ?? "";
                                 const docFileName = doc.file_name ?? doc.original_name ?? doc.name ?? "Documento";
-                                
-                                // 🔥 USAR EL FILE_PATH ORIGINAL DEL DOCUMENTO DE ESA VERSIÓN
-                                const docFilePath = doc._originalFilePath ?? doc.file_path ?? doc.path ?? doc.url ?? "";
-                                
+                                const docFilePath = doc.file_path ?? doc.path ?? doc.url ?? "";
                                 const images = doc.images || [];
-
                                 return (
-                                    <div 
-                                        key={doc.document_id ?? doc.file_name} 
-                                        className="border border-red-200 rounded-xl overflow-hidden bg-red-50"
-                                    >
-                                        {/* Header del documento */}
+                                    <div key={doc.document_id ?? doc.file_name} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
                                         <div className="bg-white border-b border-red-200 px-5 py-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start gap-3">
@@ -171,7 +146,6 @@ export function ObservedDocsModal({
                                             </div>
                                         </div>
 
-                                        {/* Observación */}
                                         <div className="px-5 py-4">
                                             <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
                                                 <div className="flex items-start gap-3">
@@ -198,7 +172,6 @@ export function ObservedDocsModal({
                                             </div>
                                         </div>
 
-                                        {/* Imágenes */}
                                         {Array.isArray(images) && images.length > 0 && (
                                             <div className="px-5 pb-4">
                                                 <h4 className="font-semibold text-slate-900 text-sm mb-3">
@@ -207,9 +180,10 @@ export function ObservedDocsModal({
 
                                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                                     {images.map((img: any, idx: number) => {
-                                                        const url = typeof img === "string"
-                                                            ? img
-                                                            : `${API_URL_DOCUMENTS}/${img.image_path}`;
+                                                        const url =
+                                                            typeof img === "string"
+                                                                ? img
+                                                                : `${API_URL_DOCUMENTS}/${img.image_path}`;
                                                         return (
                                                             <div key={img.image_id ?? `${url}-${idx}`} className="group relative">
                                                                 <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
@@ -227,16 +201,11 @@ export function ObservedDocsModal({
                                             </div>
                                         )}
 
-                                        {/* 🔥 BOTONES PARA VER Y DESCARGAR EL DOCUMENTO CORRECTO */}
                                         <div className="px-5 pb-4 flex gap-2">
                                             <button
                                                 onClick={() => {
                                                     const url = getDocumentUrl(docFilePath);
-                                                    if (!url) {
-                                                        alert('No se encontró el archivo');
-                                                        return;
-                                                    }
-                                                    console.log('📄 Abriendo documento:', url);
+                                                    if (!url) return;
                                                     window.open(url, "_blank");
                                                 }}
                                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -248,10 +217,7 @@ export function ObservedDocsModal({
                                             <button
                                                 onClick={() => {
                                                     const url = getDocumentUrl(docFilePath);
-                                                    if (!url) {
-                                                        alert('No se encontró el archivo');
-                                                        return;
-                                                    }
+                                                    if (!url) return;
 
                                                     const link = document.createElement("a");
                                                     link.href = url;
@@ -261,6 +227,7 @@ export function ObservedDocsModal({
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
+
                                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <Download className="w-4 h-4" />

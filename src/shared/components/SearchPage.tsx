@@ -140,7 +140,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                         <div className="space-y-6">
                             <div>
                                 <label htmlFor="dni" className="block text-sm font-semibold text-slate-700 mb-2">
-                                    {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Código de Docente (6 dígitos)'}
+                                    {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Número de DNI (8 dígitos)'}
                                 </label>
                                 <input
                                     type="text"
