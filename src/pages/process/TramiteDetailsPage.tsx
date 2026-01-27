@@ -1,8 +1,14 @@
 import { ResubmitModal } from "@/shared/components/ResubmitModal";
 import { GeneralHistorySection } from "@/shared/components/GeneralHistorySection";
 import { ObservedDocsModal } from "@/shared/components/ObservedDocsModal";
+import { ImageModal } from '@/shared/components/ImageModal';
+import { ApplicantInfo } from '@/shared/components/ApplicantInfo';
+import { DocumentCard } from '@/shared/components/DocumentCard';
+import { ConstanciaStatus } from '@/shared/components/ConstanciaStatus';
+import { Timeline } from '@/shared/components/Timeline';
 import { useEffect, useState } from 'react';
 import Logo from "@/shared/ui/Logo"
+import { API_URL } from "@/utils/api";
 import { Link } from "react-router-dom";
 import {
     Search,
@@ -31,11 +37,7 @@ import {
     ChevronUp,
     ChevronDown
 } from 'lucide-react';
-import { ImageModal } from '@/shared/components/ImageModal';
-import { ApplicantInfo } from '@/shared/components/ApplicantInfo';
-import { DocumentCard } from '@/shared/components/DocumentCard';
-import { ConstanciaStatus } from '@/shared/components/ConstanciaStatus';
-import { Timeline } from '@/shared/components/Timeline';
+
 
 export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const [showImageModal, setShowImageModal] = useState(false);
@@ -55,6 +57,11 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         return () => clearTimeout(t);
     }, []);
 
+    const [data, setData] = useState(tramiteData || {});
+    useEffect(() => {
+        setData(tramiteData);
+    }, [tramiteData]);
+
 
     if (isLoading) {
         return (
@@ -72,7 +79,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const getDocStatus = (d: any) =>
         norm(d?.status ?? d?.document_status ?? d?.current_status);
 
-    const hasObservedDocs = (tramiteData?.documents ?? []).some((d: any) => {
+    const hasObservedDocs = (data?.documents ?? []).some((d: any) => {
         const st = getDocStatus(d);
         return (
             st === "observado" ||
@@ -82,16 +89,13 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         );
     });
 
-    const rawStatus = norm(tramiteData?.status);
+    const rawStatus = norm(data?.status);
     const uiStatus = hasObservedDocs ? "observado" : rawStatus;
 
-    // úsalo para “Publicado”
+
     const isPublicado = uiStatus === "publicado";
 
-    console.log("documents[0]:", tramiteData?.documents?.[0]);
-
-    
-
+    console.log("documents[0]:", data?.documents?.[0]);
 
     const openImageModal = (images, startIndex) => {
         setAllImages(images);
@@ -119,17 +123,17 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         console.log("CLICK timeline item:", historyItem);
         console.log("STATUS detectado:", st);
 
-        // ✅ abre el modal nuevo si es observado o rechazado
+
         if (st === "observado" || st === "rechazado") {
             setSelectedObservedEvent(historyItem);
             setShowObservedDocsModal(true);
 
-            // opcional: cierra el antiguo por si quedó abierto
+
             setShowHistoryModal(false);
             return;
         }
 
-        // ✅ para otros estados, sí abre el modal antiguo
+
         setSelectedHistory(historyItem);
         setShowHistoryModal(true);
     };
@@ -152,7 +156,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     };
 
     const isCorrectionStatus = ["observado", "requiere_correccion"].includes(
-        String(tramiteData?.status ?? "").toLowerCase()
+        String(data?.status ?? "").toLowerCase()
     );
     const resubmitPath =
         activeTab === "docente"
@@ -182,15 +186,17 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         dni: pick(a?.dni ?? a?.documentNumber ?? a?.document_number),
     });
 
+
+
     const resubmitAuthors =
-        Array.isArray(tramiteData?.authors) && tramiteData.authors.length > 0
-            ? tramiteData.authors.map(normalizeAuthor)
-            : tramiteData?.applicant
-                ? [normalizeAuthor(tramiteData.applicant)]
+        Array.isArray(data?.authors) && data.authors.length > 0
+            ? data.authors.map(normalizeAuthor)
+            : data?.applicant
+                ? [normalizeAuthor(data.applicant)]
                 : [];
 
 
-    const observedDocsForResubmit = (tramiteData?.documents ?? [])
+    const observedDocsForResubmit = (data?.documents ?? [])
         .filter((d) => {
             const st = String(d?.status ?? d?.document_status ?? "").toLowerCase();
             return st === "observado" || Boolean(d?.rejection_reason || d?.observation || d?.observations);
@@ -201,10 +207,30 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
             images: Array.isArray(d?.images) ? d.images : (Array.isArray(d?.evidence_images) ? d.evidence_images : [])
         }));
 
+    const refreshTramite = async () => {
+        const dni = data?.applicant?.dni;
+        if (!dni) return;
+
+        const url = `${API_URL}/applications/search?dni=${encodeURIComponent(dni)}&type=${encodeURIComponent(activeTab)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!res.ok || !json?.success) {
+            throw new Error(json?.message || "No se pudo actualizar el trámite");
+        }
+        setData(json.data);
+    };
+
     const handleResubmitClose = () => setShowResubmitModal(false);
-    const handleResubmitSuccess = () => {
+
+    const handleResubmitSuccess = async () => {
         setShowResubmitModal(false);
-        // si quieres refrescar datos luego del envío, aquí es el lugar
+
+        try {
+            await refreshTramite();
+        } catch (e) {
+            console.error("❌ Error refrescando trámite:", e);
+        }
     };
 
 
@@ -220,6 +246,79 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         return labels[status] || status;
     };
 
+    const authorsForUI =
+        tramiteData?.authors ??
+        tramiteData?.applicant?.authors ??
+        data?.authors ??
+        data?.applicant?.authors ??
+        [];
+
+    const authorNames =
+        Array.isArray(authorsForUI) && authorsForUI.length > 0
+            ? authorsForUI
+                .map((a: any) =>
+                    `${pick(a?.first_name ?? a?.firstName ?? a?.name ?? a?.nombres)} ${pick(
+                        a?.last_name ?? a?.lastName ?? a?.surname ?? a?.apellidos
+                    )}`.trim()
+                )
+                .filter(Boolean)
+            : [];
+
+    //Bloque de autores
+    function initialsFromName(name: string) {
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return "AA";
+        const first = parts[0]?.[0] ?? "";
+        const last = (parts.length > 1 ? parts[parts.length - 1]?.[0] : "") ?? "";
+        return (first + last).toUpperCase();
+    }
+
+    function AuthorsCard({ authorNames }: { authorNames: string[] }) {
+        if (!Array.isArray(authorNames) || authorNames.length === 0) return null;
+
+        return (
+            <div className="mt-6 bg-white rounded-2xl  border border-slate-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <Users className="w-6 h-6 text-slate-700" />
+                    </div>
+
+                    <div className="flex-1">
+                        <h2 className="text-lg font-bold text-gray-900">
+                            {authorNames.length > 1 ? "Autores" : "Autor"}
+                        </h2>
+                        <p className="text-sm text-slate-600">
+                            {authorNames.length} {authorNames.length === 1 ? "persona" : "personas"}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {authorNames.map((name, idx) => (
+                        <div
+                            key={`${name}-${idx}`}
+                            className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 hover:bg-slate-100 transition-colors"
+                            title={name}
+                        >
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-blue-700">
+                                    {initialsFromName(name)}
+                                </span>
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{name}</p>
+                                <p className="text-xs text-slate-500 truncate">
+                                    {authorNames.length > 1 ? "Autor" : "Autor principal"}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+    //modal de documentos observados desde el historial
     const openObservedDocsModalIfObserved = (item) => {
         const st = String(item?.new_status ?? item?.status ?? "").toLowerCase();
         if (st !== "observado") return;
@@ -228,9 +327,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         setShowObservedDocsModal(true);
     };
 
-    
-
-
+    //diseño del modal de detalles del historial
     const HistoryDetailsModal = () => {
         if (!showHistoryModal || !selectedHistory) return null;
         console.log(selectedHistory)
@@ -302,7 +399,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     </div>
                                 </div>
                             )}
-
+                            {/*
                             {hasImages ? (
                                 <div>
                                     <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
@@ -330,6 +427,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     <p className="text-slate-500 text-sm">No hay capturas adjuntas</p>
                                 </div>
                             )}
+                            */}
                         </div>
                     </div>
 
@@ -348,7 +446,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
 
     return (
         <>
-            <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
+            <div className="h-16 bg-secondary flex items-center px-6">
                 <Logo />
             </div>
             <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 py-8 px-4">
@@ -365,10 +463,10 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                     <ObservedDocsModal
                         open={showObservedDocsModal}
                         onClose={() => setShowObservedDocsModal(false)}
-                        documents={tramiteData?.documents ?? []}
+                        documents={data?.documents ?? []}
                         observedEvent={selectedObservedEvent}
                     />
-
+                    {/*
                     <ImageModal
                         show={showImageModal}
                         images={allImages}
@@ -377,11 +475,11 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                         onNext={nextImage}
                         onPrev={prevImage}
                     />
-
+                    */}
                     {showResubmitModal && (
                         <ResubmitModal
-                            applicationId={tramiteData?.applicationId}
-                            projectTitle={tramiteData?.projectName}
+                            applicationId={data?.applicationId}
+                            projectTitle={data?.projectName}
                             authors={resubmitAuthors}
                             observedDocuments={observedDocsForResubmit}
                             onClose={handleResubmitClose}
@@ -390,7 +488,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                     )}
 
                     <main className="max-w-5xl mx-auto p-6 md:p-8">
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
                             <div className="flex items-center gap-2 mb-6">
                                 <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${activeTab === 'estudiante'
                                     ? 'bg-blue-100 text-blue-800'
@@ -413,11 +511,9 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8">
                                 <div className="flex-1">
                                     <h1 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">
-                                        {tramiteData.projectName}
+                                        {data.projectName}
                                     </h1>
-                                    <p className="text-sm text-slate-500 font-mono bg-slate-50 inline-block px-3 py-1 rounded-md">
-                                        {tramiteData.applicationId}
-                                    </p>
+                                    
                                 </div>
                                 <div className={`px-4 py-2 rounded-lg ${getStatusColor(uiStatus)} text-sm font-bold border-2 flex items-center gap-2`}>
                                     {getStatusIcon(uiStatus)}
@@ -426,12 +522,72 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                             </div>
 
                             <ApplicantInfo
-                                applicant={tramiteData.applicant}
-                                createdAt={tramiteData.createdAt}
+                                applicant={data.applicant}
+                                authors={tramiteData?.authors ?? tramiteData?.applicant?.authors ?? []}
+                                createdAt={data.created_at || data.createdAt}
+                                hidePhone={activeTab === "docente"}  
                             />
-                        </div>
 
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                        </div>
+                        {/* BLOQUE: Autores (compacto y suave) */}
+                        {authorNames.length > 0 && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                                        <Users className="w-4 h-4 text-emerald-600" />
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <h2 className="text-sm font-semibold text-slate-900">
+                                            {authorNames.length > 1 ? "Autores" : "Autor"}
+                                        </h2>
+                                        <p className="text-xs text-slate-500">
+                                            {authorNames.length} {authorNames.length === 1 ? "persona" : "personas"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {authorNames.map((name: string, idx: number) => {
+                                        const initials = name
+                                            .split(" ")
+                                            .map((n) => n?.[0])
+                                            .filter(Boolean)
+                                            .slice(0, 2)
+                                            .join("")
+                                            .toUpperCase();
+
+                                        return (
+                                            <div
+                                                key={`${name}-${idx}`}
+                                                className="flex items-center gap-3 rounded-lg px-3 py-2 border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/60 transition-colors"
+                                            >
+                                                <div className="w-9 h-9 rounded-full bg-emerald-400 flex items-center justify-center shrink-0">
+                                                    <span className="text-[11px] font-semibold text-white">
+                                                        {initials || "AU"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-slate-800 truncate">
+                                                        {name}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        {idx === 0
+                                                            ? authorNames.length > 1
+                                                                ? "Autor"
+                                                                : "Autor "
+                                                            : ""}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                                     <FileText className="w-6 h-6 text-blue-600" />
@@ -443,7 +599,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                             </div>
 
                             <div className="space-y-5">
-                                {tramiteData.documents.map((doc, index) => (
+                                {data.documents.map((doc, index) => (
                                     <DocumentCard
                                         key={index}
                                         doc={doc}
@@ -457,7 +613,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                             {/*<RejectionHistorySection rejectionHistory={doc.rejection_history} /> */}
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                                         <FileText className="w-6 h-6 text-purple-600" />
@@ -469,24 +625,24 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 </div>
                                 <ConstanciaStatus
                                     status={uiStatus}
-                                    publicationLink={tramiteData.publication_link}
+                                    publicationLink={data.publication_link}
                                     showResubmitButton={hasObservedDocs}
                                     onOpenResubmit={() => setShowResubmitModal(true)}
                                 />
 
                             </div>
 
-                        
-                                <GeneralHistorySection
-                                
-                                    history={tramiteData.timeline ?? []}
-                                    onObservedClick={openObservedDocsModalIfObserved}
-                                />
+
+                            <GeneralHistorySection
+
+                                history={data.timeline ?? []}
+                                onObservedClick={openObservedDocsModalIfObserved}
+                            />
 
                         </div>
 
                         {/* Información adicional */}
-                        <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                        <div className="mt-6 bg-blue-50 shadow-sm border-blue-200 rounded-xl p-6">
                             <div className="flex items-start gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
                                     <AlertCircle className="w-5 h-5 text-white" />
@@ -494,7 +650,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 <div className="text-sm">
                                     <p className="font-bold text-blue-900 mb-3 text-base">Información importante</p>
                                     <ul className="space-y-2 text-blue-800">
-                                        
+
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
                                             <span>El tiempo de procesamiento es de 5 días hábiles</span>
@@ -502,7 +658,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
                                             <span>Si tiene dudas, puede contactar a la Unidad de Investigación: </span>
-                                             <span>repositorio@unamba.edu.pe</span>
+                                            <span>repositorio@unamba.edu.pe</span>
                                         </li>
                                     </ul>
                                 </div>

@@ -4,7 +4,8 @@ import { FileUpload } from "@/shared/components/forms/FileUpload";
 import { FormInput } from "@/shared/components/forms/FormInput";
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox";
 import Logo from "@/shared/ui/Logo";
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader, X, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom"
 import { useState } from "react";
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
@@ -61,16 +62,21 @@ export default function TeacherResearchReportRequest() {
     });
   };
 
-  const [coautor, setCoautor] = useState([1]);
-  const [coautorData, setCoautorData] = useState<any[]>([{}]);
-  const [coautorErrors, setCoautorErrors] = useState<CoautorErr[]>([{}]);
+  const [coautor, setCoautor] = useState<number[]>([]);
+  const [coautorData, setCoautorData] = useState<any[]>([]);
+  const [coautorErrors, setCoautorErrors] = useState<CoautorErr[]>([]);
+
 
   const addCoautor = () => {
     if (coautor.length === 5) return toastService.error("Máximo cinco coautores por informe");
-    setCoautor([...coautor, coautor.length + 1]);
+
+    const nextNumber = coautor.length === 0 ? 1 : Math.max(...coautor) + 1;
+
+    setCoautor([...coautor, nextNumber]);
     setCoautorData([...coautorData, {}]);
     setCoautorErrors([...coautorErrors, {}]);
   };
+
 
   const removeCoautor = (index: number) => {
     setCoautor(coautor.filter((_, i) => i !== index));
@@ -103,6 +109,8 @@ export default function TeacherResearchReportRequest() {
     report: null as File | null,
   });
 
+
+
   // =========================
   // VALIDACIONES
   // =========================
@@ -111,10 +119,8 @@ export default function TeacherResearchReportRequest() {
 
   const orcidOk = (vRaw: string) => {
     const v = String(vRaw ?? "").trim();
-    if (!v) return true; // si quieres ORCID opcional
-    const id = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
     const url = /^https?:\/\/orcid\.org\/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
-    return id.test(v) || url.test(v);
+    return url.test(v);
   };
 
   const validatePdf = (file: File | null, maxMB: number) => {
@@ -127,6 +133,12 @@ export default function TeacherResearchReportRequest() {
   const isRowEmpty = (obj: any, keys: string[]) =>
     keys.every((k) => String(obj?.[k] ?? "").trim() === "");
 
+  const clearTermsErrorIfOk = (next: typeof checkboxes) => {
+    const ok = next.agreement && next.format && next.errors && next.informed;
+    if (ok) {
+      setTopErrors((prev) => ({ ...prev, terms: "" }));
+    }
+  };
   const validateAll = () => {
     const nextTop: TopErr = { files: {} };
     const nextTeacherErrors: TeacherErr[] = teacherData.map(() => ({}));
@@ -141,6 +153,7 @@ export default function TeacherResearchReportRequest() {
     if (!checkboxes.agreement || !checkboxes.format || !checkboxes.errors || !checkboxes.informed) {
       nextTop.terms = "Debe marcar todos los checks informativos";
     }
+
 
     // Veracidad
     if (!checkboxes.truthful) nextTop.truthful = "Debe declarar que la información es verídica";
@@ -157,39 +170,40 @@ export default function TeacherResearchReportRequest() {
       const orcid = String(t?.orcid ?? "").trim();
       const escuela = String(t?.escuela ?? "").trim();
 
-      if (!onlyDigitsOk(dni, 8)) nextTeacherErrors[idx].dni = "DNI debe tener 8 dígitos";
+      if (dni && !onlyDigitsOk(dni, 8)) nextTeacherErrors[idx].dni = "DNI debe tener 8 dígitos";
+
       if (!nombres || nombres.length < 2 || !onlyTextOk(nombres)) nextTeacherErrors[idx].nombres = "Ingrese nombres válidos (solo letras)";
       if (!apellidos || apellidos.length < 2 || !onlyTextOk(apellidos)) nextTeacherErrors[idx].apellidos = "Ingrese apellidos válidos (solo letras)";
-      if (!orcidOk(orcid)) nextTeacherErrors[idx].orcid = "ORCID inválido (0000-0000-0000-0000 o https://orcid.org/...)";
+      if (!orcid) nextTeacherErrors[idx].orcid = "El ORCID es obligatorio";
+      else if (!orcidOk(orcid)) nextTeacherErrors[idx].orcid = "ORCID inválido (0000-0000-0000-0000 o https://orcid.org/...)";
       if (!escuela) nextTeacherErrors[idx].escuela = "Seleccione una escuela profesional";
+      if (!dni) nextTeacherErrors[idx].dni = "El DNI es obligatorio";
     });
 
     // Coautores (opcional): si está totalmente vacío el coautor 1, no bloqueamos.
-    coautorData.forEach((c, idx) => {
-      const empty = isRowEmpty(c, ["tipoUbicacion", "tipoRol", "nombre", "apellido", "orcid"]);
-      const isOnlyOneAndEmpty = coautorData.length === 1 && empty;
+    if (coautorData.length > 0) {
+      coautorData.forEach((c, idx) => {
+        if (!c?.tipoUbicacion) nextCoautorErrors[idx].tipoUbicacion = "Seleccione ubicación";
+        if (!c?.tipoRol) nextCoautorErrors[idx].tipoRol = "Seleccione rol";
 
-      if (isOnlyOneAndEmpty) return;
+        const nombre = String(c?.nombre ?? "").trim();
+        const apellido = String(c?.apellido ?? "").trim();
 
-      if (!c?.tipoUbicacion) nextCoautorErrors[idx].tipoUbicacion = "Seleccione ubicación";
-      if (!c?.tipoRol) nextCoautorErrors[idx].tipoRol = "Seleccione rol";
+        if (!nombre || nombre.length < 2 || !onlyTextOk(nombre)) nextCoautorErrors[idx].nombre = "Ingrese nombres válidos";
+        if (!apellido || apellido.length < 2 || !onlyTextOk(apellido)) nextCoautorErrors[idx].apellido = "Ingrese apellidos válidos";
 
-      const nombre = String(c?.nombre ?? "").trim();
-      const apellido = String(c?.apellido ?? "").trim();
-
-      if (!nombre || nombre.length < 2 || !onlyTextOk(nombre)) nextCoautorErrors[idx].nombre = "Ingrese nombres válidos";
-      if (!apellido || apellido.length < 2 || !onlyTextOk(apellido)) nextCoautorErrors[idx].apellido = "Ingrese apellidos válidos";
-
-      const orcid = String(c?.orcid ?? "").trim();
-      if (!orcidOk(orcid)) nextCoautorErrors[idx].orcid = "ORCID inválido";
-    });
+        const orcid = String(c?.orcid ?? "").trim();
+        if (!orcid) nextCoautorErrors[idx].orcid = "El ORCID es obligatorio";
+        else if (!orcidOk(orcid)) nextCoautorErrors[idx].orcid = "ORCID inválido";
+      });
+    }
 
     // Archivos
-    nextTop.files!.authorization = validatePdf(files.authorization, 1);
-    nextTop.files!.document = validatePdf(files.document, 1);
-    // similarity es opcional en tu backend? Si quieres obligatorio, descomenta:
-    // nextTop.files!.similarity = validatePdf(files.similarity, 10);
+    nextTop.files!.authorization = validatePdf(files.authorization, 10);
+    nextTop.files!.document = validatePdf(files.document, 10);
+    nextTop.files!.similarity = validatePdf(files.similarity, 10);
     nextTop.files!.report = validatePdf(files.report, 10);
+
 
     const hasTeacherErr = nextTeacherErrors.some((e) => Object.values(e).some(Boolean));
     const hasCoautorErr = nextCoautorErrors.some((e) => Object.values(e).some(Boolean));
@@ -208,10 +222,12 @@ export default function TeacherResearchReportRequest() {
   };
 
   const handleSubmit = async () => {
+    if (isLoading) return;
+
     setSubmitAttempted(true);
 
     if (!validateAll()) {
-      toastService.error("Revisa los campos marcados en amarillo");
+      toastService.error("Revisa los campos marcados en rojo");
       return;
     }
 
@@ -242,6 +258,8 @@ export default function TeacherResearchReportRequest() {
         const applicationId = result.data.applicationId;
         sessionStorage.setItem("lastApplicationId", applicationId);
         resetForm();
+        setTimeout(() => window.location.reload(), 30000);
+
       } else {
         toastService.error(result.message || "Error al enviar solicitud");
       }
@@ -253,6 +271,48 @@ export default function TeacherResearchReportRequest() {
     }
   };
 
+  const MB = 1024 * 1024;
+  const MAX_MB = 10;
+
+  const validatePdf10MB = (file: File | null) => {
+    if (!file) return "";
+    if (file.type !== "application/pdf") return "Solo se permite PDF";
+    if (file.size > MAX_MB * MB) return "El archivo no debe superar los 10 MB";
+    return "";
+  };
+
+  const setFileWithValidation = (
+    key: "authorization" | "document" | "similarity" | "report",
+    file: File | null
+  ) => {
+    const err = validatePdf10MB(file);
+
+    if (err) {
+      toastService.error(err);
+
+      // ❌ no aceptar archivo inválido
+      setFiles((prev) => ({ ...prev, [key]: null }));
+
+      // ✅ mostrar mensaje debajo
+      setTopErrors((prev) => ({
+        ...prev,
+        files: { ...(prev.files ?? {}), [key]: err },
+      }));
+      return;
+    }
+
+    // ✅ archivo válido
+    setFiles((prev) => ({ ...prev, [key]: file }));
+
+    // ✅ limpiar error
+    setTopErrors((prev) => ({
+      ...prev,
+      files: { ...(prev.files ?? {}), [key]: "" },
+    }));
+  };
+
+
+  const [formKey, setFormKey] = useState(0);
   const resetForm = () => {
     setSubmitAttempted(false);
     setTopErrors({});
@@ -270,9 +330,10 @@ export default function TeacherResearchReportRequest() {
     setTeacherData([{}]);
     setTeacherErrors([{}]);
 
-    setCoautor([1]);
-    setCoautorData([{}]);
-    setCoautorErrors([{}]);
+    setCoautor([]);
+    setCoautorData([]);
+    setCoautorErrors([]);
+
 
     setFiles({
       authorization: null,
@@ -280,6 +341,9 @@ export default function TeacherResearchReportRequest() {
       similarity: null,
       report: null,
     });
+
+    // ✅ fuerza que hijos (inputs/fileupload) se reinicien al 100%
+    setFormKey((k) => k + 1);
   };
 
   return (
@@ -324,11 +388,15 @@ export default function TeacherResearchReportRequest() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  window.location.href = "/";
+                }}
                 className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
               >
                 Entendido
               </button>
+
             </div>
           </div>
         </div>
@@ -339,6 +407,15 @@ export default function TeacherResearchReportRequest() {
       </div>
 
       <main className="max-w-5xl mx-auto p-6 md:p-8">
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Volver al inicio</span>
+          </Link>
+        </div>
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
           <div className="text-center mb-10 pb-6 border-b-2 border-gray-100">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
@@ -354,7 +431,7 @@ export default function TeacherResearchReportRequest() {
             <div className="space-y-4">
               <InfoCheckbox
                 icon={AlertCircle}
-                iconColor="amber"
+                iconColor="redr"
                 text={
                   <>
                     No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación...
@@ -371,7 +448,11 @@ export default function TeacherResearchReportRequest() {
                 }
                 checkboxLabel="Sí, estoy de acuerdo"
                 checked={checkboxes.agreement}
-                onChange={(e) => setCheckboxes({ ...checkboxes, agreement: e.target.checked })}
+                onChange={(e) => {
+                  const next = { ...checkboxes, agreement: e.target.checked };
+                  setCheckboxes(next);
+                  clearTermsErrorIfOk(next);
+                }}
               />
 
               <InfoCheckbox
@@ -380,7 +461,11 @@ export default function TeacherResearchReportRequest() {
                 text="He leído y ajustado el informe de investigación al formato oficial del reglamento de Investigación de la UNAMBA."
                 checkboxLabel="Sí, he ajustado"
                 checked={checkboxes.format}
-                onChange={(e) => setCheckboxes({ ...checkboxes, format: e.target.checked })}
+                onChange={(e) => {
+                  const next = { ...checkboxes, format: e.target.checked };
+                  setCheckboxes(next);
+                  clearTermsErrorIfOk(next);
+                }}
               />
 
               <InfoCheckbox
@@ -401,7 +486,11 @@ export default function TeacherResearchReportRequest() {
                 }
                 checkboxLabel="Sí, he leído"
                 checked={checkboxes.errors}
-                onChange={(e) => setCheckboxes({ ...checkboxes, errors: e.target.checked })}
+                onChange={(e) => {
+                  const next = { ...checkboxes, errors: e.target.checked };
+                  setCheckboxes(next);
+                  clearTermsErrorIfOk(next);
+                }}
               />
 
               <InfoCheckbox
@@ -410,11 +499,15 @@ export default function TeacherResearchReportRequest() {
                 text="Estoy informado que el trámite es virtual..."
                 checkboxLabel="Sí, estoy informado"
                 checked={checkboxes.informed}
-                onChange={(e) => setCheckboxes({ ...checkboxes, informed: e.target.checked })}
+                onChange={(e) => {
+                  const next = { ...checkboxes, informed: e.target.checked };
+                  setCheckboxes(next);
+                  clearTermsErrorIfOk(next);
+                }}
               />
 
               {submitAttempted && topErrors.terms && (
-                <p className="text-xs text-amber-600 font-medium">{topErrors.terms}</p>
+                <p className="text-xs text-red-600 font-medium">{topErrors.terms}</p>
               )}
             </div>
 
@@ -475,20 +568,27 @@ export default function TeacherResearchReportRequest() {
               </div>
 
               <div className="space-y-4">
-                {coautor.map((_, index) => (
-                  <CoautorForm
-                    key={index}
-                    number={index + 1}
-                    onRemove={() => removeCoautor(index)}
-                    canRemove={index !== 0}
-                    data={coautorData[index]}
-                    onChange={(data) => updateCoautorData(index, data)}
-                    realTimeErrors={coautorErrors[index]}
-                    onRealTimeErrorChange={(field, value) => setCoautorFieldError(index, field, value)}
-                    showValidation={submitAttempted}
-                  />
-                ))}
+                {coautor.length === 0 ? (
+                  <div className="text-sm text-gray-500 border border-dashed rounded-xl p-4">
+                    Si deseas, puedes agregar coautores (opcional).
+                  </div>
+                ) : (
+                  coautor.map((_, index) => (
+                    <CoautorForm
+                      key={index}
+                      number={index + 1}
+                      onRemove={() => removeCoautor(index)}
+                      canRemove={true}
+                      data={coautorData[index]}
+                      onChange={(data) => updateCoautorData(index, data)}
+                      realTimeErrors={coautorErrors[index]}
+                      onRealTimeErrorChange={(field, value) => setCoautorFieldError(index, field, value)}
+                      showValidation={submitAttempted}
+                    />
+                  ))
+                )}
               </div>
+
             </div>
 
             <div className="border-t-2 border-gray-100 pt-8">
@@ -506,7 +606,14 @@ export default function TeacherResearchReportRequest() {
                   type="text"
                   placeholder="Ingrese el título completo"
                   value={projectTitle}
-                  onChange={(e) => setProjectTitle(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setProjectTitle(v);
+
+                    if (v.trim().length >= 5) {
+                      setTopErrors((prev) => ({ ...prev, projectTitle: "" }));
+                    }
+                  }}
                   disabled={isLoading}
                   errorMessage={submitAttempted ? topErrors.projectTitle : ""}
                 />
@@ -514,16 +621,27 @@ export default function TeacherResearchReportRequest() {
                 <FileUpload
                   label="Adjuntar hoja de autorización de publicación"
                   sublabel="Debe estar escaneado en formato PDF (Apellidos Nombre Hoja.pdf) max 1 MB, firmado y con su huella digital."
-                  maxSize="1 MB"
-                  onChange={(file) => setFiles({ ...files, authorization: file })}
+                  maxSize="10 MB"
+                  value={files.authorization}
+                  onChange={(file) => {
+                    setFiles((prev) => ({ ...prev, authorization: file }));
+
+                    if (file) {
+                      setTopErrors((prev) => ({
+                        ...prev,
+                        files: { ...(prev.files ?? {}), authorization: "" },
+                      }));
+                    }
+                  }}
                   errorMessage={submitAttempted ? topErrors.files?.authorization : ""}
                 />
 
                 <FileUpload
                   label="Adjuntar documento escaneado"
                   sublabel="(constancia, carta de aceptación, carta de informe de investigacion favorable u otro) emitido por la Dirección de Institutos de Investigación (formato PDF)."
-                  maxSize="1 MB"
-                  onChange={(file) => setFiles({ ...files, document: file })}
+                  maxSize="10 MB"
+                  value={files.document}
+                  onChange={(file) => setFileWithValidation("document", file)}
                   errorMessage={submitAttempted ? topErrors.files?.document : ""}
                 />
 
@@ -531,30 +649,38 @@ export default function TeacherResearchReportRequest() {
                   label="Adjuntar reporte de similitud"
                   sublabel="emitido por Turnitin, donde muestre título del informe, nombres y apellidos del primer autor (formato PDF)."
                   maxSize="10 MB"
-                  onChange={(file) => setFiles({ ...files, similarity: file })}
-                  // si lo haces obligatorio, habilita también su validación arriba
-                  // errorMessage={submitAttempted ? topErrors.files?.similarity : ""}
+                  value={files.similarity}
+                  onChange={(file) => setFileWithValidation("similarity", file)}
+                  errorMessage={submitAttempted ? topErrors.files?.similarity : ""}
                 />
 
                 <FileUpload
                   label="Adjuntar Informe de investigacion"
                   sublabel="con el mismo contenido presentado a la Dirección de Institutos de Investigación y que fue aceptado de forma favorable. Este documento será publicado en Repositorio DSpace (formato PDF)."
                   maxSize="10 MB"
-                  onChange={(file) => setFiles({ ...files, report: file })}
+                  value={files.report}
+                  onChange={(file) => setFileWithValidation("report", file)}
                   errorMessage={submitAttempted ? topErrors.files?.report : ""}
                 />
 
                 <div className="space-y-4">
                   <InfoCheckbox
                     icon={AlertCircle}
-                    iconColor="amber"
+                    iconColor="red"
                     text="Declaro bajo juramento que toda esta información compartida en la solicitud es verídica."
                     checkboxLabel="Sí, es información verídica"
                     checked={checkboxes.truthful}
-                    onChange={(e) => setCheckboxes({ ...checkboxes, truthful: e.target.checked })}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setCheckboxes((prev) => ({ ...prev, truthful: next }));
+
+                      if (next) {
+                        setTopErrors((prev) => ({ ...prev, truthful: "" }));
+                      }
+                    }}
                   />
                   {submitAttempted && topErrors.truthful && (
-                    <p className="text-xs text-amber-600 font-medium">{topErrors.truthful}</p>
+                    <p className="text-xs text-red-600 font-medium">{topErrors.truthful}</p>
                   )}
 
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -573,7 +699,11 @@ export default function TeacherResearchReportRequest() {
                               type="radio"
                               name="funding"
                               checked={checkboxes.funding === "public"}
-                              onChange={() => setCheckboxes({ ...checkboxes, funding: "public" })}
+                              onChange={() => {
+                                setCheckboxes((prev) => ({ ...prev, funding: "public" }));
+                                setTopErrors((prev) => ({ ...prev, funding: "" }));
+                              }}
+
                               className="w-4 h-4 text-blue-600"
                               disabled={isLoading}
                             />
@@ -587,7 +717,10 @@ export default function TeacherResearchReportRequest() {
                               type="radio"
                               name="funding"
                               checked={checkboxes.funding === "self"}
-                              onChange={() => setCheckboxes({ ...checkboxes, funding: "self" })}
+                              onChange={() => {
+                                setCheckboxes((prev) => ({ ...prev, funding: "self" }));
+                                setTopErrors((prev) => ({ ...prev, funding: "" }));
+                              }}
                               className="w-4 h-4 text-blue-600"
                               disabled={isLoading}
                             />
@@ -596,13 +729,12 @@ export default function TeacherResearchReportRequest() {
                             </span>
                           </label>
                         </div>
-
-                        {submitAttempted && topErrors.funding && (
-                          <p className="text-xs text-amber-600 font-medium mt-2">{topErrors.funding}</p>
-                        )}
                       </div>
                     </div>
                   </div>
+                  {submitAttempted && topErrors.funding && (
+                    <p className="text-xs text-red-600 font-medium mt-2">{topErrors.funding}</p>
+                  )}
                 </div>
               </div>
             </div>

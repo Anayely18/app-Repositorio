@@ -63,7 +63,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                 </div>
                 <span className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 flex items-center gap-2 ${getStatusColor(doc.status)}`}>
                     {getStatusIcon(doc.status)}
-                    {getStatusLabel(doc.status) == "Rechazado" ? "Observado": getStatusLabel(doc.status)}
+                    {getStatusLabel(doc.status) == "Rechazado" ? "Observado" : getStatusLabel(doc.status)}
                 </span>
             </div>
 
@@ -73,10 +73,12 @@ export function DocumentCard({ doc, onOpenImage }) {
                         <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
                         <div className="flex-1">
                             <p className="text-sm font-bold text-orange-900 mb-2">Observación del administrador:</p>
-                            <p className="text-sm text-orange-800 leading-relaxed">{doc.observation}</p>
+                            <p className="text-sm text-orange-800 leading-relaxed whitespace-pre-wrap break-words">
+                                {doc.observation}
+                            </p>
                         </div>
                     </div>
-
+                    {/*
                     {doc.images && doc.images.length > 0 && (
                         <div className="border-t-2 border-orange-200 pt-4">
                             <div className="flex items-center gap-2 mb-3">
@@ -85,6 +87,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                                     Evidencia adjunta ({doc.images.length} {doc.images.length === 1 ? 'imagen' : 'imágenes'})
                                 </p>
                             </div>
+                            
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                                 {doc.images.map((img, imgIndex) => (
                                     <div
@@ -116,7 +119,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                             </p>
                         </div>
                     )}
-
+                    */}
                 </div>
             )}
 

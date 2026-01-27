@@ -49,14 +49,15 @@ export function CoautorForm({
   onChange,
   realTimeErrors,
   onRealTimeErrorChange,
-  showValidation ,
+  showValidation,
 }: CoautorFormProps) {
   // ✅ Solo UI/lookup (NO se guarda en "data")
   const [codigoLookup, setCodigoLookup] = useState<string>("");
   const [dniLookup, setDniLookup] = useState<string>("");
 
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState("");
+  const [lookupMsg, setLookupMsg] = useState("");
+  const lookupTimerMsgRef = useRef<number | null>(null);
 
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -102,9 +103,10 @@ export function CoautorForm({
     return re.test(s);
   };
 
+
   // ✅ Cuando cambia rol/ubicación: limpia búsquedas y errores
   useEffect(() => {
-    setLookupError("");
+    setLookupMsg("");
     setIsLookingUp(false);
     lastKeyRef.current = "";
 
@@ -115,6 +117,9 @@ export function CoautorForm({
     if (timerRef.current) window.clearTimeout(timerRef.current);
   }, [data.tipoRol, data.tipoUbicacion]);
 
+  // =========================
+  // VALIDACIONES (dinámicas)
+  // =========================
   // =========================
   // VALIDACIONES (dinámicas)
   // =========================
@@ -133,28 +138,31 @@ export function CoautorForm({
     if (!tu) e.tipoUbicacion = "Selecciona la ubicación del coautor.";
     if (!tr) e.tipoRol = "Selecciona el rol del coautor.";
 
-    // requisito de lookup según rol/ubicación
+    // ✅ REQUERIDO si es interno
     if (isInternalStudent) {
       if (!codigo) e.codigo = "El código es obligatorio.";
       else if (!/^\d{6}$/.test(codigo)) e.codigo = "El código debe tener 6 dígitos.";
-      else if (!isLookingUp && lookupError) e.codigo = lookupError;
+
     }
 
     if (isInternalTeacher) {
       if (!dni) e.dni = "El DNI es obligatorio.";
       else if (!/^\d{8}$/.test(dni)) e.dni = "El DNI debe tener 8 dígitos.";
-      else if (!isLookingUp && lookupError) e.dni = lookupError;
+
     }
 
-    // nombre/apellido siempre necesarios (interno se autocompleta, externo manual)
+    // nombre/apellido siempre necesarios
     if (!nombre) e.nombre = "Los nombres son obligatorios.";
     else if (nombre.length < 2) e.nombre = "Escribe al menos 2 caracteres.";
 
     if (!apellido) e.apellido = "Los apellidos son obligatorios.";
     else if (apellido.length < 2) e.apellido = "Escribe al menos 2 caracteres.";
 
-    // ORCID opcional, pero si escribe debe ser válido
-    if (!isValidOrcid(data.orcid)) e.orcid = "ORCID no válido (ej: 0000-0000-0000-0000).";
+    // ✅ ORCID opcional: solo valida si escribe
+    const orcid = String(data.orcid ?? "").trim();
+    if (orcid && !isValidOrcid(orcid)) {
+      e.orcid = "ORCID no válido (ej: https://orcid.org/0000-0000-0000-0000).";
+    }
 
     return e;
   }, [
@@ -165,11 +173,11 @@ export function CoautorForm({
     data.orcid,
     codigoLookup,
     dniLookup,
-    lookupError,
     isLookingUp,
     isInternalStudent,
     isInternalTeacher,
   ]);
+
 
   const fieldError = (k: FieldKey) => {
     // prioridad: realtime > computed
@@ -177,19 +185,34 @@ export function CoautorForm({
       k === "codigo"
         ? realTimeErrors?.codigo
         : k === "dni"
-        ? realTimeErrors?.dni
-        : k === "nombre"
-        ? realTimeErrors?.nombre
-        : k === "apellido"
-        ? realTimeErrors?.apellido
-        : k === "orcid"
-        ? realTimeErrors?.orcid
-        : undefined;
+          ? realTimeErrors?.dni
+          : k === "nombre"
+            ? realTimeErrors?.nombre
+            : k === "apellido"
+              ? realTimeErrors?.apellido
+              : k === "orcid"
+                ? realTimeErrors?.orcid
+                : undefined;
 
     if (rt) return rt;
+
     if (!showErr(k)) return "";
     return computedErrors[k] ?? "";
   };
+
+  const lookupFlashTimerRef = useRef<number | null>(null);
+
+  const flashLookup = (msg: string) => {
+    setLookupMsg(msg);
+    if (lookupTimerMsgRef.current) window.clearTimeout(lookupTimerMsgRef.current);
+    lookupTimerMsgRef.current = window.setTimeout(() => setLookupMsg(""), 20000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (lookupTimerMsgRef.current) window.clearTimeout(lookupTimerMsgRef.current);
+    };
+  }, []);
 
   // =========================
   // 1) LOOKUP ESTUDIANTE por CÓDIGO (6 dígitos) SOLO si es interno
@@ -200,7 +223,7 @@ export function CoautorForm({
     const codigo = onlyDigits(codigoLookup ?? "", 6);
 
     if (codigo.length !== 6) {
-      setLookupError("");
+      setLookupMsg("");
       lastKeyRef.current = "";
       if (abortRef.current) abortRef.current.abort();
       return;
@@ -213,7 +236,7 @@ export function CoautorForm({
 
     timerRef.current = window.setTimeout(async () => {
       try {
-        setLookupError("");
+        setLookupMsg("");
         setIsLookingUp(true);
 
         if (abortRef.current) abortRef.current.abort();
@@ -226,7 +249,7 @@ export function CoautorForm({
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok || json?.success === false) {
-          throw new Error(json?.message || "Código no encontrado");
+          throw new Error(json?.message || "Error consultando código, ingrese manualmente su nombre y apellido");
         }
 
         const { nombres, apellidos, full } = pickNames(json);
@@ -251,6 +274,7 @@ export function CoautorForm({
         lastKeyRef.current = key;
 
         onRealTimeErrorChange?.("codigo", "");
+        setLookupMsg("");
         onChange({
           ...data,
           nombre: finalNombres || data.nombre || "",
@@ -258,7 +282,11 @@ export function CoautorForm({
         });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        setLookupError(err?.message || "Error consultando código");
+
+        flashLookup("Código no encontrado. Completa los datos manualmente.");
+        onChange({ ...data, nombre: "", apellido: "", orcid: "" });
+
+        lastKeyRef.current = key; // evita repetir
       } finally {
         setIsLookingUp(false);
       }
@@ -278,7 +306,7 @@ export function CoautorForm({
     const dni = onlyDigits(dniLookup ?? "", 8);
 
     if (dni.length !== 8) {
-      setLookupError("");
+      setLookupMsg("");
       lastKeyRef.current = "";
       if (abortRef.current) abortRef.current.abort();
       return;
@@ -291,7 +319,7 @@ export function CoautorForm({
 
     timerRef.current = window.setTimeout(async () => {
       try {
-        setLookupError("");
+        setLookupMsg("");
         setIsLookingUp(true);
 
         if (abortRef.current) abortRef.current.abort();
@@ -302,10 +330,6 @@ export function CoautorForm({
 
         const res = await fetch(LOOKUP_URL, { signal: controller.signal });
         const json = await res.json().catch(() => ({}));
-
-        if (!res.ok || json?.success === false) {
-          throw new Error(json?.message || "DNI no encontrado");
-        }
 
         const { nombres, apellidos, full } = pickNames(json);
 
@@ -329,6 +353,7 @@ export function CoautorForm({
         lastKeyRef.current = key;
 
         onRealTimeErrorChange?.("dni", "");
+        setLookupMsg("");
         onChange({
           ...data,
           nombre: finalNombres || data.nombre || "",
@@ -336,7 +361,11 @@ export function CoautorForm({
         });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        setLookupError(err?.message || "Error consultando DNI");
+
+        flashLookup("DNI no encontrado. Completa los datos manualmente.");
+        onChange({ ...data, nombre: "", apellido: "", orcid: "" });
+
+        lastKeyRef.current = key;
       } finally {
         setIsLookingUp(false);
       }
@@ -380,20 +409,40 @@ export function CoautorForm({
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es externo o interno</span>
           </div>
-          <div className="grid grid-cols-3 w-full px-2">
-            <div className="flex items-center gap-3">
-              <RadioGroupItem value="externo" id={`ubicacion-externo-${number}`} />
-              <Label htmlFor={`ubicacion-externo-${number}`} className="font-normal capitalize">
+          <div className="grid grid-cols-2 w-full px-2 gap-2 mt-2">
+            <div
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${data.tipoUbicacion === "externo"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:bg-gray-50"
+                }`}
+            >
+              <RadioGroupItem
+                value="externo"
+                id={`ubicacion-externo-${number}`}
+                className="h-4 w-4 border-gray-300 text-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label htmlFor={`ubicacion-externo-${number}`} className="font-normal capitalize cursor-pointer">
                 Externo
               </Label>
             </div>
-            <div className="flex items-center gap-3">
-              <RadioGroupItem value="interno" id={`ubicacion-interno-${number}`} />
-              <Label htmlFor={`ubicacion-interno-${number}`} className="font-normal capitalize">
+
+            <div
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${data.tipoUbicacion === "interno"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:bg-gray-50"
+                }`}
+            >
+              <RadioGroupItem
+                value="interno"
+                id={`ubicacion-interno-${number}`}
+                className="h-4 w-4 border-gray-300 text-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label htmlFor={`ubicacion-interno-${number}`} className="font-normal capitalize cursor-pointer">
                 Interno
               </Label>
             </div>
           </div>
+
         </RadioGroup>
 
         {fieldError("tipoUbicacion") && (
@@ -414,20 +463,40 @@ export function CoautorForm({
             <MapPinned className="w-4 h-4 text-blue-500" />
             <span className="text-xs text-gray-600">Seleccione si el coautor es estudiante o docente</span>
           </div>
-          <div className="grid grid-cols-3 w-full px-2">
-            <div className="flex items-center gap-3">
-              <RadioGroupItem value="estudiante" id={`rol-estudiante-${number}`} />
-              <Label htmlFor={`rol-estudiante-${number}`} className="font-normal capitalize">
+          <div className="grid grid-cols-2 w-full px-2 gap-2 mt-2">
+            <div
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${data.tipoRol === "estudiante"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:bg-gray-50"
+                }`}
+            >
+              <RadioGroupItem
+                value="estudiante"
+                id={`rol-estudiante-${number}`}
+                className="h-4 w-4 border-gray-300 text-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label htmlFor={`rol-estudiante-${number}`} className="font-normal capitalize cursor-pointer">
                 Estudiante
               </Label>
             </div>
-            <div className="flex items-center gap-3">
-              <RadioGroupItem value="docente" id={`rol-docente-${number}`} />
-              <Label htmlFor={`rol-docente-${number}`} className="font-normal capitalize">
+
+            <div
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${data.tipoRol === "docente"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:bg-gray-50"
+                }`}
+            >
+              <RadioGroupItem
+                value="docente"
+                id={`rol-docente-${number}`}
+                className="h-4 w-4 border-gray-300 text-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label htmlFor={`rol-docente-${number}`} className="font-normal capitalize cursor-pointer">
                 Docente
               </Label>
             </div>
           </div>
+
         </RadioGroup>
 
         {fieldError("tipoRol") && (
@@ -455,17 +524,29 @@ export function CoautorForm({
               maxLength={6}
               value={codigoLookup}
               onChange={(e) => {
-                const raw = e.target.value;
-                const v = onlyDigits(raw, 6);
-                setCodigoLookup(v);
-                setLookupError("");
+                const v = onlyDigits(e.target.value, 6);
+
+                if (abortRef.current) abortRef.current.abort();
+                if (timerRef.current) window.clearTimeout(timerRef.current);
+
+                lastKeyRef.current = "";
+                setLookupMsg("");
                 onRealTimeErrorChange?.("codigo", "");
+
+                setCodigoLookup(v);
+
+                // ✅ limpiar siempre
+                onChange({ ...data, nombre: "", apellido: "", orcid: "" });
               }}
+
               onBlur={() => touch("codigo")}
               inputType="number"
               error={fieldError("codigo")}
+
             />
-            {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del código...</p>}
+            {!isLookingUp && lookupMsg && (
+              <p className="text-xs text-amber-700 mt-1">{lookupMsg}</p>
+            )}
           </div>
         )}
 
@@ -480,17 +561,28 @@ export function CoautorForm({
               maxLength={8}
               value={dniLookup}
               onChange={(e) => {
-                const raw = e.target.value;
-                const v = onlyDigits(raw, 8);
-                setDniLookup(v);
-                setLookupError("");
+                const v = onlyDigits(e.target.value, 8);
+
+                if (abortRef.current) abortRef.current.abort();
+                if (timerRef.current) window.clearTimeout(timerRef.current);
+
+                lastKeyRef.current = "";
+                setLookupMsg("");
                 onRealTimeErrorChange?.("dni", "");
+
+                setDniLookup(v);
+
+                // ✅ limpiar siempre
+                onChange({ ...data, nombre: "", apellido: "", orcid: "" });
               }}
+
               onBlur={() => touch("dni")}
               inputType="number"
               error={fieldError("dni")}
             />
-            {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del DNI...</p>}
+            {!isLookingUp && lookupMsg && (
+              <p className="text-xs text-amber-700 mt-1">{lookupMsg}</p>
+            )}
           </div>
         )}
 
@@ -534,7 +626,7 @@ export function CoautorForm({
           icon={FileText}
           label="Url de ORCID"
           type="text"
-          placeholder="0000-0000-0000-0000"
+          placeholder="https://orcid.org/0000-0000-0000-0000"
           value={data.orcid || ""}
           onChange={(e) => {
             const value = e.target.value;

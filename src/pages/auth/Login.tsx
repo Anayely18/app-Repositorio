@@ -28,7 +28,7 @@ export default function Login() {
                     />
                 </div>
                 <div className="hidden md:flex items-center h-full bg-secondary">
-                    <link rel="/dashboard" href="" />
+                    
                     <img src="assets/img/login.svg" alt="" className="h-90 object-contain m-auto w-auto" />
                 </div>
             </main>

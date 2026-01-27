@@ -43,8 +43,8 @@ export function AddTeacherForm({
   showValidation = false,
 }: AddTeacherFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState("");
-
+  const [flashLookupWarning, setFlashLookupWarning] = useState("");
+  const flashLookupTimerRef = useRef<number | null>(null)
   const lastDniRef = useRef<string>("");
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -57,6 +57,11 @@ export function AddTeacherForm({
     escuela: false,
   });
 
+  const flashWarning = (msg: string) => {
+    setFlashLookupWarning(msg);
+    if (flashLookupTimerRef.current) window.clearTimeout(flashLookupTimerRef.current);
+    flashLookupTimerRef.current = window.setTimeout(() => setFlashLookupWarning(""), 20000);
+  };
   const touch = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
   const showErr = (k: FieldKey) => showValidation || touched[k];
 
@@ -87,9 +92,11 @@ export function AddTeacherForm({
     const orcid = String(data.orcid ?? "").trim();
     const escuela = String(data.escuela ?? "").trim();
 
+    // DNI opcional: solo valida formato si lo escribieron
+    // ✅ DNI requerido + 8 dígitos
     if (!dni) e.dni = "El DNI es obligatorio.";
     else if (!/^\d{8}$/.test(dni)) e.dni = "El DNI debe tener 8 dígitos.";
-    else if (!isLookingUp && lookupError) e.dni = lookupError;
+
 
     if (!nombres) e.nombres = "Los nombres son obligatorios.";
     else if (nombres.length < 2) e.nombres = "Escribe al menos 2 caracteres.";
@@ -103,7 +110,8 @@ export function AddTeacherForm({
     if (!escuela) e.escuela = "Selecciona una escuela profesional.";
 
     return e;
-  }, [data.dni, data.nombres, data.apellidos, data.orcid, data.escuela, lookupError, isLookingUp]);
+  }, [data.dni, data.nombres, data.apellidos, data.orcid, data.escuela, isLookingUp]);
+
 
   // ✅ error final por campo (prioridad: realtime > computed)
   const fieldError = (k: FieldKey) => {
@@ -114,13 +122,18 @@ export function AddTeacherForm({
   };
 
   const isInvalid = (k: FieldKey) => !!fieldError(k);
+  useEffect(() => {
+    return () => {
+      if (flashLookupTimerRef.current) window.clearTimeout(flashLookupTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const dni = onlyDigits(data.dni ?? "", 8);
 
     // si no está completo, no consultes
     if (dni.length !== 8) {
-      setLookupError("");
+      setFlashLookupWarning("");
       lastDniRef.current = "";
       if (abortRef.current) abortRef.current.abort();
       return;
@@ -134,7 +147,7 @@ export function AddTeacherForm({
 
     timerRef.current = window.setTimeout(async () => {
       try {
-        setLookupError("");
+        setFlashLookupWarning("");
         setIsLookingUp(true);
 
         if (abortRef.current) abortRef.current.abort();
@@ -147,7 +160,7 @@ export function AddTeacherForm({
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok || json?.success === false) {
-          throw new Error(json?.message || "DNI no encontrado");
+          throw new Error(json?.message || "DNI no encontrado, agregue los datos manualmente");
         }
 
         const { nombres, apellidos, full } = pickNames(json);
@@ -176,7 +189,7 @@ export function AddTeacherForm({
         onRealTimeErrorChange?.("dni", "");
         onRealTimeErrorChange?.("nombres", "");
         onRealTimeErrorChange?.("apellidos", "");
-
+        setFlashLookupWarning("");
         onChange({
           ...data,
           dni,
@@ -185,7 +198,19 @@ export function AddTeacherForm({
         });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        setLookupError(err?.message || "Error consultando DNI");
+
+        flashWarning("DNI no encontrado. Completa nombres y apellidos manualmente.");
+
+        onChange({
+          ...data,
+          dni,
+          nombres: "",
+          apellidos: "",
+          orcid: "",
+          escuela: "",
+        });
+        // ✅ opcional: evita reconsultar el mismo DNI inexistente
+        lastDniRef.current = dni;
       } finally {
         setIsLookingUp(false);
       }
@@ -227,27 +252,52 @@ export function AddTeacherForm({
             sublabel="Escriba 8 dígitos para autocompletar"
             type="text"
             placeholder="12345678"
-            required
             maxLength={8}
             value={data.dni || ""}
             onChange={(e) => {
               const raw = e.target.value;
               const dni = onlyDigits(raw, 8);
               const hasLetters = /[a-zA-Z]/.test(raw);
+
+              // ✅ cortar búsqueda anterior y timers
+              if (abortRef.current) abortRef.current.abort();
+              if (timerRef.current) window.clearTimeout(timerRef.current);
+
+              // ✅ permitir buscar el nuevo DNI
+              lastDniRef.current = "";
+
+              // ✅ borrar warning viejo
+              setFlashLookupWarning("");
+
+              // ✅ error realtime por letras
               onRealTimeErrorChange?.("dni", hasLetters ? "Solo se aceptan números" : "");
-              setLookupError("");
-              onChange({ ...data, dni });
+
+              // ✅ limpiar todo SIEMPRE al cambiar DNI (aunque exista)
+              onChange({
+                ...data,
+                dni,
+                nombres: "",
+                apellidos: "",
+                orcid: "",
+                escuela: "",
+              });
             }}
+
             onBlur={() => touch("dni")}
             inputType="number"
-            invalid={isInvalid("dni")}
+
           />
 
           {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del DNI...</p>}
 
+          {!isLookingUp && flashLookupWarning && (
+            <p className="text-xs text-red-600">{flashLookupWarning}</p>
+          )}
+
           {!isLookingUp && fieldError("dni") && (
             <p className="text-xs text-red-600">{fieldError("dni")}</p>
           )}
+
         </div>
 
         <div className="space-y-1">
@@ -265,9 +315,8 @@ export function AddTeacherForm({
               onRealTimeErrorChange?.("nombres", hasNumbers ? "Solo se aceptan letras" : "");
               onChange({ ...data, nombres: value });
             }}
-            onBlur={() => touch("nombres")}
-            inputType="text"
-            invalid={isInvalid("nombres")}
+
+
           />
           {fieldError("nombres") && <p className="text-xs text-red-600">{fieldError("nombres")}</p>}
         </div>
@@ -289,7 +338,7 @@ export function AddTeacherForm({
             }}
             onBlur={() => touch("apellidos")}
             inputType="text"
-            invalid={isInvalid("apellidos")}
+
           />
           {fieldError("apellidos") && <p className="text-xs text-red-600">{fieldError("apellidos")}</p>}
         </div>
@@ -298,9 +347,9 @@ export function AddTeacherForm({
           <FormInput
             icon={FileText}
             label="URL de ORCID"
-            sublabel="Ej: 0000-0000-0000-0000 o https://orcid.org/0000-0000-0000-0000"
+            sublabel="Ej: https://orcid.org/0000-0000-0000-0000"
             type="text"
-            placeholder="0000-0000-0000-0000"
+            placeholder="https://orcid.org/0000-0000-0000-0000"
             value={data.orcid || ""}
             required
             onChange={(e) => {
@@ -310,36 +359,34 @@ export function AddTeacherForm({
               else onRealTimeErrorChange?.("orcid", "");
               onChange({ ...data, orcid: value });
             }}
-            onBlur={() => touch("orcid")}
-            inputType="alphanumeric"
-            invalid={isInvalid("orcid")}
           />
           {fieldError("orcid") && <p className="text-xs text-red-600">{fieldError("orcid")}</p>}
         </div>
-
-        <FormSelect
-          icon={Building2}
-          label="Escuela Profesional"
-          value={data.escuela || ""}
-          onChange={(value) => {
-            onChange({ ...data, escuela: value });
-            touch("escuela");
-            onRealTimeErrorChange?.("escuela", "");
-          }}
-          options={[
-            "Ingeniería informática y sistemas",
-            "Ingeniería Civil",
-            "Ingeniería de Minas",
-            "Ingeniería Agroindustrial",
-            "Ingeniería Agroecológica y Desarrollo Rural",
-            "Administración",
-            "Ciencia Política y Gobernabilidad",
-            "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
-            "Medicina Veterinaria y zootécnia",
-          ]}
-          invalid={isInvalid("escuela")}
-          error={fieldError("escuela")}
-        />
+        <div className="space-y-1">
+          <FormSelect
+            icon={Building2}
+            label="Escuela Profesional"
+            value={data.escuela || ""}
+            onChange={(value) => {
+              onChange({ ...data, escuela: value });
+              touch("escuela");
+              onRealTimeErrorChange?.("escuela", "");
+            }}
+            options={[
+              "Ingeniería informática y sistemas",
+              "Ingeniería Civil",
+              "Ingeniería de Minas",
+              "Ingeniería Agroindustrial",
+              "Ingeniería Agroecológica y Desarrollo Rural",
+              "Administración",
+              "Ciencia Política y Gobernabilidad",
+              "Educación inicial intercultural y bilingüe 1ra y 2da infancia",
+              "Medicina Veterinaria y zootécnia",
+            ]}
+          />
+          {fieldError("escuela") && <p className="text-xs text-red-600">{fieldError("escuela")}</p>
+          }
+        </div>
       </div>
     </div>
   );

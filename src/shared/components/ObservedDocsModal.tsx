@@ -24,21 +24,37 @@ export function ObservedDocsModal({
         return map[type] || type || "Documento";
     };
 
+    const parseBackendDate = (dateString: any) => {
+        if (!dateString) return null;
+
+        let s = String(dateString).trim();
+
+        if (s.includes(" ")) s = s.replace(" ", "T");
+
+        s = s.replace(/(\.\d{3})\d+/, "$1");
+
+        const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(s);
+        if (!hasTZ) s += "Z";
+
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+    };
+
     const formatDate = (dateString: any) => {
-        if (!dateString) return "Sin fecha";
-        const safe = String(dateString).includes(" ")
-            ? String(dateString).replace(" ", "T")
-            : String(dateString);
-        const d = new Date(safe);
-        if (Number.isNaN(d.getTime())) return "Fecha inválida";
-        return d.toLocaleDateString("es-PE", {
+        const d = parseBackendDate(dateString);
+        if (!d) return "Sin fecha";
+
+        return d.toLocaleString("es-PE", {
+            timeZone: "America/Lima",
             day: "2-digit",
             month: "long",
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
+            hour12: true,
         });
     };
+
 
     const parseSafeDate = (value: any) => {
         if (!value) return null;
@@ -152,7 +168,7 @@ export function ObservedDocsModal({
                                                     <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
                                                     <div className="flex-1">
                                                         <h4 className="font-semibold text-red-900 text-sm mb-3">
-                                                            Observación (del momento):
+                                                            Observaciones
                                                         </h4>
 
                                                         {doc._obsMoment ? (
@@ -171,7 +187,7 @@ export function ObservedDocsModal({
                                                 </div>
                                             </div>
                                         </div>
-
+                                        {/*
                                         {Array.isArray(images) && images.length > 0 && (
                                             <div className="px-5 pb-4">
                                                 <h4 className="font-semibold text-slate-900 text-sm mb-3">
@@ -200,7 +216,8 @@ export function ObservedDocsModal({
                                                 </div>
                                             </div>
                                         )}
-
+                                        
+                                        
                                         <div className="px-5 pb-4 flex gap-2">
                                             <button
                                                 onClick={() => {
@@ -234,6 +251,7 @@ export function ObservedDocsModal({
                                                 Descargar
                                             </button>
                                         </div>
+                                        */}
                                     </div>
                                 );
                             })}

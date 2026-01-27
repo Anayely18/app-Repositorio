@@ -4,19 +4,28 @@ import { FileUpload } from "@/shared/components/forms/FileUpload"
 import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
-import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X, IdCard } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X, IdCard, ArrowLeft } from "lucide-react"
+import { Link } from "react-router-dom"
 import { useState, useRef } from "react"
+import { useEffect } from "react"
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 export default function StudentResearchReportRequest() {
     const [isModalOpen, setIsModalOpen] = useState(false)
-
+    const [isLoading, setIsLoading] = useState(false);
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
         format: false,
         errors: false,
         informed: false
     })
+
+    useEffect(() => {
+        return () => {
+            Object.values(juryTimers.current).forEach((t) => t && window.clearTimeout(t));
+            Object.values(juryAbort.current).forEach((c) => c && c.abort());
+        };
+    }, []);
 
     const [student, setStudent] = useState([1])
     const [studentData, setStudentData] = useState<any[]>([{}])
@@ -56,9 +65,8 @@ export default function StudentResearchReportRequest() {
         const fullName = [a?.nombre, a?.apellido].filter(Boolean).join(" ").trim();
 
         return {
-            // ✅ manda 1 solo campo para BD
-            full_name: fullName,      // si tu backend usa full_name
-            nombre: fullName,         // si tu backend usa nombre como “nombre completo”
+            full_name: fullName,
+            nombre: fullName,
             dni: a?.dni ?? "",
             orcid: a?.orcid ?? "",
         };
@@ -75,8 +83,8 @@ export default function StudentResearchReportRequest() {
         newData[index] = data
         setAdvisorData(newData)
     }
-
-    const [jury, setJury] = useState([0, 1, 2, 3])
+    const juryFlashTimers = useRef<Record<number, number | null>>({});
+    const [jury, setJury] = useState([0, 1, 2])
     const [juryData, setJuryData] = useState<Array<{ dnijury: string; firstName: string; lastName: string }>>([
         { dnijury: "", firstName: "", lastName: "" },
         { dnijury: "", firstName: "", lastName: "" },
@@ -92,12 +100,18 @@ export default function StudentResearchReportRequest() {
         }
         setJury([...jury, jury.length])
         setJuryData([...juryData, { dnijury: "", firstName: "", lastName: "" }])
+        setJuryLookupMsg((prev) => [...prev, ""]);
+        setJuryTypingErr((prev) => [...prev, ""]);
+
     }
 
     const removeLastJury = () => {
         if (jury.length > 3) {
             setJury(jury.slice(0, -1))
             setJuryData(juryData.slice(0, -1))
+            setJuryLookupMsg((prev) => prev.slice(0, -1));
+            setJuryTypingErr((prev) => prev.slice(0, -1));
+
         }
     }
 
@@ -126,6 +140,61 @@ export default function StudentResearchReportRequest() {
         files: {},
         jury: [],
     });
+
+
+    const [juryLookupMsg, setJuryLookupMsg] = useState<string[]>(["", "", "", ""]);
+
+    const [juryTypingErr, setJuryTypingErr] = useState<string[]>(["", "", "", ""]);
+    const [juryNameErr, setJuryNameErr] = useState<string[]>(["", "", "", ""]);
+    const [juryLastErr, setJuryLastErr] = useState<string[]>(["", "", "", ""]);
+
+    const flashJuryMsg = (index: number, msg: string) => {
+        setJuryLookupMsg((prev) => {
+            const copy = [...prev];
+            copy[index] = msg;
+            return copy;
+        });
+
+        if (juryFlashTimers.current[index]) {
+            window.clearTimeout(juryFlashTimers.current[index]!);
+        }
+
+        juryFlashTimers.current[index] = window.setTimeout(() => {
+            setJuryLookupMsg((prev) => {
+                const copy = [...prev];
+                copy[index] = "";
+                return copy;
+            });
+        }, 20000);
+    };
+    const onlyLetters = (v: string) =>
+        String(v ?? "")
+            .replace(/[^a-zA-ZÀ-ÿÑñ\s'-]/g, "")
+            .replace(/\s+/g, " ")
+            .trimStart();
+
+    const clearJuryError = (index: number, key: "dnijury" | "firstName" | "lastName") => {
+        setFormErrors((prev) => {
+            const copy = {
+                ...prev,
+                jury: Array.isArray(prev?.jury) ? [...prev.jury] : [],
+            };
+
+            copy.jury[index] = { ...(copy.jury[index] ?? {}) };
+            delete (copy.jury[index] as any)[key];
+
+            return copy;
+        });
+    };
+    const clearCheckboxErrorIfOk = (next: typeof checkboxes) => {
+        setFormErrors((prev) => ({
+            ...prev,
+            checkboxes: next.agreement && next.format && next.errors && next.informed
+                ? ""
+                : prev.checkboxes,
+        }));
+    };
+
 
 
     const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
@@ -170,16 +239,14 @@ export default function StudentResearchReportRequest() {
     };
 
     const validateJuryAll = () => {
-        // ✅ 3 obligatorios, 4to opcional solo si existe en el array (cuando lo agregas)
         const errs: Array<Partial<Record<"dnijury" | "firstName" | "lastName", string>>> = [];
 
         for (let i = 0; i < jury.length; i++) {
             const j = juryData[i] ?? { dnijury: "", firstName: "", lastName: "" };
 
-            const required = i < 3; // primeros 3 siempre
+            const required = i < 3;
             const anyFilled = !!(j.dnijury || j.firstName || j.lastName);
 
-            // 4to: si no existe, no entra al loop; si existe pero está vacío, no lo obligamos
             if (!required && !anyFilled) {
                 errs[i] = {};
                 continue;
@@ -187,7 +254,7 @@ export default function StudentResearchReportRequest() {
 
             const e: any = {};
 
-            if (!/^\d{8}$/.test((j.dnijury ?? "").trim())) e.dnijury = "DNI inválido (8 dígitos).";
+            if (!/^\d{8}$/.test((j.dnijury ?? "").trim())) e.dnijury = "DNI obligatorio.";
             if (((j.firstName ?? "").trim().length) < 2) e.firstName = "Nombre obligatorio.";
             if (((j.lastName ?? "").trim().length) < 2) e.lastName = "Apellido obligatorio.";
 
@@ -202,32 +269,29 @@ export default function StudentResearchReportRequest() {
         const e: any = { files: {}, jury: [] };
         let ok = true;
 
-        // checkboxes
+
         const c = checkboxes;
         if (!c.agreement || !c.format || !c.errors || !c.informed) {
             e.checkboxes = "Debes marcar todas las confirmaciones antes de enviar.";
             ok = false;
         }
 
-        // project title
         if (!projectTitle.trim()) {
             e.projectTitle = "El título del proyecto es obligatorio.";
             ok = false;
         }
 
-        // files
         if (!files.authorization) { e.files.authorization = "Adjunta la hoja de autorización (PDF)."; ok = false; }
         if (!files.certificate) { e.files.certificate = "Adjunta la constancia de empastados (PDF)."; ok = false; }
         if (!files.thesis) { e.files.thesis = "Adjunta la tesis/informe (PDF)."; ok = false; }
         if (!files.originality) { e.files.originality = "Adjunta la constancia de originalidad (PDF)."; ok = false; }
 
-        // students/advisors (los mensajes se ven en sus componentes con showValidation)
         const studentsOk = studentData.every(validateStudent);
         const advisorsOk = advisorData.every(validateAdvisor);
         if (!studentsOk) ok = false;
         if (!advisorsOk) ok = false;
 
-        // jury
+
         const j = validateJuryAll();
         e.jury = j.errs;
         if (!j.ok) ok = false;
@@ -237,6 +301,8 @@ export default function StudentResearchReportRequest() {
 
 
     const handleSubmit = async () => {
+        if (isLoading) return;
+
         try {
             setShowValidation(true);
 
@@ -247,6 +313,8 @@ export default function StudentResearchReportRequest() {
                 toastService.error("Corrige los campos marcados antes de enviar.");
                 return;
             }
+
+            setIsLoading(true);
 
             const formData = new FormData();
             const studentsPayload = studentData.map(({ codigo, ...rest }) => rest);
@@ -273,22 +341,24 @@ export default function StudentResearchReportRequest() {
             if (result.success) {
                 setIsModalOpen(true);
                 resetForm();
+                setTimeout(() => window.location.reload(), 30000);
             } else {
                 toastService.error(result.message || "Error al enviar solicitud");
             }
         } catch (error) {
             console.error("Error:", error);
             toastService.error("Error de conexión al servidor");
+        } finally {
+            setIsLoading(false);
         }
     };
 
 
+
     const onlyDigits = (v: string, max: number) => String(v ?? "").replace(/\D/g, "").slice(0, max);
 
-    // ✅ AJUSTA AQUÍ: endpoint para buscar por DNI (jurados/asesores)
     const PERSON_BY_DNI_URL = (dni: string) => `${API_URL}/personas/dni/${dni}`
 
-    // Normaliza respuesta API (acepta varios formatos)
     const pickNames = (payload: any) => {
         const p = payload?.data ?? payload;
         const first = p?.nombres ?? p?.nombre ?? p?.first_name ?? p?.firstName ?? "";
@@ -303,7 +373,6 @@ export default function StudentResearchReportRequest() {
         return { first: parts.slice(0, -2).join(" "), last: parts.slice(-2).join(" ") };
     };
 
-    // Debounce + abort por jurado
     const juryTimers = useRef<Record<number, number | null>>({});
     const juryAbort = useRef<Record<number, AbortController | null>>({});
     const juryLastDni = useRef<Record<number, string>>({});
@@ -325,73 +394,148 @@ export default function StudentResearchReportRequest() {
         return { firstName, lastName };
     };
 
+    const MAX_10_MB = 10 * 1024 * 1024;
+
+    const validatePdfAndSize = (file: File | null, maxBytes: number) => {
+        if (!file) return "";
+        if (file.type !== "application/pdf") return "Solo se permite PDF.";
+        if (file.size > maxBytes) return `El archivo supera el límite de ${Math.round(maxBytes / (1024 * 1024))} MB.`;
+        return "";
+    };
+
+    const setFileWithValidation = (
+        key: "authorization" | "certificate" | "thesis" | "originality",
+        file: File | null
+    ) => {
+        const err = validatePdfAndSize(file, MAX_10_MB);
+
+        if (err) {
+            toastService.error(err);
+            setFiles((prev) => ({ ...prev, [key]: null }));
+
+            setFormErrors((prev) => ({
+                ...prev,
+                files: { ...(prev.files ?? {}), [key]: err },
+            }));
+            return;
+        }
+
+        setFiles((prev) => ({ ...prev, [key]: file }));
+
+        setFormErrors((prev) => ({
+            ...prev,
+            files: { ...(prev.files ?? {}), [key]: "" },
+        }));
+    };
+
+
     const handleJuryDniChange = (index: number, raw: string) => {
+        const hasLetters = /[a-zA-Z]/.test(raw);
+        setJuryTypingErr((prev) => {
+            const copy = [...prev];
+            copy[index] = hasLetters ? "Solo se aceptan números" : "";
+            return copy;
+        });
+
         const dni = onlyDigits(raw, 8);
 
-        // 1) guardar dni en estado
-        updateJuryData(index, { ...juryData[index], dnijury: dni });
+        if (juryTimers.current[index]) window.clearTimeout(juryTimers.current[index]!);
+        if (juryAbort.current[index]) juryAbort.current[index]!.abort();
 
-        // 2) solo consultar cuando tenga 8 dígitos
+        juryLastDni.current[index] = "";
+
+        setJuryLookupMsg((prev) => {
+            const copy = [...prev];
+            copy[index] = "";
+            return copy;
+        });
+
+        setJuryNameErr((prev) => {
+            const copy = [...prev];
+            copy[index] = "";
+            return copy;
+        });
+        setJuryLastErr((prev) => {
+            const copy = [...prev];
+            copy[index] = "";
+            return copy;
+        });
+
+        setFormErrors((prev) => {
+            const jury = [...(prev.jury ?? [])];
+            jury[index] = { ...(jury[index] ?? {}) };
+            jury[index].dnijury = "";
+            jury[index].firstName = "";
+            jury[index].lastName = "";
+            return { ...prev, jury };
+        });
+
+        updateJuryData(index, {
+            ...juryData[index],
+            dnijury: dni,
+            firstName: "",
+            lastName: "",
+        });
+
         if (dni.length !== 8) return;
 
-        // debounce
-        if (juryTimers.current[index]) window.clearTimeout(juryTimers.current[index]!);
+        if (juryLastDni.current[index] === dni) return;
+
 
         juryTimers.current[index] = window.setTimeout(async () => {
             try {
-                if (juryLastDni.current[index] === dni) return;
-
-                // abort request anterior de este índice
-                if (juryAbort.current[index]) juryAbort.current[index]!.abort();
                 const controller = new AbortController();
                 juryAbort.current[index] = controller;
 
                 const { firstName, lastName } = await lookupPersonByDni(dni, controller.signal);
 
                 juryLastDni.current[index] = dni;
+
+                setJuryLookupMsg((prev) => {
+                    const copy = [...prev];
+                    copy[index] = "";
+                    return copy;
+                });
+
                 updateJuryData(index, {
                     ...juryData[index],
                     dnijury: dni,
-                    firstName: firstName || juryData[index]?.firstName || "",
-                    lastName: lastName || juryData[index]?.lastName || "",
+                    firstName: firstName || "",
+                    lastName: lastName || "",
                 });
             } catch (err: any) {
                 if (err?.name === "AbortError") return;
-                toastService.error(err?.message || "Error consultando DNI");
+
+                flashJuryMsg(index, "DNI no encontrado, escribe nombre y apellido manualmente.");
+
+                juryLastDni.current[index] = dni;
             }
         }, 450);
     };
 
 
-    const resetForm = () => {
+    const [formKey, setFormKey] = useState(0);
 
+    const resetForm = () => {
         setProjectTitle("");
 
-        setCheckboxes({
-            agreement: false,
-            format: false,
-            errors: false,
-            informed: false
-        });
+        setCheckboxes({ agreement: false, format: false, errors: false, informed: false });
 
-        setStudentData([
-            { nombres: "", apellidos: "", telefono: "", dni: "", escuela: "" }
-        ]);
+        setStudent([1]);
+        setStudentData([{ nombres: "", apellidos: "", telefono: "", dni: "", escuela: "", email: "", codigo: "" }]);
 
-        setAdvisorData([
-            { nombre: "", dni: "", orcid: "", apellido: "" }
-        ]);
+        setAdvisor([1]);
+        setAdvisorData([{ nombre: "", apellido: "", dni: "", orcid: "" }]);
 
-
-        setFiles({
-            authorization: null,
-            certificate: null,
-            thesis: null,
-            originality: null
-        });
+        setFiles({ authorization: null, certificate: null, thesis: null, originality: null });
 
         setShowValidation(false);
         setFormErrors({ files: {}, jury: [] });
+
+        setJuryLookupMsg(["", "", "", ""]);
+        setJuryTypingErr(["", "", "", ""]);
+        setJuryNameErr(["", "", "", ""]);
+        setJuryLastErr(["", "", "", ""]);
 
         setJury([0, 1, 2]);
         setJuryData([
@@ -400,7 +544,9 @@ export default function StudentResearchReportRequest() {
             { dnijury: "", firstName: "", lastName: "" },
         ]);
 
+        setFormKey((k) => k + 1);
     };
+
 
 
     return (
@@ -445,11 +591,15 @@ export default function StudentResearchReportRequest() {
 
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    window.location.href = "/";
+                                }}
                                 className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
                             >
                                 Entendido
                             </button>
+
                         </div>
                     </div>
                 </div>
@@ -458,7 +608,17 @@ export default function StudentResearchReportRequest() {
                 <Logo />
             </div>
             <main className="max-w-5xl mx-auto p-6 md:p-8">
+                <div className="mb-4">
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                        <span>Volver al inicio</span>
+                    </Link>
+                </div>
                 <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
+
                     <div className="text-center mb-10 pb-6 border-b-2 border-gray-100">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                             <FileText className="w-8 h-8 text-blue-600" />
@@ -478,7 +638,12 @@ export default function StudentResearchReportRequest() {
                                     No es función de la unidad de repositorio revisar en todo su extremo el informe de investigación, esa es responsabilidad de usted, equipo de trabajo, revisores o la Dirección de Institutos de Investigación. Sin embargo, a pesar de estos filtros a la fecha existen trabajos rechazados. Esta oficina verifica aleatoriamente el formato o esquema, caso no esté bien será rechazado y si reincide se aplica el <a href="https://drive.google.com/file/d/1FNXxEnW_zWmuuFhHJ7tW2AqECUwekjBc/view" target="_blank" className="text-blue-600 hover:underline font-semibold">reglamento</a>.</>}
                                 checkboxLabel="Sí, estoy de acuerdo"
                                 checked={checkboxes.agreement}
-                                onChange={(e) => setCheckboxes({ ...checkboxes, agreement: e.target.checked })}
+                                onChange={(e) => {
+                                    const next = { ...checkboxes, agreement: e.target.checked };
+                                    setCheckboxes(next);
+                                    clearCheckboxErrorIfOk(next);
+                                }}
+
                             />
                             <InfoCheckbox
                                 icon={FileText}
@@ -486,7 +651,11 @@ export default function StudentResearchReportRequest() {
                                 text="He leído y ajustado el informe de investigación al formato oficial del reglamento de Investigación de la UNAMBA."
                                 checkboxLabel="Sí, he ajustado"
                                 checked={checkboxes.format}
-                                onChange={(e) => setCheckboxes({ ...checkboxes, format: e.target.checked })}
+                                onChange={(e) => {
+                                    const next = { ...checkboxes, format: e.target.checked };
+                                    setCheckboxes(next);
+                                    clearCheckboxErrorIfOk(next);
+                                }}
                             />
                             <InfoCheckbox
                                 icon={AlertCircle}
@@ -494,7 +663,12 @@ export default function StudentResearchReportRequest() {
                                 text={<>He leído los errores más comunes que se presentan a la hora de presentar los informes de investigación cuyo link está aquí: <a href="https://drive.google.com/file/d/1yUA2CEBWBsgf1o181WaqmomqtHwkiNEK/view" target="_blank" className="text-blue-600 hover:underline font-semibold">ERRORES RECURRENTES EN DIAGRAMACION.pdf</a></>}
                                 checkboxLabel="Sí, he leído"
                                 checked={checkboxes.errors}
-                                onChange={(e) => setCheckboxes({ ...checkboxes, errors: e.target.checked })}
+                                onChange={(e) => {
+                                    const next = { ...checkboxes, errors: e.target.checked };
+                                    setCheckboxes(next);
+                                    clearCheckboxErrorIfOk(next);
+                                }}
+
                             />
                             <InfoCheckbox
                                 icon={CheckCircle2}
@@ -502,7 +676,12 @@ export default function StudentResearchReportRequest() {
                                 text="Estoy informado que el trámite es virtual, existe una página de seguimiento para ver mi trámite, que el procedimiento para otorgar la constancia es de 5 días hábiles."
                                 checkboxLabel="Sí, estoy informado"
                                 checked={checkboxes.informed}
-                                onChange={(e) => setCheckboxes({ ...checkboxes, informed: e.target.checked })}
+                                onChange={(e) => {
+                                    const next = { ...checkboxes, informed: e.target.checked };
+                                    setCheckboxes(next);
+                                    clearCheckboxErrorIfOk(next);
+                                }}
+
                             />
                             {showValidation && formErrors.checkboxes && (
                                 <p className="text-xs text-red-600 font-medium">{formErrors.checkboxes}</p>
@@ -563,7 +742,7 @@ export default function StudentResearchReportRequest() {
                             <div className="space-y-4">
                                 {advisor.map((num, index) => (
                                     <AsesorForm
-                                        key={index}
+                                        key={`${formKey}-advisor-${index}`}
                                         number={index + 1}
                                         onRemove={() => removeAdvisor(index)}
                                         canRemove={index !== 0}
@@ -592,7 +771,7 @@ export default function StudentResearchReportRequest() {
                                             <div key={index} className="col-span-2">
                                                 <div className="flex items-start gap-2">
                                                     <div className="grid grid-cols-[200px_1fr_1fr] gap-4 flex-1 items-start">
-                                                        <div className="grid grid-cols-1 gap-2  flex-1">
+                                                        <div className="space-y-2">
                                                             <FormInput
                                                                 icon={IdCard}
                                                                 label={`dni del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
@@ -601,39 +780,102 @@ export default function StudentResearchReportRequest() {
                                                                 placeholder="Ejem: 67234567"
                                                                 value={juryData[index]?.dnijury || ""}
                                                                 onChange={(e) => handleJuryDniChange(index, e.target.value)}
-                                                                invalid={showValidation && !!formErrors.jury?.[index]?.dnijury}
+
                                                             />
-                                                            {showValidation && formErrors.jury?.[index]?.dnijury && (
-                                                                <p className="text-xs text-red-600">{formErrors.jury[index].dnijury}</p>
-                                                            )}
+
+                                                            <p className="text-xs min-h-[16px] -mt-1">
+                                                                {(() => {
+                                                                    const dniLen = (juryData[index]?.dnijury ?? "").length;
+
+                                                                    const typing = juryTypingErr[index]; // letras
+                                                                    const submitErr =
+                                                                        showValidation && dniLen === 0
+                                                                            ? (formErrors.jury?.[index]?.dnijury || "")
+                                                                            : "";
+
+                                                                    const hint = dniLen > 0 && dniLen < 8 ? `Debe ser 8 dígitos (${dniLen}/8)` : "";
+                                                                    const lookup = juryLookupMsg[index]; // no encontrado
+
+                                                                    const msg = typing || submitErr || hint || lookup || "";
+                                                                    const cls =
+                                                                        typing || submitErr
+                                                                            ? "text-red-600"
+                                                                            : hint
+                                                                                ? "text-red-500"
+                                                                                : lookup
+                                                                                    ? "text-amber-700"
+                                                                                    : "text-red-600";
+
+                                                                    return <span className={cls}>{msg || "."}</span>;
+                                                                })()}
+                                                            </p>
+
                                                         </div>
 
-                                                        <FormInput
-                                                            icon={User}
-                                                            label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                            sublabel="(En mayúsculas y minúsculas según corresponda)"
-                                                            type="text"
-                                                            placeholder="Ejem: Luis"
-                                                            value={juryData[index]?.firstName || ''}
-                                                            onChange={(e) => updateJuryData(index, { ...juryData[index], firstName: e.target.value })}
-                                                            invalid={showValidation && !!formErrors.jury?.[index]?.firstName}
-                                                        />
-                                                        {showValidation && formErrors.jury?.[index]?.firstName && (
-                                                            <p className="text-xs text-red-600">{formErrors.jury[index].firstName}</p>
-                                                        )}
-                                                        <FormInput
-                                                            icon={User}
-                                                            label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
-                                                            sublabel="(En mayúsculas y minúsculas según corresponda)"
-                                                            type="text"
-                                                            placeholder="Ejem: Robles"
-                                                            value={juryData[index]?.lastName || ''}
-                                                            onChange={(e) => updateJuryData(index, { ...juryData[index], lastName: e.target.value })}
-                                                            invalid={showValidation && !!formErrors.jury?.[index]?.lastName}
-                                                        />
-                                                        {showValidation && formErrors.jury?.[index]?.lastName && (
-                                                            <p className="text-xs text-red-600">{formErrors.jury[index].lastName}</p>
-                                                        )}
+                                                        <div className="space-y-2">
+                                                            <FormInput
+                                                                icon={User}
+                                                                label={`Nombre del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                                sublabel="(En mayúsculas y minúsculas según corresponda)"
+                                                                type="text"
+                                                                placeholder="Ejem: Luis"
+                                                                value={juryData[index]?.firstName || ''}
+                                                                onChange={(e) => {
+                                                                    const raw = e.target.value;
+                                                                    const cleaned = onlyLetters(raw);
+                                                                    clearJuryError(index, "firstName");
+                                                                    setJuryNameErr((prev) => {
+                                                                        const copy = [...prev];
+                                                                        copy[index] = /\d/.test(raw) ? "Solo se aceptan letras" : "";
+                                                                        return copy;
+                                                                    });
+
+                                                                    updateJuryData(index, { ...juryData[index], firstName: cleaned });
+                                                                }}
+
+
+                                                            />
+                                                            <p className="text-xs text-red-600 min-h-[16px]">
+                                                                {juryLastErr[index] ||
+                                                                    (showValidation && (juryData[index]?.lastName ?? "").trim().length === 0
+                                                                        ? (formErrors.jury?.[index]?.lastName || "")
+                                                                        : "")}
+
+                                                            </p>
+
+
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <FormInput
+                                                                icon={User}
+                                                                label={`Apellido del ${index === 0 ? 'presidente' : index === 1 ? 'primer miembro' : index === 2 ? 'segundo miembro' : 'tercer miembro'}`}
+                                                                sublabel="(En mayúsculas y minúsculas según corresponda)"
+                                                                type="text"
+                                                                placeholder="Ejem: Robles"
+                                                                value={juryData[index]?.lastName || ''}
+                                                                onChange={(e) => {
+                                                                    const raw = e.target.value;
+                                                                    const cleaned = onlyLetters(raw);
+                                                                    clearJuryError(index, "lastName");
+                                                                    setJuryLastErr((prev) => {
+                                                                        const copy = [...prev];
+                                                                        copy[index] = /\d/.test(raw) ? "Solo se aceptan letras" : "";
+                                                                        return copy;
+                                                                    });
+
+                                                                    updateJuryData(index, { ...juryData[index], lastName: cleaned });
+                                                                }}
+
+                                                            />
+                                                            <p className="text-xs text-red-600 min-h-[16px]">
+                                                                {juryNameErr[index] ||
+                                                                    (showValidation && (juryData[index]?.lastName ?? "").trim().length === 0
+                                                                        ? (formErrors.jury?.[index]?.lastName || "")
+                                                                        : "")}
+                                                            </p>
+
+
+                                                        </div>
                                                     </div>
 
                                                     {jury.length > 3 && index === jury.length - 1 && (
@@ -650,10 +892,12 @@ export default function StudentResearchReportRequest() {
                                                     )}
                                                 </div>
 
-                                                {/* ✅ Línea divisoria entre jurados */}
-                                                {i < jury.length - 1 && (
-                                                    <div className="my-4 border-t border-gray-200" />
-                                                )}
+
+                                                {
+                                                    i < jury.length - 1 && (
+                                                        <div className="my-4 border-t border-gray-200" />
+                                                    )
+                                                }
                                             </div>
                                         ))}
                                     </div>
@@ -688,64 +932,90 @@ export default function StudentResearchReportRequest() {
                                     type="text"
                                     placeholder="Ingrese el título completo"
                                     value={projectTitle}
-                                    onChange={(e) => setProjectTitle(e.target.value)}
-                                    invalid={showValidation && !!formErrors.projectTitle}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setProjectTitle(v);
+
+                                        if (v.trim().length > 5) {
+                                            setFormErrors((prev) => ({ ...prev, projectTitle: "" }));
+                                        }
+                                    }}
                                 />
+
                                 {showValidation && formErrors.projectTitle && (
                                     <p className="text-xs text-red-600 font-medium">{formErrors.projectTitle}</p>
                                 )}
                                 <FileUpload
-                                    label="Hoja de autorización de publicación escaneado en formato PDF (Apellidos Nombre Hoja.pdf max 1 MB, firmado y con su huella digital)"
-                                    maxSize="1 MB"
-                                    onChange={(file) => setFiles({ ...files, authorization: file })}
+                                    label="Hoja de autorización de publicación escaneado en formato PDF (Apellidos Nombre Hoja.pdf max 10 MB, firmado y con su huella digital)"
+                                    maxSize="10 MB"
+                                    value={files.authorization}
+                                    onChange={(file) => setFileWithValidation("authorization", file)}
                                 />
                                 {showValidation && formErrors.files?.authorization && (
                                     <p className="text-xs text-red-600 font-medium">{formErrors.files.authorization}</p>
                                 )}
                                 <FileUpload
-                                    label="Constancia de entrega de empastados otorgado por la Unidad de Investigación de su Facultad (Apellidos Nombres Acta.pdf) max 1 MB"
-                                    maxSize="1 MB"
-                                    onChange={(file) => setFiles({ ...files, certificate: file })}
+                                    label="Constancia de entrega de empastados otorgado por la Unidad de Investigación de su Facultad (Apellidos Nombres Acta.pdf) max 10 MB"
+                                    maxSize="10 MB"
+                                    value={files.certificate}
+                                    onChange={(file) => setFileWithValidation("certificate", file)}
                                 />
-                                {showValidation && formErrors.files?.authorization && (
-                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.authorization}</p>
+                                {showValidation && formErrors.files?.certificate && (
+                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.certificate}</p>
                                 )}
                                 <FileUpload
                                     label="Tesis con el mismo contenido presentado en Unidad de Investigación (apellidos Nombre Tesis.pdf), TAMAÑO A4 y máximo 10 Mb"
                                     maxSize="10 MB"
-                                    onChange={(file) => setFiles({ ...files, thesis: file })}
+                                    value={files.thesis}
+                                    onChange={(file) => setFileWithValidation("thesis", file)}
+
                                 />
-                                {showValidation && formErrors.files?.authorization && (
-                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.authorization}</p>
+                                {showValidation && formErrors.files?.thesis && (
+                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.thesis}</p>
                                 )}
                                 <FileUpload
-                                    label="Constancia de originalidad de su Tesis otorgado por la Unidad de Investigación de su Facultad (apellidos Nombre Constancia.pdf), TAMAÑO A4 y máximo 1 Mb"
-                                    maxSize="1 MB"
-                                    onChange={(file) => setFiles({ ...files, originality: file })}
+                                    label="Constancia de originalidad de su Tesis otorgado por la Unidad de Investigación de su Facultad (apellidos Nombre Constancia.pdf), TAMAÑO A4 y máximo 10 Mb"
+                                    maxSize="10 MB"
+                                    value={files.originality}
+                                    onChange={(file) => setFileWithValidation("originality", file)}
                                 />
-                                {showValidation && formErrors.files?.authorization && (
-                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.authorization}</p>
+                                {showValidation && formErrors.files?.originality && (
+                                    <p className="text-xs text-red-600 font-medium">{formErrors.files.originality}</p>
                                 )}
                             </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4 pt-6">
                             <button
                                 onClick={handleSubmit}
-                                className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-8 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                disabled={isLoading}
+                                className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-blue-400 disabled:to-blue-500 text-white font-semibold py-4 px-8 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                             >
-                                <CheckCircle2 className="w-5 h-5" />
-                                Enviar Solicitud
+                                {isLoading ? (
+                                    <>
+                                        <span className="w-5 h-5 rounded-full border-2 border-white/60 border-t-white animate-spin" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        Enviar Solicitud
+                                    </>
+                                )}
                             </button>
+
                             <button
                                 type="button"
+                                onClick={resetForm}
+                                disabled={isLoading}
                                 className="px-8 py-4 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all hover:border-gray-400"
                             >
-                                Cancelar
+                                Limpiar
                             </button>
+
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     )
 }
