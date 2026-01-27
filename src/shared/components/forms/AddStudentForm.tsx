@@ -11,8 +11,6 @@ interface StudentData {
   telefono?: string;
   escuela?: string;
   email?: string;
-
-  // ✅ Solo para autocompletar (no se persiste)
   codigo?: string;
 }
 
@@ -38,11 +36,13 @@ export function AddStudentForm({
   showValidation = false,
 }: AddStudentFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState<string>("");
+
 
   const lastCodeRef = useRef<string>("");
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [flashCodeError, setFlashCodeError] = useState<string>("");
+  const flashTimerRef = useRef<number | null>(null);
 
   const [touched, setTouched] = useState<Record<FieldKey, boolean>>({
     codigo: false,
@@ -57,6 +57,15 @@ export function AddStudentForm({
   const touch = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
   const showErr = (k: FieldKey) => showValidation || touched[k];
 
+  const flashError = (msg: string) => {
+    setFlashCodeError(msg || "Código no encontrado, completa tus datos manualmente.");
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => {
+      setFlashCodeError("");
+    }, 10000);
+  };
+
+
   const onlyDigits = (v: string, max: number) => v.replace(/\D/g, "").slice(0, max);
 
   const pickNames = (payload: any) => {
@@ -69,7 +78,6 @@ export function AddStudentForm({
     return { nombres, apellidos, full };
   };
 
-  // ✅ Validaciones (sin tocar UI)
   const errors = useMemo(() => {
     const e: Partial<Record<FieldKey, string>> = {};
 
@@ -81,30 +89,24 @@ export function AddStudentForm({
     const escuela = (data.escuela ?? "").trim();
     const email = (data.email ?? "").trim();
 
-    // Código 6 dígitos + lookupError
     if (!codigo) e.codigo = "El código es obligatorio.";
     else if (!/^\d{6}$/.test(codigo)) e.codigo = "El código debe tener 6 dígitos.";
-    else if (!isLookingUp && lookupError) e.codigo = lookupError;
 
-    // DNI 8 dígitos
     if (!dni) e.dni = "El DNI es obligatorio.";
     else if (!/^\d{8}$/.test(dni)) e.dni = "El DNI debe tener 8 dígitos.";
 
-    // Nombres / Apellidos
     if (!nombres) e.nombres = "Los nombres son obligatorios.";
     else if (nombres.length < 2) e.nombres = "Escribe al menos 2 caracteres.";
 
     if (!apellidos) e.apellidos = "Los apellidos son obligatorios.";
     else if (apellidos.length < 2) e.apellidos = "Escribe al menos 2 caracteres.";
 
-    // Teléfono 9 dígitos (Perú)
     if (!telefono) e.telefono = "El teléfono es obligatorio.";
     else if (!/^\d{9}$/.test(telefono)) e.telefono = "Debe tener 9 dígitos.";
 
-    // Escuela
     if (!escuela) e.escuela = "Selecciona una escuela profesional.";
 
-    // Email
+
     if (!email) e.email = "El correo es obligatorio.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Correo no válido.";
 
@@ -117,32 +119,36 @@ export function AddStudentForm({
     data.telefono,
     data.escuela,
     data.email,
-    lookupError,
+
     isLookingUp,
   ]);
 
   const isInvalid = (k: FieldKey) => !!errors[k] && showErr(k);
 
   useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+
     const codigo = onlyDigits(data.codigo ?? "", 6);
 
-    // si no está completo, no consultes
     if (codigo.length !== 6) {
-      setLookupError("");
+
       lastCodeRef.current = "";
       if (abortRef.current) abortRef.current.abort();
       return;
     }
 
-    // evita repetir el mismo código
     if (codigo === lastCodeRef.current) return;
 
-    // debounce
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     timerRef.current = window.setTimeout(async () => {
       try {
-        setLookupError("");
+
         setIsLookingUp(true);
 
         if (abortRef.current) abortRef.current.abort();
@@ -163,7 +169,6 @@ export function AddStudentForm({
         let finalNombres = String(nombres ?? "").trim();
         let finalApellidos = String(apellidos ?? "").trim();
 
-        // fallback si solo viene "full_name"
         if ((!finalNombres || !finalApellidos) && full) {
           const parts = String(full).trim().split(/\s+/);
           if (parts.length >= 2) {
@@ -189,7 +194,9 @@ export function AddStudentForm({
         });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        setLookupError(err?.message || "Error consultando código");
+        const msg =  "Codigo no encontrado, escriba su nombre y apellido de forma manual.";
+        
+        flashError(msg);        
       } finally {
         setIsLookingUp(false);
       }
@@ -235,20 +242,39 @@ export function AddStudentForm({
             inputType="number"
             onChange={(e) => {
               const codigo = onlyDigits(e.target.value, 6);
-              setLookupError("");
-              onChange({ ...data, codigo });
+
+              // ✅ cortar búsqueda anterior
+              if (abortRef.current) abortRef.current.abort();
+              if (timerRef.current) window.clearTimeout(timerRef.current);
+
+              // ✅ permitir nueva búsqueda
+              lastCodeRef.current = "";
+
+              // ✅ borrar mensaje anterior
+              setFlashCodeError("");
+
+              // ✅ limpiar todo al cambiar el código (aunque exista en Excel)
+              onChange({
+                ...data,
+                codigo,
+                dni: "",
+                nombres: "",
+                apellidos: "",
+                telefono: "",
+                escuela: "",
+                email: "",
+              });
             }}
-            onBlur={() => touch("codigo")}
-            invalid={isInvalid("codigo")}
+
           />
 
-          {isLookingUp && (
-            <p className="text-xs text-slate-500">Buscando datos del código...</p>
-          )}
+          <p
+            className={`text-xs min-h-[16px] ${flashCodeError ? "text-amber-700" : "text-red-600"
+              }`}
+          >
+            {!isLookingUp ? (flashCodeError || (isInvalid("codigo") ? errors.codigo : "")) : ""}
+          </p>
 
-          {!isLookingUp && isInvalid("codigo") && (
-            <p className="text-xs text-red-600">{errors.codigo}</p>
-          )}
         </div>
 
         <div className="space-y-1">
@@ -263,7 +289,7 @@ export function AddStudentForm({
             inputType="number"
             onChange={(e) => onChange({ ...data, dni: onlyDigits(e.target.value, 8) })}
             onBlur={() => touch("dni")}
-            invalid={isInvalid("dni")}
+
           />
           {isInvalid("dni") && <p className="text-xs text-red-600">{errors.dni}</p>}
         </div>
@@ -279,7 +305,7 @@ export function AddStudentForm({
             inputType="text"
             onChange={(e) => onChange({ ...data, nombres: e.target.value })}
             onBlur={() => touch("nombres")}
-            invalid={isInvalid("nombres")}
+
           />
           {isInvalid("nombres") && <p className="text-xs text-red-600">{errors.nombres}</p>}
         </div>
@@ -295,7 +321,7 @@ export function AddStudentForm({
             inputType="text"
             onChange={(e) => onChange({ ...data, apellidos: e.target.value })}
             onBlur={() => touch("apellidos")}
-            invalid={isInvalid("apellidos")}
+
           />
           {isInvalid("apellidos") && (
             <p className="text-xs text-red-600">{errors.apellidos}</p>
@@ -314,7 +340,7 @@ export function AddStudentForm({
             maxLength={9}
             onChange={(e) => onChange({ ...data, telefono: onlyDigits(e.target.value, 9) })}
             onBlur={() => touch("telefono")}
-            invalid={isInvalid("telefono")}
+
           />
           {isInvalid("telefono") && (
             <p className="text-xs text-red-600">{errors.telefono}</p>
@@ -353,7 +379,7 @@ export function AddStudentForm({
             value={data.email || ""}
             onChange={(e) => onChange({ ...data, email: e.target.value })}
             onBlur={() => touch("email")}
-            invalid={isInvalid("email")}
+
           />
           {isInvalid("email") && <p className="text-xs text-red-600">{errors.email}</p>}
         </div>

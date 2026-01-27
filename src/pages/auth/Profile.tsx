@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'sonner';
+import { useNavigate } from "react-router-dom";
+
 import {
   User,
   Mail,
@@ -13,17 +15,20 @@ import {
   Shield,
   Clock,
   Calendar,
-  Settings
+  Settings,
+  UserPlus,
+
 } from 'lucide-react';
 
 export default function AdminProfile() {
+
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [adminData, setAdminData] = useState(null);
-
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -34,11 +39,12 @@ export default function AdminProfile() {
     confirmPassword: ''
   });
 
-  const API_URL = 'http://localhost:3000/api';
+  const API_URL = '/api';
 
   useEffect(() => {
     fetchProfile();
   }, []);
+
 
   const fetchProfile = async () => {
     try {
@@ -190,11 +196,11 @@ export default function AdminProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-10">
       <Toaster position="top-right" richColors closeButton />
       <div className="max-w-5xl mx-auto p-6 md:p-8">
         {/* Header con gradiente */}
-        <div className=" bg-blue-900 rounded-3xl  p-8 mb-6 relative overflow-hidden">
+        <div className=" bg-blue-900 rounded-2xl  p-8 mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
 
@@ -261,7 +267,7 @@ export default function AdminProfile() {
             </div>
 
             {/* Security Note */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-100 rounded-3xl p-6 ">
+            <div className="bg-gradient-to-br from-amber-50 to-amber-50 border-2 border-amber-100 rounded-2xl p-6 ">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl  bg-amber-500 flex items-center justify-center flex-shrink-0">
                   <AlertCircle className="w-5 h-5 text-white" />
@@ -285,7 +291,18 @@ export default function AdminProfile() {
                 </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-bold
+             bg-blue-900 text-white hover:bg-blue-800 transition-all shadow-lg hover:shadow-xl"
+             >
+              <UserPlus className="w-5 h-5" />
+              Agregar un nuevo usuario
+            </button>
           </div>
+
+
 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -344,7 +361,7 @@ export default function AdminProfile() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     DNI

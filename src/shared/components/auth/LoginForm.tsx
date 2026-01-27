@@ -101,7 +101,7 @@ export default function LoginForm({
                         </button>
                     </div>
                 </form>
-                <span className="block text-end text-xs">
+                {/*<span className="block text-end text-xs">
                     ¿Aun no tienes una cuenta?
                     <button
                         onClick={() => (window.location.href = "/register")}
@@ -109,7 +109,7 @@ export default function LoginForm({
                     >
                         click aquí
                     </button>
-                </span>
+                </span>*/}
             </div>
         </div>
     );

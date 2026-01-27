@@ -22,8 +22,9 @@ import {
     ChevronUp,
 } from "lucide-react";
 
-import { API_URL, API_URL_DOCUMENTS } from "@/utils/api";
-import { Link } from "react-router-dom";
+import { API_URL_DOCUMENTS } from "@/utils/api";
+import { authFetch } from "@/utils/authFetch";
+import { data, Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
 import JuryItem from "@/shared/components/JuradoItem";
@@ -54,7 +55,8 @@ export default function RequestDetailsPage() {
             try {
                 setLoading(true);
                 const applicationId = getApplicationId();
-                const response = await fetch(`${API_URL}/applications/details/${applicationId}`);
+                const response = await authFetch(`/applications/details/${applicationId}`);
+
 
                 if (!response.ok) {
                     throw new Error('Error al cargar los detalles');
@@ -65,6 +67,23 @@ export default function RequestDetailsPage() {
                 console.log('📄 Documentos:', result.data.documents);
                 console.log('📊 Estado de aplicación:', result.data.status);
                 console.log('📜 Historial:', result.data.history);
+                console.log("DOC SAMPLE:", result.data.documents?.[0]);
+                console.log("DOCS:", result.data.documents?.map(d => ({
+                    id: d.document_id,
+                    type: d.document_type,
+                    status: d.status,
+                    reason: d.rejection_reason,
+                    hist: d.rejection_history?.length,
+                })));
+
+                console.log("HISTORY:", result.data.history?.map(h => ({
+                    id: h.history_id,
+                    docId: h.document_id,
+                    docType: h.document_type,
+                    status: h.new_status,
+                    date: h.change_date,
+                })));
+                console.log("RAW change_date:", result.data.history?.[0]?.change_date);
                 setApplicationData(result.data);
             } catch (err) {
                 console.error('❌ Error al cargar:', err);
@@ -111,23 +130,21 @@ export default function RequestDetailsPage() {
         const first = toTitleCase(p?.first_name ?? p?.name ?? p?.nombres ?? p?.firstName ?? "");
 
         if (!last && !first) {
-            // fallback si solo llega un full_name
+           
             const full = toTitleCase(p?.full_name ?? p?.fullName ?? "");
             return full || "—";
         }
 
         if (!last) return first;
         if (!first) return last;
-        return `${last}, ${first}`; // ✅ Apellido(s), Nombre(s)
+        return `${last}, ${first}`; 
     };
 
 
-    // Pone cada palabra con inicial en mayúscula (con acentos/ñ)
     const titleCaseName = (value: string) => {
         const s = clean(value).toLowerCase();
         if (!s) return "";
 
-        // separa por espacios y también mantiene guiones/apóstrofes bien
         return s
             .split(" ")
             .filter(Boolean)
@@ -149,7 +166,6 @@ export default function RequestDetailsPage() {
         const s = clean(fullName);
         if (!s) return "—";
 
-        // si ya viene "Apellido, Nombre" lo respetamos
         if (s.includes(",")) {
             const [lastRaw, firstRaw] = s.split(",", 2);
             const last = titleCaseName(lastRaw);
@@ -157,7 +173,6 @@ export default function RequestDetailsPage() {
             return `${last}, ${first}`.replace(/\s+,/g, ",").replace(/,\s+/g, ", ");
         }
 
-        // si viene "Nombres Apellidos" (sin coma): asumimos 2 últimos = apellidos
         const parts = s.split(" ").filter(Boolean);
         if (parts.length === 1) return titleCaseName(parts[0]);
         if (parts.length === 2) return `${titleCaseName(parts[1])}, ${titleCaseName(parts[0])}`;
@@ -177,13 +192,11 @@ export default function RequestDetailsPage() {
             return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
         };
 
-        // si lo escribieron TODO EN MAYÚSCULAS, lo bajamos y dejamos estilo frase
         const letters = s.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, "");
         const looksAllCaps = letters && letters === letters.toUpperCase();
 
         const base = looksAllCaps ? s.toLowerCase() : s;
 
-        // capitalizar inicio y después de ":" (subtítulo)
         const parts = base.split(":");
         const fixed = parts.map((p, i) => makeSentenceCase(p));
         return fixed.join(": ");
@@ -202,27 +215,36 @@ export default function RequestDetailsPage() {
     };
 
     const pickDocObservation = (doc: any) => {
-        const h = doc?._history ?? {};
+
+        console.log("🔍 pickDocObservation - doc completo:", doc);
+        console.log("🔍 _history:", doc?._history);
+        if (doc?._history?.comentario) {
+            return cleanObservationText(doc._history.comentario);
+        }
+
+        if (doc?._history?.comment) {
+            return cleanObservationText(doc._history.comment);
+        }
 
         const raw =
-            h.observation ??            // <- si el backend manda "observation"
-            h.rejection_reason ??       // <- si manda "rejection_reason"
-            h.razon_rechazo ??          // <- si manda "razon_rechazo"
-            h.comment ??                // <- si manda "comment"
-            h.description ??            // <- si manda "description"
-            h.observations ??           // <- si manda "observations"
-            doc.rejection_reason ??     // <- si viene en el doc
-            doc.razon_rechazo ??
-            doc.observation ??
-            doc.observations ??
+            doc?._history?.rejection_reason ??
+            doc?._history?.razon_rechazo ??
+            doc?._history?.observation ??
+            doc?._history?.observations ??
+            doc?.rejection_reason ??
+            doc?.razon_rechazo ??
+            doc?.observation ??
+            doc?.observations ??
             "";
-
-        return cleanObservationText(raw);
+        const cleaned = cleanObservationText(raw);
+        console.log("🔍 Observación extraída:", cleaned);
+        return cleaned;
     };
 
 
     const fetchHistory = async (applicationId: string) => {
-        const response = await fetch(`${API_URL}/applications/${applicationId}/history-with-paths`);
+        const response = await authFetch(`/applications/${applicationId}/history-with-paths`);
+
         const data = await response.json();
         return data;
     };
@@ -235,21 +257,41 @@ export default function RequestDetailsPage() {
         }));
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return "Sin fecha";
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+    const parseBackendDate = (dateString: any) => {
+        if (!dateString) return null;
+
+        let s = String(dateString).trim();
+
+        if (s.includes(" ")) s = s.replace(" ", "T");
+
+        s = s.replace(/(\.\d{3})\d+/, "$1");
+
+        const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(s);
+        if (!hasTZ) s += "Z";
+
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const formatDate = (dateString: any) => {
+        const d = parseBackendDate(dateString);
+        if (!d) return "Sin fecha";
+
+        return d.toLocaleString("es-PE", {
+            timeZone: "America/Lima",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
         });
     };
 
+
     const normalizeStatus = (status: any) => {
         if (typeof status === "string") return status.toLowerCase();
-        return ""; // o "pendiente" como default
+        return ""; 
     };
 
     const getStatusColor = (status: any) => {
@@ -325,8 +367,13 @@ export default function RequestDetailsPage() {
 
 
     const handleSaveAllDocuments = async () => {
+        console.log("📊 Estado antes de guardar:", {
+            documentReviews,
+            documentObservations,
+            documentImages
+        });
         try {
-            // Verificar que haya al menos un documento con decisión
+
             const documentsWithDecisions = Object.keys(documentReviews).filter(
                 docId => documentReviews[docId] && documentReviews[docId] !== 'pendiente'
             );
@@ -336,6 +383,23 @@ export default function RequestDetailsPage() {
                 return;
             }
 
+            const observedDocs = documentsWithDecisions.filter(
+                docId => documentReviews[docId] === 'observado'
+            );
+
+            const observedWithoutComments = observedDocs.filter(
+                docId => !documentObservations[docId]?.trim()
+            );
+
+            if (observedWithoutComments.length > 0) {
+                const docNames = observedWithoutComments.map(docId => {
+                    const doc = applicationData.documents.find(d => d.document_id === docId);
+                    return getDocumentTypeLabel(doc?.document_type);
+                }).join(', ');
+
+                toast.error(`Los siguientes documentos observados necesitan comentarios: ${docNames}`);
+                return;
+            }
             const totalDocs = applicationData.documents.length;
             const reviewedDocs = documentsWithDecisions.length;
 
@@ -347,37 +411,46 @@ export default function RequestDetailsPage() {
                 return;
             }
 
+
             toast.info('Guardando revisión de documentos...');
             let successCount = 0;
             let errorCount = 0;
 
-            // 1️⃣ Guardar revisiones individuales de documentos
             for (const doc of applicationData.documents) {
                 const documentId = doc.document_id;
                 const decision = documentReviews[documentId];
 
                 if (!decision || decision === 'pendiente') continue;
 
+                const observationText = documentObservations[documentId] || '';
+                console.log(`📝 Guardando doc ${documentId}:`, {
+                    decision,
+                    observation: observationText,
+                    hasObservation: !!observationText.trim()
+                });
+
                 try {
                     const formData = new FormData();
                     const mappedStatus = mapStatusToDatabase(decision);
 
                     formData.append('status', mappedStatus);
-                    const obs = documentObservations[documentId] || "";
-                    formData.append("observation", obs);
-                    formData.append("rejection_reason", obs); // alias por si el backend usa ese nombre
-                    formData.append("observations", obs);     // otro alias común
-
+                    formData.append('observation', documentObservations[documentId] || '');
 
                     const imgs = documentImages[documentId] || [];
                     imgs.forEach((image) => {
                         formData.append('images', image);
                     });
 
-                    const response = await fetch(
-                        `${API_URL}/applications/documents/${documentId}/review`,
-                        { method: 'PATCH', body: formData }
-                    );
+                    console.log(`📤 Enviando a /documents/${documentId}/review:`, {
+                        status: mappedStatus,
+                        observation: observationText,
+                        imagesCount: imgs.length
+                    });
+
+                    const response = await authFetch(`/applications/documents/${documentId}/review`, {
+                        method: "PATCH",
+                        body: formData,
+                    });
 
                     const result = await response.json();
 
@@ -395,7 +468,6 @@ export default function RequestDetailsPage() {
                 }
             }
 
-            // 2️⃣ Actualizar estado GENERAL de la solicitud (solo si todo lo anterior salió OK)
             if (errorCount === 0 && successCount > 0) {
                 const applicationId = getApplicationId();
 
@@ -424,7 +496,7 @@ export default function RequestDetailsPage() {
                 console.log('📊 Estado final calculado:', { finalStatus, statusMessage });
 
                 try {
-                    const reviewResponse = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+                    const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -483,7 +555,7 @@ export default function RequestDetailsPage() {
         try {
             const applicationId = getApplicationId();
 
-            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+            const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -494,7 +566,7 @@ export default function RequestDetailsPage() {
                 })
             });
 
-            const result = await response.json();
+            const result = await reviewResponse.json();
 
             if (result.success) {
                 toast.success('Solicitud aprobada correctamente');
@@ -514,7 +586,7 @@ export default function RequestDetailsPage() {
         try {
             const applicationId = getApplicationId();
 
-            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+            const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -525,7 +597,7 @@ export default function RequestDetailsPage() {
                 })
             });
 
-            const result = await response.json();
+            const result = await reviewResponse.json();
 
             if (result.success) {
                 toast.success('Solicitud observada');
@@ -563,7 +635,7 @@ export default function RequestDetailsPage() {
         const st = String(item?.new_status ?? "").toLowerCase();
         if (st !== "observado") return;
 
-        setSelectedObservedEvent(item);   // ✅ guardo el observado exacto clickeado
+        setSelectedObservedEvent(item);   
         setShowDocumentModal(true);
     };
 
@@ -576,37 +648,59 @@ export default function RequestDetailsPage() {
         return Number.isNaN(d.getTime()) ? null : d.getTime();
     };
 
-    const WINDOW_MS = 10 * 60 * 1000; // 10 minutos
+    const WINDOW_MS = 10 * 60 * 1000; 
 
     const getObservedDocumentsForEvent = (event: any) => {
         if (!event || !applicationData) return [];
 
+        console.log("🔍 getObservedDocumentsForEvent - event:", event);
+        console.log("🔍 applicationData.history:", applicationData.history);
+
         const eventTime = toTime(event.change_date);
         if (eventTime === null) return [];
 
-        // 1) Historial SOLO de documentos (document_id) del mismo momento
-        // 2) y SOLO los que quedaron OBSERVADO
         const relatedObservedHistory = (applicationData.history ?? []).filter((item: any) => {
             const itemTime = toTime(item.change_date);
+
+        
+            console.log("🔍 Comparando item:", {
+                document_id: item.document_id,
+                itemTime,
+                eventTime,
+                timesMatch: itemTime === eventTime,
+                status: item.new_status,
+                comment: item.comment || item.comentario
+            });
+
             if (!item.document_id || itemTime === null) return false;
             if (itemTime !== eventTime) return false;
             return norm(item.new_status) === "observado";
         });
 
-        // evitar duplicados por document_id (por si hay más de 1 registro)
+        console.log("🔍 relatedObservedHistory encontrado:", relatedObservedHistory);
+
         const byDoc = new Map<string, any>();
         for (const h of relatedObservedHistory) {
             if (!byDoc.has(h.document_id)) byDoc.set(h.document_id, h);
         }
 
-        return Array.from(byDoc.values())
+        const result = Array.from(byDoc.values())
             .map((h: any) => {
                 const doc = (applicationData.documents ?? []).find(
                     (d: any) => d.document_id === h.document_id
                 );
-                return doc ? { ...doc, _history: h } : null;
+
+                return doc ? {
+                    ...doc,
+                    _history: h,
+                    _observationText: h.comment || h.comentario || h.observation
+                } : null;
             })
             .filter(Boolean);
+
+        console.log("🔍 Documentos observados finales:", result);
+        return result;
+
     };
 
 
@@ -631,27 +725,8 @@ export default function RequestDetailsPage() {
     const getFacultyFromCareer = (career: any) =>
         CAREER_TO_FACULTY[normalizeKey(career)] || "";
 
-    // Sección de Historial General (solo cambios de estado de la solicitud completa)
     const GeneralHistorySection = ({ history = [], onObservedClick }: any) => {
         const [showAll, setShowAll] = useState(false);
-
-        const formatDate = (dateString) => {
-            if (!dateString) return "Sin fecha";
-            const safe = String(dateString).includes(" ")
-                ? String(dateString).replace(" ", "T")
-                : dateString;
-
-            const d = new Date(safe);
-            if (Number.isNaN(d.getTime())) return "Fecha inválida";
-
-            return d.toLocaleDateString("es-PE", {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-        };
 
         const normalizeStatus = (status: any) => {
             if (typeof status === "string") return status.toLowerCase();
@@ -703,12 +778,13 @@ export default function RequestDetailsPage() {
             return labels[status?.toLowerCase()] || status;
         };
 
-        // 🎯 FILTRAR SOLO CAMBIOS DE ESTADO GENERAL (sin document_type)
+
+
+
         const generalHistory = (history || []).filter(
             (item) => !item.document_type || item.document_type === null || item.document_type === ""
         );
 
-        // Ordenar por fecha (más reciente primero)
         const sortedHistory = [...generalHistory].sort(
             (a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime()
         );
@@ -753,7 +829,7 @@ export default function RequestDetailsPage() {
                     </div>
                 </div>
 
-                {/* 👇 Zona scrolleable */}
+            
                 <div className="flex-1 min-h-0">
                     <div className={`h-full pr-2 space-y-4 ${showAll ? "overflow-y-auto" : ""}`}>
                         {visibleHistory.map((item, index) => {
@@ -808,12 +884,6 @@ export default function RequestDetailsPage() {
                                                     <span className="font-mono">{formatDate(item.change_date)}</span>
                                                 </div>
 
-                                                {item.admin_name && (
-                                                    <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                                                        <User className="w-3 h-3" />
-                                                        <span className="font-medium">{item.admin_name}</span>
-                                                    </div>
-                                                )}
                                             </div>
 
                                             {isObserved && (
@@ -829,7 +899,7 @@ export default function RequestDetailsPage() {
                     </div>
                 </div>
 
-                {/* Footer fijo */}
+                
                 {hasMore && (
                     <button
                         type="button"
@@ -855,7 +925,6 @@ export default function RequestDetailsPage() {
 
 
     };
-
 
     const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
     const currentImages = selectedDocument ? (documentImages[selectedDocument] || []) : [];
@@ -891,28 +960,31 @@ export default function RequestDetailsPage() {
         );
     }
 
+
     const DocumentDetailsModal = () => {
         if (!showDocumentModal) return null;
 
         const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
 
-        /*const documentsWithHistoricalPaths = rejectedDocs.map((doc: any) => {
-            const observationDate = new Date(selectedObservedEvent?.change_date ?? "");
+        console.log("📋 DocumentDetailsModal - rejectedDocs:", rejectedDocs);
 
-            const historicalEntry = (applicationData?.history ?? []).find((h: any) =>
-                h.id_documento === doc.document_id &&
-                Math.abs(
-                    new Date(h.fecha_cambio || h.change_date).getTime() -
-                    observationDate.getTime()
-                ) < 600000
-            );
+        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-            return {
-                ...doc,
-                _historicalPath: historicalEntry?.file_path_historico || doc.file_path
-            };
-        });*/
+        const stripObservationPrefix = (text: string, doc: any) => {
+            if (!text) return text;
 
+            let t = String(text).trim();
+
+            if (doc?.document_type) {
+                const re = new RegExp(`^\\s*${escapeRegExp(doc.document_type)}\\s*-\\s*`, "i");
+                t = t.replace(re, "");
+            }
+
+            t = t.replace(/^\s*-\s*(observado|rechazado|pendiente)\s*:\s*/i, "");
+            t = t.replace(/^\s*(observado|rechazado|pendiente)\s*:\s*/i, "");
+
+            return t.trim();
+        };
 
         return (
             <div className="fixed inset-0 bg-black/80 bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -942,69 +1014,83 @@ export default function RequestDetailsPage() {
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                         {rejectedDocs.length > 0 ? (
                             <div className="space-y-6">
-                                {rejectedDocs.map((doc: any) => (
-                                    /*console.log("🧾 _history:", doc._history);
-                                    console.log("🧾 keys:", Object.keys(doc._history ?? {}));
-                                    console.log("📌 DOC:", doc.document_id, doc.document_type);
-                                    console.log("📌 rejection_history:", doc.rejection_history);*/
+                                {rejectedDocs.map((doc: any) => {
+                                    console.log("📄 Renderizando doc:", {
+                                        document_id: doc.document_id,
+                                        _history: doc._history,
+                                        _observationText: doc._observationText,
+                                        pickResult: pickDocObservation(doc)
+                                    });
 
-                                    <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
-                                        <div className="bg-white border-b border-red-200 px-5 py-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-                                                        <FileText className="w-6 h-6 text-red-600" />
+                                    return (
+                                        <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
+                                            <div className="bg-white border-b border-red-200 px-5 py-4">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                                            <FileText className="w-6 h-6 text-red-600" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-semibold text-slate-900 text-lg">
+                                                                {getDocumentTypeLabel(doc.document_type)}
+                                                            </h3>
+                                                            <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                            <div className="flex items-center gap-3 mt-2">
+                                                                <span className="text-xs text-slate-500">
+                                                                    📦 {doc.size_kb} KB
+                                                                </span>
+                                                                <span className="text-xs text-slate-500">
+                                                                    📅 {formatDate(doc.upload_date)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-slate-900 text-lg">
-                                                            {getDocumentTypeLabel(doc.document_type)}
-                                                        </h3>
-                                                        <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
-                                                        <div className="flex items-center gap-3 mt-2">
-                                                            <span className="text-xs text-slate-500">
-                                                                📦 {doc.size_kb} KB
-                                                            </span>
-                                                            <span className="text-xs text-slate-500">
-                                                                📅 {formatDate(doc.upload_date)}
-                                                            </span>
+                                                    <span
+                                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
+                                                            ? 'bg-red-100 text-red-800'
+                                                            : 'bg-orange-100 text-orange-800'
+                                                            }`}
+                                                    >
+                                                        {getStatusLabel(doc._history?.new_status || doc.status)}
+                                                    </span>
+                                                </div>
+
+                                            </div>
+
+                                            <div className="px-5 py-4">
+                                                <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                                    <div className="flex items-start gap-3">
+                                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                                        <div className="flex-1">
+                                                            <h4 className="font-semibold text-red-900 text-sm mb-3">
+                                                                Observaciones:
+                                                            </h4>
+
+                                                            <div className="text-xs text-slate-500 mb-1">
+                                                                {formatDate(doc._history?.change_date || doc.upload_date)}
+                                                            </div>
+
+                                                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                                                {(() => {
+                                                                    const rawObs =
+                                                                        doc._observationText ||
+                                                                        pickDocObservation(doc) ||
+                                                                        doc._history?.comment ||
+                                                                        doc._history?.comentario ||
+                                                                        doc.rejection_reason ||
+                                                                        "Sin observación registrada";
+
+                                                                    return stripObservationPrefix(rawObs, doc);
+                                                                })()}
+                                                            </div>
+
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span
-                                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
-                                                        ? 'bg-red-100 text-red-800'
-                                                        : 'bg-orange-100 text-orange-800'
-                                                        }`}
-                                                >
-                                                    {getStatusLabel(doc._history?.new_status || doc.status)}
-                                                </span>
                                             </div>
 
-                                        </div>
 
-                                        <div className="px-5 py-4">
-                                            <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
-                                                <div className="flex items-start gap-3">
-                                                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-red-900 text-sm mb-3">
-                                                            Observaciones (historial):
-                                                        </h4>
-
-                                                        <div className="text-xs text-slate-500 mb-1">
-                                                            {formatDate(doc._history?.change_date || doc._history?.fecha_cambio || doc.upload_date)}
-                                                        </div>
-
-                                                        <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                                                            {pickDocObservation(doc) || "Sin observación"}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-
-                                        {
+                                            {/*
                                             doc.images && doc.images.length > 0 && (
                                                 <div className="px-5 pb-4">
                                                     <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
@@ -1032,8 +1118,8 @@ export default function RequestDetailsPage() {
                                                     </div>
                                                 </div>
                                             )
-                                        }
-                                        {/*
+                                        */}
+                                            {/*
                                             <div className="px-5 pb-4 flex gap-2">
                                                 <button
                                                     onClick={() => {
@@ -1062,9 +1148,10 @@ export default function RequestDetailsPage() {
                                                     Descargar
                                                 </button>
                                             </div>*/}
-                                    </div>
+                                        </div>
+                                    );
 
-                                ))}
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-12">
@@ -1121,7 +1208,7 @@ export default function RequestDetailsPage() {
                                     value={getFacultyFromCareer(applicationData.professional_school) || "No especificada"}
                                 />
 
-                                <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Tesis de posgrado'} />
+                                <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Informe de investigacion'} />
                                 {applicationData.application_type === 'docente' && (
                                     <InfoRow label="Tipo de financiamiento" value={applicationData.funding_type || "No especificado"} />
                                 )}
@@ -1143,7 +1230,7 @@ export default function RequestDetailsPage() {
                                         <tbody className="divide-y divide-slate-200">
                                             {applicationData.authors.map((author, index) => (
                                                 <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">{toMetadataName(author)}</td>
+                                                    <td className="py-3 px-4 ">{toMetadataName(author)}</td>
                                                     <td className="py-3 px-4">{author.dni || "N/A"}</td>
                                                     <td className="py-3 px-4">{author.professional_school || "N/A"}</td>
                                                     <td className="py-3 px-4">
@@ -1167,17 +1254,19 @@ export default function RequestDetailsPage() {
                                         <table className="w-full text-sm">
                                             <thead className="bg-slate-50">
                                                 <tr className="text-left text-slate-600">
-                                                    <th className="py-3 px-4 font-semibold">Nombre</th>
-                                                    <th className="py-3 px-4 font-semibold">DNI</th>
-                                                    <th className="py-3 px-4 font-semibold">Correo</th>
+                                                    <th className="py-3 px-4 font-semibold">Nombre Completo</th>
+                                                    <th className="py-3 px-4 font-semibold">Tipo Coautor</th>
+                                                    <th className="py-3 px-4 font-semibold">Ubicacion Coautor</th>
+                                                    <th className="py-3 px-4 font-semibold">ORCID</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-200">
                                                 {applicationData.coauthors.map((coauthor, index) => (
-                                                    <tr key={index} className="hover:bg-slate-50">
+                                                    <tr key={coauthor.coauthor_id || index} className="hover:bg-slate-50">
                                                         <td className="py-3 px-4">{toMetadataName(coauthor)}</td>
-                                                        <td className="py-3 px-4">{coauthor.dni || "N/A"}</td>
-                                                        <td className="py-3 px-4">{coauthor.email || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.role_type || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.location_type || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.orcid_url || "N/A"}</td>
                                                         <td className="py-3 px-4"></td>
                                                     </tr>
                                                 ))}
@@ -1189,56 +1278,58 @@ export default function RequestDetailsPage() {
                                 )}
                             </Section>
                         )}
-
-                        <Section title="Asesores" icon={Users}>
-                            {applicationData.advisors && applicationData.advisors.length > 0 ? (
-                                <div className="overflow-hidden rounded-lg border border-slate-200">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-slate-50">
-                                            <tr className="text-left text-slate-600">
-                                                <th className="py-3 px-4 font-semibold">Nombre Completo</th>
-                                                <th className="py-3 px-4 font-semibold">DNI</th>
-                                                <th className="py-3 px-4 font-semibold">ORCID</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-200">
-                                            {applicationData.advisors.map((advisor, index) => (
-                                                <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4 font-medium text-slate-900">{toMetadataName(advisor)}</td>
-                                                    <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
-                                                    <td className="py-3 px-4 font-mono text-xs">{advisor.orcid || "N/A"}</td>
+                        {applicationData.application_type === 'estudiante' && (
+                            <Section title="Asesores" icon={Users}>
+                                {applicationData.advisors && applicationData.advisors.length > 0 ? (
+                                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-slate-50">
+                                                <tr className="text-left text-slate-600">
+                                                    <th className="py-3 px-4 font-semibold">Nombre Completo</th>
+                                                    <th className="py-3 px-4 font-semibold">DNI</th>
+                                                    <th className="py-3 px-4 font-semibold">ORCID</th>
                                                 </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200">
+                                                {applicationData.advisors.map((advisor, index) => (
+                                                    <tr key={index} className="hover:bg-slate-50">
+                                                        <td className="py-3 px-4">{toMetadataName(advisor)}</td>
+                                                        <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
+                                                        <td className="py-3 px-4">{advisor.orcid || "N/A"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 text-sm py-4">No hay asesores registrados</p>
+                                )}
+                            </Section>
+                        )}
+                        {applicationData.application_type === 'estudiante' && (
+                            <Section title="Jurado Evaluador" icon={Users}>
+                                {applicationData.jury && applicationData.jury.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {[...applicationData.jury]
+                                            .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
+                                            .map((juryMember, index) => (
+                                                <JuryItem
+                                                    key={juryMember.jury_id ?? index}
+                                                    rol={getJuryRoleLabel(juryMember.jury_role)}
+                                                    nombre={toMetadataFromSingleField(juryMember.full_name) || "No asignado"}
+                                                    badge={juryMember.jury_role === "presidente" ? "Principal" : "Miembro"}
+                                                />
+
                                             ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay asesores registrados</p>
-                            )}
-                        </Section>
-
-                        <Section title="Jurado Evaluador" icon={Users}>
-                            {applicationData.jury && applicationData.jury.length > 0 ? (
-                                <div className="space-y-3">
-                                    {[...applicationData.jury]
-                                        .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
-                                        .map((juryMember, index) => (
-                                            <JuryItem
-                                                key={juryMember.jury_id ?? index}
-                                                rol={getJuryRoleLabel(juryMember.jury_role)}
-                                                nombre={toMetadataFromSingleField(juryMember.full_name) || "No asignado"}
-                                                badge={juryMember.jury_role === "presidente" ? "Principal" : "Miembro"}
-                                            />
-
-                                        ))}
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
-                            )}
-                        </Section>
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
+                                )}
+                            </Section>
+                        )}
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         <GeneralHistorySection
                             history={applicationData?.history ?? []}
                             onObservedClick={(item) => {
@@ -1247,19 +1338,16 @@ export default function RequestDetailsPage() {
                             }}
                         />
 
-                        <div className="lg:col-span-2 mt-6">
+                        <div className="mt-6 min-w-0">
                             <PublicationSection
                                 applicationId={applicationData.application_id}
                                 initialLink={applicationData.published_thesis_link ?? ""}
                                 onSave={async (link) => {
-                                    const response = await fetch(
-                                        `${API_URL}/applications/${applicationData.application_id}/publication-link`
-                                        ,
-                                        {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ publicationLink: link })
-                                        }
+                                    const response = await authFetch(`/applications/${applicationData.application_id}/publication-link`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ publicationLink: link })
+                                    }
                                     );
                                     const json = await response.json();
                                     console.log("✅ publication-link response:", json);
@@ -1268,7 +1356,7 @@ export default function RequestDetailsPage() {
                                         throw new Error('Error al guardar');
                                     }
 
-                                    // Actualizar estado local
+                                    
                                     setApplicationData({
                                         ...applicationData,
                                         publication_link: link

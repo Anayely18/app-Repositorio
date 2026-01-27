@@ -33,7 +33,8 @@ export function AsesorForm({
   showValidation = false,
 }: AsesorFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState<string>("");
+  const [flashCodeError, setFlashCodeError] = useState<string>("");
+  const flashTimerRef = useRef<number | null>(null);
 
   const lastDniRef = useRef<string>("");
   const timerRef = useRef<number | null>(null);
@@ -48,6 +49,15 @@ export function AsesorForm({
 
   const touch = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
   const showErr = (k: FieldKey) => showValidation || touched[k];
+
+  const flashError = (msg: string) => {
+    setFlashCodeError( "DNI no encontrado, completa tus datos manualmente.");
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => {
+      setFlashCodeError("");
+    }, 10000);
+  };
+
 
   const cleanDigits = (v: string) => v.replace(/\D/g, "").slice(0, 8);
 
@@ -72,7 +82,7 @@ export function AsesorForm({
     // DNI: requerido + 8 dígitos + error de lookup (si ya está completo)
     if (!dni) e.dni = "El DNI es obligatorio.";
     else if (!/^\d{8}$/.test(dni)) e.dni = "El DNI debe tener 8 dígitos.";
-    else if (!isLookingUp && lookupError) e.dni = lookupError;
+
 
     // Nombre / Apellido: requeridos
     if (!nombre) e.nombre = "Los nombres son obligatorios.";
@@ -81,37 +91,40 @@ export function AsesorForm({
     if (!apellido) e.apellido = "Los apellidos son obligatorios.";
     else if (apellido.length < 2) e.apellido = "Escribe al menos 2 caracteres.";
 
-    // ORCID: opcional (acepta ID o URL)
-    if (orcid) {
-      const re = /^(https?:\/\/orcid\.org\/)?\d{4}-\d{4}-\d{4}-\d{3}(\d|X)$/i;
-      if (!re.test(orcid)) e.orcid = "ORCID no válido. Ej: 0000-0000-0000-0000";
-    }
+    //orcid: requerido + formato básico
+    const re = /^https?:\/\/orcid\.org\/\d{4}-\d{4}-\d{4}-\d{3}(\d|X)$/i;
+    if (!orcid) e.orcid = "El ORCID es obligatorio.";
+    else if (!re.test(orcid)) e.orcid = "ORCID no válido. Ej: https://orcid.org/0000-0000-0000-0000";
 
     return e;
-  }, [data.dni, data.nombre, data.apellido, data.orcid, lookupError, isLookingUp]);
+  }, [data.dni, data.nombre, data.apellido, data.orcid, isLookingUp]);
 
   const isInvalid = (k: FieldKey) => !!errors[k] && showErr(k);
+  useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const dni = cleanDigits(data.dni ?? "");
 
     // si no está completo, no busques
     if (dni.length !== 8) {
-      setLookupError("");
+      setFlashCodeError("");
       lastDniRef.current = "";
       if (abortRef.current) abortRef.current.abort();
       return;
     }
 
-    // evita volver a consultar el mismo dni
     if (dni === lastDniRef.current) return;
 
-    // debounce
+    
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     timerRef.current = window.setTimeout(async () => {
       try {
-        setLookupError("");
+
         setIsLookingUp(true);
 
         if (abortRef.current) abortRef.current.abort();
@@ -148,6 +161,7 @@ export function AsesorForm({
 
         lastDniRef.current = dni;
 
+
         onChange({
           ...data,
           dni,
@@ -156,7 +170,21 @@ export function AsesorForm({
         });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        setLookupError(err?.message || "Error consultando DNI");
+
+        const msg =
+          "DNI no encontrado,complete nombres y apellidos manualmente.";
+
+        flashError(msg);
+
+        onChange({
+          ...data,
+          dni,           
+          nombre: "",
+          apellido: "",
+          orcid: "",
+        });
+
+        lastDniRef.current = dni;
       } finally {
         setIsLookingUp(false);
       }
@@ -165,7 +193,7 @@ export function AsesorForm({
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
-  }, [data.dni]); // solo cuando cambia el dni
+  }, [data.dni]); 
 
   return (
     <div className="border-2 border-gray-200 rounded-xl p-6 space-y-4 bg-linear-to-br from-gray-50 to-white hover:border-blue-300 transition-all">
@@ -189,7 +217,6 @@ export function AsesorForm({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* DNI + estado */}
         <div className="space-y-1">
           <FormInput
             icon={CreditCard}
@@ -201,18 +228,31 @@ export function AsesorForm({
             value={data.dni || ""}
             onChange={(e) => {
               const dni = cleanDigits(e.target.value);
-              setLookupError("");
-              onChange({ ...data, dni });
+
+              if (abortRef.current) abortRef.current.abort();
+              if (timerRef.current) window.clearTimeout(timerRef.current);
+
+              lastDniRef.current = "";
+
+              setFlashCodeError("");
+
+              onChange({
+                ...data,
+                dni,
+                nombre: "",
+                apellido: "",
+                orcid: "",
+              });
             }}
-              onBlur={() => touch("dni")}
-              invalid={isInvalid("dni")}
+
+            onBlur={() => touch("dni")}
           />
-
-          {isLookingUp && <p className="text-xs text-slate-500">Buscando datos del DNI...</p>}
-
-          {!isLookingUp && isInvalid("dni") && (
-            <p className="text-xs text-red-600">{errors.dni}</p>
-          )}
+          <p
+            className={`text-xs min-h-[16px] ${flashCodeError ? "text-amber-700" : "text-red-600"
+              }`}
+          >
+            {!isLookingUp ? (flashCodeError || (isInvalid("dni") ? errors.dni : "")) : ""}
+          </p>
         </div>
 
         <div className="space-y-1">
@@ -225,7 +265,6 @@ export function AsesorForm({
             value={data.nombre || ""}
             onChange={(e) => onChange({ ...data, nombre: e.target.value })}
             onBlur={() => touch("nombre")}
-            invalid={isInvalid("nombre")}
           />
           {isInvalid("nombre") && <p className="text-xs text-red-600">{errors.nombre}</p>}
         </div>
@@ -240,7 +279,6 @@ export function AsesorForm({
             value={data.apellido || ""}
             onChange={(e) => onChange({ ...data, apellido: e.target.value })}
             onBlur={() => touch("apellido")}
-            invalid={isInvalid("apellido")}
           />
           {isInvalid("apellido") && (
             <p className="text-xs text-red-600">{errors.apellido}</p>
@@ -253,13 +291,13 @@ export function AsesorForm({
             label="Url de ORCID"
             sublabel="Ingrese correctamente"
             type="text"
+            required
             placeholder="0000-0000-0000-0000"
             value={data.orcid || ""}
             onChange={(e) => onChange({ ...data, orcid: e.target.value })}
             onBlur={() => touch("orcid")}
-            invalid={isInvalid("orcid")}
           />
-          {isInvalid("orcid") && <p className="text-xs text-red-600">{errors.orcid}</p>}
+          <p className="text-xs text-red-600 min-h-[16px]">{isInvalid("orcid") ? errors.orcid : ""}</p>
         </div>
       </div>
     </div>

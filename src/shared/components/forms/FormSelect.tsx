@@ -15,13 +15,12 @@ interface FormSelectProps {
   value?: string;
   onChange?: (value: string) => void;
 
-  /** ✅ nuevo */
-  invalid?: boolean;
-  /** ✅ nuevo */
-  error?: string;
-  /** compat */
   errorMessage?: string;
+  error?: string;
 }
+
+const warnSelect =
+  "border-amber-300 ring-2 ring-amber-200 focus:ring-amber-300 focus:border-amber-400";
 
 export function FormSelect({
   icon: Icon,
@@ -29,9 +28,8 @@ export function FormSelect({
   options,
   value,
   onChange,
-  invalid = false,
-  error,
   errorMessage,
+  error,
 }: FormSelectProps) {
   const err = error ?? errorMessage;
 
@@ -43,11 +41,7 @@ export function FormSelect({
       </label>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger
-          className={`w-full ${
-            (invalid || err) ? "border-red-500 focus:ring-red-100" : ""
-          }`}
-        >
+        <SelectTrigger className={`w-full ${err ? warnSelect : ""}`}>
           <SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} />
         </SelectTrigger>
 
@@ -60,9 +54,7 @@ export function FormSelect({
         </SelectContent>
       </Select>
 
-      {(invalid || err) && err && (
-        <p className="text-xs text-red-600 font-medium">{err}</p>
-      )}
+      {err && <p className="text-xs text-amber-600 font-medium">{err}</p>}
     </div>
   );
 }
