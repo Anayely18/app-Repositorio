@@ -1,4 +1,4 @@
-export const API_URL = "/api";
+export const API_URL = "http://127.0.0.1/api";
 export const API_URL_DOCUMENTS = "";
 // --- helpers seguros (sin importar authService para evitar ciclos) ---
 const TOKEN_KEY = "token";
