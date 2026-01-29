@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast, Toaster } from 'sonner';
+import { Image as ImageIcon, X } from "lucide-react";
+
 import {
     FileText,
     User,
@@ -13,9 +15,16 @@ import {
     Upload,
     Loader2,
     ArrowLeft,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
-import { API_URL, API_URL_DOCUMENTS } from "@/utils/api";
-import { Link } from "react-router-dom";
+
+import { API_URL_DOCUMENTS } from "@/utils/api";
+import { authFetch } from "@/utils/authFetch";
+import { data, Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
 import JuryItem from "@/shared/components/JuradoItem";
@@ -33,7 +42,8 @@ export default function RequestDetailsPage() {
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentReviews, setDocumentReviews] = useState({});
     const [showDocumentModal, setShowDocumentModal] = useState(false);
-    const [showAllHistory, setShowAllHistory] = useState(false);
+    const [selectedObservedEvent, setSelectedObservedEvent] = useState<any>(null);
+
 
     const getApplicationId = () => {
         const pathParts = window.location.pathname.split('/');
@@ -45,7 +55,8 @@ export default function RequestDetailsPage() {
             try {
                 setLoading(true);
                 const applicationId = getApplicationId();
-                const response = await fetch(`${API_URL}/applications/details/${applicationId}`);
+                const response = await authFetch(`/applications/details/${applicationId}`);
+
 
                 if (!response.ok) {
                     throw new Error('Error al cargar los detalles');
@@ -56,6 +67,23 @@ export default function RequestDetailsPage() {
                 console.log('📄 Documentos:', result.data.documents);
                 console.log('📊 Estado de aplicación:', result.data.status);
                 console.log('📜 Historial:', result.data.history);
+                console.log("DOC SAMPLE:", result.data.documents?.[0]);
+                console.log("DOCS:", result.data.documents?.map(d => ({
+                    id: d.document_id,
+                    type: d.document_type,
+                    status: d.status,
+                    reason: d.rejection_reason,
+                    hist: d.rejection_history?.length,
+                })));
+
+                console.log("HISTORY:", result.data.history?.map(h => ({
+                    id: h.history_id,
+                    docId: h.document_id,
+                    docType: h.document_type,
+                    status: h.new_status,
+                    date: h.change_date,
+                })));
+                console.log("RAW change_date:", result.data.history?.[0]?.change_date);
                 setApplicationData(result.data);
             } catch (err) {
                 console.error('❌ Error al cargar:', err);
@@ -79,6 +107,147 @@ export default function RequestDetailsPage() {
         }));
     };
 
+    const clean = (v: any) => String(v ?? "").trim().replace(/\s+/g, " ");
+
+    const toTitleCase = (s: string) => {
+        const small = new Set(["de", "del", "la", "las", "los", "y", "e"]);
+        return clean(s)
+            .split(" ")
+            .map((w, i) => {
+                const lw = w.toLowerCase();
+                if (i > 0 && small.has(lw)) return lw;
+                // soporta "Wibrow-Pérez"
+                return lw
+                    .split("-")
+                    .map(p => (p ? p[0].toUpperCase() + p.slice(1) : p))
+                    .join("-");
+            })
+            .join(" ");
+    };
+
+    const toMetadataName = (p: any) => {
+        const last = toTitleCase(p?.last_name ?? p?.surname ?? p?.apellidos ?? p?.lastName ?? "");
+        const first = toTitleCase(p?.first_name ?? p?.name ?? p?.nombres ?? p?.firstName ?? "");
+
+        if (!last && !first) {
+           
+            const full = toTitleCase(p?.full_name ?? p?.fullName ?? "");
+            return full || "—";
+        }
+
+        if (!last) return first;
+        if (!first) return last;
+        return `${last}, ${first}`; 
+    };
+
+
+    const titleCaseName = (value: string) => {
+        const s = clean(value).toLowerCase();
+        if (!s) return "";
+
+        return s
+            .split(" ")
+            .filter(Boolean)
+            .map((w) =>
+                w
+                    .split("-")
+                    .map((p) =>
+                        p
+                            .split("'")
+                            .map((q) => (q ? q[0].toUpperCase() + q.slice(1) : ""))
+                            .join("'")
+                    )
+                    .join("-")
+            )
+            .join(" ");
+    };
+
+    const toMetadataFromSingleField = (fullName: string) => {
+        const s = clean(fullName);
+        if (!s) return "—";
+
+        if (s.includes(",")) {
+            const [lastRaw, firstRaw] = s.split(",", 2);
+            const last = titleCaseName(lastRaw);
+            const first = titleCaseName(firstRaw);
+            return `${last}, ${first}`.replace(/\s+,/g, ",").replace(/,\s+/g, ", ");
+        }
+
+        const parts = s.split(" ").filter(Boolean);
+        if (parts.length === 1) return titleCaseName(parts[0]);
+        if (parts.length === 2) return `${titleCaseName(parts[1])}, ${titleCaseName(parts[0])}`;
+
+        const last = parts.slice(-2).join(" ");
+        const first = parts.slice(0, -2).join(" ");
+        return `${titleCaseName(last)}, ${titleCaseName(first)}`;
+    };
+
+    const normalizeTitleForRepo = (title: any) => {
+        const s = clean(title);
+        if (!s) return "Sin título";
+
+        const makeSentenceCase = (t: string) => {
+            const trimmed = t.trim();
+            if (!trimmed) return trimmed;
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        };
+
+        const letters = s.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, "");
+        const looksAllCaps = letters && letters === letters.toUpperCase();
+
+        const base = looksAllCaps ? s.toLowerCase() : s;
+
+        const parts = base.split(":");
+        const fixed = parts.map((p, i) => makeSentenceCase(p));
+        return fixed.join(": ");
+    };
+
+    const cleanObservationText = (text: any) => {
+        const s = String(text ?? "").trim();
+        if (!s) return "";
+
+        return s
+            .replace(
+                /^\s*[\w]+(?:_[\w]+)+\s*-\s*(?:observado|rechazado|requiere_correccion)\s*:\s*/i,
+                ""
+            )
+            .trim();
+    };
+
+    const pickDocObservation = (doc: any) => {
+
+        console.log("🔍 pickDocObservation - doc completo:", doc);
+        console.log("🔍 _history:", doc?._history);
+        if (doc?._history?.comentario) {
+            return cleanObservationText(doc._history.comentario);
+        }
+
+        if (doc?._history?.comment) {
+            return cleanObservationText(doc._history.comment);
+        }
+
+        const raw =
+            doc?._history?.rejection_reason ??
+            doc?._history?.razon_rechazo ??
+            doc?._history?.observation ??
+            doc?._history?.observations ??
+            doc?.rejection_reason ??
+            doc?.razon_rechazo ??
+            doc?.observation ??
+            doc?.observations ??
+            "";
+        const cleaned = cleanObservationText(raw);
+        console.log("🔍 Observación extraída:", cleaned);
+        return cleaned;
+    };
+
+
+    const fetchHistory = async (applicationId: string) => {
+        const response = await authFetch(`/applications/${applicationId}/history-with-paths`);
+
+        const data = await response.json();
+        return data;
+    };
     const removeImage = (index) => {
         if (!selectedDocument) return;
 
@@ -88,43 +257,71 @@ export default function RequestDetailsPage() {
         }));
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return "Sin fecha";
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+    const parseBackendDate = (dateString: any) => {
+        if (!dateString) return null;
+
+        let s = String(dateString).trim();
+
+        if (s.includes(" ")) s = s.replace(" ", "T");
+
+        s = s.replace(/(\.\d{3})\d+/, "$1");
+
+        const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(s);
+        if (!hasTZ) s += "Z";
+
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const formatDate = (dateString: any) => {
+        const d = parseBackendDate(dateString);
+        if (!d) return "Sin fecha";
+
+        return d.toLocaleString("es-PE", {
+            timeZone: "America/Lima",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
         });
     };
 
-    const getStatusLabel = (status) => {
-        const statusMap = {
-            pendiente: "Pendiente de revisión",
-            aprobado: "aprobado",
-            observado: "observado",
-            en_revision: "En revisión",
-            publicado: "publicado"
-        };
-        const label = statusMap[status?.toLowerCase()] || status || "Estado desconocido";
-        console.log(`🏷️ Estado "${status}" mapeado a "${label}"`);
-        return label;
+
+    const normalizeStatus = (status: any) => {
+        if (typeof status === "string") return status.toLowerCase();
+        return ""; 
     };
 
-    const getStatusColor = (status) => {
-        const normalizedStatus = status?.toLowerCase();
-        const colorMap = {
+    const getStatusColor = (status: any) => {
+        const normalizedStatus = normalizeStatus(status);
+
+        const colorMap: Record<string, string> = {
             pendiente: "bg-amber-100 text-amber-800",
             aprobado: "bg-green-100 text-green-800",
             observado: "bg-red-100 text-red-800",
             en_revision: "bg-blue-100 text-amber-800",
-            publicado: "bg-blue-100 text-blue-800"
+            requiere_correccion: "bg-orange-100 text-orange-800",
+            publicado: "bg-purple-100 text-purple-900"
         };
-        const color = colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
-        console.log(`🎨 Estado "${status}" color "${color}"`);
-        return color;
+
+        return colorMap[normalizedStatus] || "bg-gray-100 text-gray-800";
+    };
+
+    const getStatusLabel = (status: any) => {
+        const normalizedStatus = normalizeStatus(status);
+
+        const statusMap: Record<string, string> = {
+            pendiente: "Pendiente de revisión",
+            aprobado: "Aprobado",
+            observado: "Observado",
+            en_revision: "En revisión",
+            requiere_correccion: "requiere corrección",
+            publicado: "Publicado"
+        };
+
+        return statusMap[normalizedStatus] || String(status ?? "Estado desconocido");
     };
 
     const getDocumentTypeLabel = (type) => {
@@ -157,6 +354,8 @@ export default function RequestDetailsPage() {
         setSelectedDocument(document_id);
     };
     console.log(applicationData)
+    console.log("STATUS APP:", applicationData?.status, typeof applicationData?.status);
+
     const handleObservationChange = (e) => {
         if (selectedDocument) {
             setDocumentObservations(prev => ({
@@ -168,8 +367,13 @@ export default function RequestDetailsPage() {
 
 
     const handleSaveAllDocuments = async () => {
+        console.log("📊 Estado antes de guardar:", {
+            documentReviews,
+            documentObservations,
+            documentImages
+        });
         try {
-            // Verificar que haya al menos un documento con decisión
+
             const documentsWithDecisions = Object.keys(documentReviews).filter(
                 docId => documentReviews[docId] && documentReviews[docId] !== 'pendiente'
             );
@@ -179,6 +383,23 @@ export default function RequestDetailsPage() {
                 return;
             }
 
+            const observedDocs = documentsWithDecisions.filter(
+                docId => documentReviews[docId] === 'observado'
+            );
+
+            const observedWithoutComments = observedDocs.filter(
+                docId => !documentObservations[docId]?.trim()
+            );
+
+            if (observedWithoutComments.length > 0) {
+                const docNames = observedWithoutComments.map(docId => {
+                    const doc = applicationData.documents.find(d => d.document_id === docId);
+                    return getDocumentTypeLabel(doc?.document_type);
+                }).join(', ');
+
+                toast.error(`Los siguientes documentos observados necesitan comentarios: ${docNames}`);
+                return;
+            }
             const totalDocs = applicationData.documents.length;
             const reviewedDocs = documentsWithDecisions.length;
 
@@ -190,7 +411,8 @@ export default function RequestDetailsPage() {
                 return;
             }
 
-            toast.info('Documentos guardados');
+
+            toast.info('Guardando revisión de documentos...');
             let successCount = 0;
             let errorCount = 0;
 
@@ -198,9 +420,14 @@ export default function RequestDetailsPage() {
                 const documentId = doc.document_id;
                 const decision = documentReviews[documentId];
 
-                if (!decision || decision === 'pendiente') {
-                    continue;
-                }
+                if (!decision || decision === 'pendiente') continue;
+
+                const observationText = documentObservations[documentId] || '';
+                console.log(`📝 Guardando doc ${documentId}:`, {
+                    decision,
+                    observation: observationText,
+                    hasObservation: !!observationText.trim()
+                });
 
                 try {
                     const formData = new FormData();
@@ -209,18 +436,21 @@ export default function RequestDetailsPage() {
                     formData.append('status', mappedStatus);
                     formData.append('observation', documentObservations[documentId] || '');
 
-                    const images = documentImages[documentId] || [];
-                    images.forEach((image) => {
+                    const imgs = documentImages[documentId] || [];
+                    imgs.forEach((image) => {
                         formData.append('images', image);
                     });
 
-                    const response = await fetch(
-                        `${API_URL}/applications/documents/${documentId}/review`,
-                        {
-                            method: 'PATCH',
-                            body: formData
-                        }
-                    );
+                    console.log(`📤 Enviando a /documents/${documentId}/review:`, {
+                        status: mappedStatus,
+                        observation: observationText,
+                        imagesCount: imgs.length
+                    });
+
+                    const response = await authFetch(`/applications/documents/${documentId}/review`, {
+                        method: "PATCH",
+                        body: formData,
+                    });
 
                     const result = await response.json();
 
@@ -232,58 +462,74 @@ export default function RequestDetailsPage() {
                         console.error(`❌ Error en documento ${documentId}:`, result.message);
                     }
 
-                } catch (error) {
+                } catch (err) {
                     errorCount++;
-                    console.error(`❌ Error guardando documento ${documentId}:`, error);
+                    console.error(`❌ Error guardando documento ${documentId}:`, err);
                 }
             }
 
-            if (errorCount === 0) {
-                // ⬇️ NUEVO: Actualizar estado de solicitud basado en los documentos
+            if (errorCount === 0 && successCount > 0) {
                 const applicationId = getApplicationId();
-                const totalDocs = applicationData.documents.length;
+
                 const approvedDocs = Object.values(documentReviews).filter(d => d === 'aprobado').length;
                 const observedDocs = Object.values(documentReviews).filter(d => d === 'observado').length;
+                const publishedDocs = Object.values(documentReviews).filter(d => d === 'publicado').length;
 
-                let finalStatus = 'pendiente'; // fallback
+
+                let finalStatus = 'pendiente';
+                let statusMessage = '';
 
                 if (approvedDocs === totalDocs) {
                     finalStatus = 'aprobado';
+                    statusMessage = `Todos los documentos (${totalDocs}) han sido aprobados`;
                 } else if (observedDocs > 0) {
                     finalStatus = 'observado';
+                    statusMessage = `${observedDocs} documento(s) observado(s) de ${totalDocs}`;
+                } else if (approvedDocs > 0) {
+                    finalStatus = 'en_revision';
+                    statusMessage = `${approvedDocs} documento(s) aprobado(s), ${totalDocs - approvedDocs} pendiente(s)`;
+                } else if (publishedDocs > 0) {
+                    finalStatus = 'publicado';
+                    statusMessage = `${publishedDocs} documento(s) aprobado(s), ${totalDocs - publishedDocs} pendiente(s)`;
                 }
 
-                const reviewResponse = await fetch(`${API_URL}/applications/${applicationId}/review`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        status: finalStatus,
-                        observations: 'Revisión por múltiples documentos' // puedes ajustar esto
-                    })
-                });
+                console.log('📊 Estado final calculado:', { finalStatus, statusMessage });
 
-                const reviewResult = await reviewResponse.json();
+                try {
+                    const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: finalStatus,
+                            observations: statusMessage
+                        })
+                    });
 
-                if (reviewResult.success) {
-                    console.log('✅ Estado general actualizado a:', finalStatus);
-                } else {
-                    console.warn('⚠️ No se pudo actualizar el estado general');
+                    const reviewResult = await reviewResponse.json();
+
+                    if (reviewResult.success) {
+                        console.log('✅ Estado general actualizado a:', finalStatus);
+                        toast.success(`Estado general actualizado: ${finalStatus.toUpperCase()}`);
+
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        console.warn('⚠️ No se pudo actualizar el estado general');
+                        toast.warning('Documentos guardados, pero no se pudo actualizar el estado general');
+                    }
+                } catch (err) {
+                    console.error('❌ Error actualizando estado general:', err);
+                    toast.error('Error al actualizar el estado general de la solicitud');
                 }
 
-            } else {
-                toast.warning(
-                    `⚠️ ${successCount} documentos guardados, ${errorCount} con errores`
-                );
+            } else if (errorCount > 0) {
+                toast.warning(`⚠️ ${successCount} documentos guardados, ${errorCount} con errores`);
             }
 
-        } catch (error) {
-            console.error('❌ Error general:', error);
+        } catch (err) {
+            console.error('❌ Error general:', err);
             toast.error('Error al guardar los documentos');
         }
     };
-
 
     const getReviewSummary = () => {
         const total = applicationData.documents.length;
@@ -296,16 +542,20 @@ export default function RequestDetailsPage() {
         const rejected = Object.values(documentReviews).filter(
             status => status === 'observado'
         ).length;
+        const published = Object.values(documentReviews).filter(
+            status => status === 'publicado'
+        ).length;
+
         const pending = total - reviewed;
 
-        return { total, reviewed, approved, rejected, pending };
+        return { total, reviewed, approved, rejected, pending, published };
     };
 
     const handleApproveApplication = async () => {
         try {
             const applicationId = getApplicationId();
 
-            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+            const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -316,7 +566,7 @@ export default function RequestDetailsPage() {
                 })
             });
 
-            const result = await response.json();
+            const result = await reviewResponse.json();
 
             if (result.success) {
                 toast.success('Solicitud aprobada correctamente');
@@ -336,7 +586,7 @@ export default function RequestDetailsPage() {
         try {
             const applicationId = getApplicationId();
 
-            const response = await fetch(`${API_URL}/applications/${applicationId}/review`, {
+            const reviewResponse = await authFetch(`/applications/${applicationId}/review`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -347,7 +597,7 @@ export default function RequestDetailsPage() {
                 })
             });
 
-            const result = await response.json();
+            const result = await reviewResponse.json();
 
             if (result.success) {
                 toast.success('Solicitud observada');
@@ -365,11 +615,11 @@ export default function RequestDetailsPage() {
 
     const mapStatusToDatabase = (frontendStatus) => {
         const statusMap = {
-            'aprobado': 'validado',
-            'observado': 'rechazado',
+            'aprobado': 'aprobado',
+            'observado': 'observado',
             'pendiente': 'pendiente',
-            'validado': 'validado',       // ✅ Por si acaso viene directo
-            'rechazado': 'rechazado'      // ✅ Por si acaso viene directo
+            'publicado': 'publicado',
+
 
         };
         return statusMap[frontendStatus] || 'pendiente';
@@ -381,12 +631,300 @@ export default function RequestDetailsPage() {
         return `${API_URL_DOCUMENTS}/${filePath}`;
     };
 
+    const openObservedDocsModalIfObserved = (item: any) => {
+        const st = String(item?.new_status ?? "").toLowerCase();
+        if (st !== "observado") return;
+
+        setSelectedObservedEvent(item);   
+        setShowDocumentModal(true);
+    };
+
+    const norm = (v: any) => String(v ?? "").toLowerCase();
+
+    const toTime = (v: any) => {
+        const s = String(v ?? "");
+        const safe = s.includes(" ") ? s.replace(" ", "T") : s;
+        const d = new Date(safe);
+        return Number.isNaN(d.getTime()) ? null : d.getTime();
+    };
+
+    const WINDOW_MS = 10 * 60 * 1000; 
+
+    const getObservedDocumentsForEvent = (event: any) => {
+        if (!event || !applicationData) return [];
+
+        console.log("🔍 getObservedDocumentsForEvent - event:", event);
+        console.log("🔍 applicationData.history:", applicationData.history);
+
+        const eventTime = toTime(event.change_date);
+        if (eventTime === null) return [];
+
+        const relatedObservedHistory = (applicationData.history ?? []).filter((item: any) => {
+            const itemTime = toTime(item.change_date);
+
+        
+            console.log("🔍 Comparando item:", {
+                document_id: item.document_id,
+                itemTime,
+                eventTime,
+                timesMatch: itemTime === eventTime,
+                status: item.new_status,
+                comment: item.comment || item.comentario
+            });
+
+            if (!item.document_id || itemTime === null) return false;
+            if (itemTime !== eventTime) return false;
+            return norm(item.new_status) === "observado";
+        });
+
+        console.log("🔍 relatedObservedHistory encontrado:", relatedObservedHistory);
+
+        const byDoc = new Map<string, any>();
+        for (const h of relatedObservedHistory) {
+            if (!byDoc.has(h.document_id)) byDoc.set(h.document_id, h);
+        }
+
+        const result = Array.from(byDoc.values())
+            .map((h: any) => {
+                const doc = (applicationData.documents ?? []).find(
+                    (d: any) => d.document_id === h.document_id
+                );
+
+                return doc ? {
+                    ...doc,
+                    _history: h,
+                    _observationText: h.comment || h.comentario || h.observation
+                } : null;
+            })
+            .filter(Boolean);
+
+        console.log("🔍 Documentos observados finales:", result);
+        return result;
+
+    };
+
+
+
+    const normalizeKey = (v: any) =>
+        String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+    const CAREER_TO_FACULTY: Record<string, string> = {
+        "ingeniería informática y sistemas": "Facultad de Ingeniería",
+        "ingeniería civil": "Facultad de Ingeniería",
+        "ingeniería de minas": "Facultad de Ingeniería",
+        "ingeniería agroindustrial": "Facultad de Ingeniería",
+        "ingeniería agroecológica y desarrollo rural": "Facultad de Ingeniería",
+
+        "administración": "Facultad de Administración",
+
+        "ciencia política y gobernabilidad": "Facultad de Educación y Ciencias Sociales",
+        "educación inicial intercultural y bilingüe 1ra y 2da infancia": "Facultad de Educación y Ciencias Sociales",
+        "medicina veterinaria y zootécnia": "Facultad de Medicina Veterinaria y Zootecnia",
+    };
+
+    const getFacultyFromCareer = (career: any) =>
+        CAREER_TO_FACULTY[normalizeKey(career)] || "";
+
+    const GeneralHistorySection = ({ history = [], onObservedClick }: any) => {
+        const [showAll, setShowAll] = useState(false);
+
+        const normalizeStatus = (status: any) => {
+            if (typeof status === "string") return status.toLowerCase();
+            if (status === null || status === undefined) return "";
+            return String(status).toLowerCase(); // convierte boolean/número a texto
+        };
+
+        const getStatusColor = (status) => {
+            const normalizedStatus = normalizeStatus(status);
+            const colors = {
+                pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
+                en_revision: "bg-blue-100 text-blue-800 border-blue-200",
+                aprobado: "bg-green-100 text-green-800 border-green-200",
+                observado: "bg-red-100 text-red-800 border-red-200",
+                requiere_correccion: "bg-orange-100 text-orange-800 border-orange-200",
+                publicado: "bg-purple-100 text-purple-800 border-purple-200",
+            };
+            return colors[normalizedStatus] || "bg-gray-100 text-gray-800 border-gray-200";
+        };
+
+        const getStatusIcon = (status: any) => {
+            const normalizedStatus = normalizeStatus(status);
+
+            switch (normalizedStatus) {
+                case "aprobado":
+                case "validado":
+                    return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+                case "observado":
+                case "rechazado":
+                case "requiere_correccion":
+                    return <XCircle className="w-4 h-4 text-red-600" />;
+                case "publicado":
+                    return <CheckCircle2 className="w-4 h-4 text-purple-600" />;
+                default:
+                    return <Clock className="w-4 h-4 text-blue-600" />;
+            }
+        };
+
+
+        const getStatusLabel = (status) => {
+            const labels = {
+                pendiente: "Pendiente",
+                en_revision: "En revisión",
+                aprobado: "Aprobado",
+                observado: "Observado",
+                requiere_correccion: "Requiere correcciones",
+                publicado: "Publicado",
+            };
+            return labels[status?.toLowerCase()] || status;
+        };
+
+
+
+
+        const generalHistory = (history || []).filter(
+            (item) => !item.document_type || item.document_type === null || item.document_type === ""
+        );
+
+        const sortedHistory = [...generalHistory].sort(
+            (a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime()
+        );
+
+        const visibleHistory = showAll ? sortedHistory : sortedHistory.slice(0, 3);
+        const hasMore = sortedHistory.length > 3;
+
+        if (!generalHistory || generalHistory.length === 0) {
+            return (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 lg:min-h-[520px]">
+
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                            <Calendar className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Historial</h2>
+                            <p className="text-sm text-slate-600">Cambios de estado general de la solicitud</p>
+                        </div>
+                    </div>
+                    <div className="text-center py-12 bg-slate-50 rounded-xl">
+                        <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500 font-medium">No hay historial de cambios</p>
+                        <p className="text-slate-400 text-sm mt-2">Los cambios de estado aparecerán aquí</p>
+                    </div>
+                </div>
+            );
+        }
+
+
+        return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col h-[700px]">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-lg font-bold text-slate-900">Historial</h2>
+                        <p className="text-sm text-slate-600">
+                            {sortedHistory.length} {sortedHistory.length === 1 ? "cambio registrado" : "cambios registrados"}
+                        </p>
+                    </div>
+                </div>
+
+            
+                <div className="flex-1 min-h-0">
+                    <div className={`h-full pr-2 space-y-4 ${showAll ? "overflow-y-auto" : ""}`}>
+                        {visibleHistory.map((item, index) => {
+                            const isObserved = normalizeStatus(item.new_status) === "observado";
+
+                            return (
+                                <div key={item.history_id ?? `${item.change_date}-${index}`} className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                        <div
+                                            className={`w-4 h-4 rounded-full border-4 shadow-sm ${item.new_status === "aprobado"
+                                                ? "bg-green-600 border-green-100"
+                                                : item.new_status === "observado"
+                                                    ? "bg-red-600 border-red-100"
+                                                    : item.new_status === "publicado"
+                                                        ? "bg-purple-600 border-purple-100"
+                                                        : "bg-blue-600 border-blue-100"
+                                                }`}
+                                        />
+                                        {index < visibleHistory.length - 1 && <div className="w-0.5 h-full bg-slate-200 my-1" />}
+                                    </div>
+
+                                    <div className="flex-1 pb-6">
+                                        <div
+                                            className={`bg-slate-50 rounded-lg p-4 border-2 border-slate-200 ${isObserved ? "cursor-pointer hover:border-red-300 hover:bg-red-50" : ""
+                                                }`}
+                                            onClick={() => {
+                                                if (isObserved) onObservedClick?.(item);
+                                            }}
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    {getStatusIcon(item.new_status)}
+                                                    <p className="text-sm font-semibold text-slate-900">{getStatusLabel(item.new_status)}</p>
+                                                </div>
+                                            </div>
+
+                                            {item.previous_status && item.previous_status !== item.new_status && (
+                                                <div className="flex items-center gap-2 mb-3 text-xs">
+                                                    <span className={`px-2 py-1 rounded ${getStatusColor(item.previous_status)}`}>
+                                                        {getStatusLabel(item.previous_status)}
+                                                    </span>
+                                                    <span className="text-slate-400">→</span>
+                                                    <span className={`px-2 py-1 rounded ${getStatusColor(item.new_status)}`}>
+                                                        {getStatusLabel(item.new_status)}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span className="font-mono">{formatDate(item.change_date)}</span>
+                                                </div>
+
+                                            </div>
+
+                                            {isObserved && (
+                                                <div className="mt-3 text-xs font-semibold text-red-700">
+                                                    Ver documentos observados →
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                
+                {hasMore && (
+                    <button
+                        type="button"
+                        onClick={() => setShowAll(!showAll)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-lg transition-colors text-sm font-semibold text-slate-700 mt-4"
+                    >
+                        <Calendar className="w-4 h-4" />
+                        {showAll ? (
+                            <>Mostrar menos <ChevronUp className="w-4 h-4" /></>
+                        ) : (
+                            <>Ver {sortedHistory.length - 3} cambios más <ChevronDown className="w-4 h-4" /></>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+
+    };
+
+
     const ReviewSummaryPanel = () => {
         const summary = getReviewSummary();
 
 
     };
-
 
     const currentObservation = selectedDocument ? (documentObservations[selectedDocument] || "") : "";
     const currentImages = selectedDocument ? (documentImages[selectedDocument] || []) : [];
@@ -422,12 +960,31 @@ export default function RequestDetailsPage() {
         );
     }
 
+
     const DocumentDetailsModal = () => {
         if (!showDocumentModal) return null;
 
-        const rejectedDocs = applicationData.documents.filter(
-            doc => doc.rejection_reason || doc.status === 'rechazado' || doc.status === 'observado'
-        );
+        const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
+
+        console.log("📋 DocumentDetailsModal - rejectedDocs:", rejectedDocs);
+
+        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        const stripObservationPrefix = (text: string, doc: any) => {
+            if (!text) return text;
+
+            let t = String(text).trim();
+
+            if (doc?.document_type) {
+                const re = new RegExp(`^\\s*${escapeRegExp(doc.document_type)}\\s*-\\s*`, "i");
+                t = t.replace(re, "");
+            }
+
+            t = t.replace(/^\s*-\s*(observado|rechazado|pendiente)\s*:\s*/i, "");
+            t = t.replace(/^\s*(observado|rechazado|pendiente)\s*:\s*/i, "");
+
+            return t.trim();
+        };
 
         return (
             <div className="fixed inset-0 bg-black/80 bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -457,130 +1014,161 @@ export default function RequestDetailsPage() {
                     <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                         {rejectedDocs.length > 0 ? (
                             <div className="space-y-6">
-                                {rejectedDocs.map((doc, index) => (
-                                    <div key={index} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
-                                        <div className="bg-white border-b border-red-200 px-5 py-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-                                                        <FileText className="w-6 h-6 text-red-600" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-slate-900 text-lg">
-                                                            {getDocumentTypeLabel(doc.document_type)}
-                                                        </h3>
-                                                        <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
-                                                        <div className="flex items-center gap-3 mt-2">
-                                                            <span className="text-xs text-slate-500">
-                                                                📦 {doc.size_kb} KB
-                                                            </span>
-                                                            <span className="text-xs text-slate-500">
-                                                                📅 {formatDate(doc.upload_date)}
-                                                            </span>
+                                {rejectedDocs.map((doc: any) => {
+                                    console.log("📄 Renderizando doc:", {
+                                        document_id: doc.document_id,
+                                        _history: doc._history,
+                                        _observationText: doc._observationText,
+                                        pickResult: pickDocObservation(doc)
+                                    });
+
+                                    return (
+                                        <div key={doc.document_id} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
+                                            <div className="bg-white border-b border-red-200 px-5 py-4">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                                            <FileText className="w-6 h-6 text-red-600" />
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <span className={`px-3 py-1.5 rounded-full text-xs font-semibold
-                                                ${doc.status === 'rechazado'
-                                                        ? 'bg-red-100 text-red-800'
-                                                        : 'bg-orange-100 text-orange-800'
-                                                    }`}>
-                                                    { '⚠ Observado'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="px-5 py-4">
-                                            <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
-                                                <div className="flex items-start gap-3">
-                                                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-red-900 text-sm mb-2">
-                                                            Motivo del rechazo:
-                                                        </h4>
-                                                        <p className="text-slate-700 text-sm leading-relaxed">
-                                                            {doc.rejection_reason || 'Sin descripción específica'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {doc.images && doc.images.length > 0 && (
-                                            <div className="px-5 pb-4">
-                                                <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                                                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    Capturas de pantalla ({doc.images.length})
-                                                </h4>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                                    {doc.images.map((image, imgIndex) => (
-                                                        <div key={imgIndex} className="group relative">
-                                                            <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                                                                <img
-                                                                    src={`${API_URL_DOCUMENTS}/${image.image_path}`}
-                                                                    alt={image.file_name}
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                                    onClick={() => window.open(`${API_URL_DOCUMENTS}/${image.image_path}`, '_blank')}
-                                                                />
+                                                        <div>
+                                                            <h3 className="font-semibold text-slate-900 text-lg">
+                                                                {getDocumentTypeLabel(doc.document_type)}
+                                                            </h3>
+                                                            <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                            <div className="flex items-center gap-3 mt-2">
+                                                                <span className="text-xs text-slate-500">
+                                                                    📦 {doc.size_kb} KB
+                                                                </span>
+                                                                <span className="text-xs text-slate-500">
+                                                                    📅 {formatDate(doc.upload_date)}
+                                                                </span>
                                                             </div>
-                                                            <p className="text-xs text-slate-600 mt-1 truncate" title={image.file_name}>
-                                                                {image.file_name}
-                                                            </p>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    <span
+                                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold ${doc._history?.new_status === 'observado'
+                                                            ? 'bg-red-100 text-red-800'
+                                                            : 'bg-orange-100 text-orange-800'
+                                                            }`}
+                                                    >
+                                                        {getStatusLabel(doc._history?.new_status || doc.status)}
+                                                    </span>
+                                                </div>
+
+                                            </div>
+
+                                            <div className="px-5 py-4">
+                                                <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                                    <div className="flex items-start gap-3">
+                                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                                        <div className="flex-1">
+                                                            <h4 className="font-semibold text-red-900 text-sm mb-3">
+                                                                Observaciones:
+                                                            </h4>
+
+                                                            <div className="text-xs text-slate-500 mb-1">
+                                                                {formatDate(doc._history?.change_date || doc.upload_date)}
+                                                            </div>
+
+                                                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                                                {(() => {
+                                                                    const rawObs =
+                                                                        doc._observationText ||
+                                                                        pickDocObservation(doc) ||
+                                                                        doc._history?.comment ||
+                                                                        doc._history?.comentario ||
+                                                                        doc.rejection_reason ||
+                                                                        "Sin observación registrada";
+
+                                                                    return stripObservationPrefix(rawObs, doc);
+                                                                })()}
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="px-5 pb-4 flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    const url = getDocumentUrl(doc.file_path);
-                                                    window.open(url, '_blank');
-                                                }}
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                Ver Documento
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const url = getDocumentUrl(doc.file_path);
-                                                    const link = document.createElement('a');
-                                                    link.href = url;
-                                                    link.download = doc.file_name;
-                                                    link.target = '_blank';
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
-                                                }}
-                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                Descargar
-                                            </button>
+
+                                            {/*
+                                            doc.images && doc.images.length > 0 && (
+                                                <div className="px-5 pb-4">
+                                                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        Capturas de pantalla ({doc.images.length})
+                                                    </h4>
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                        {doc.images.map((image, imgIndex) => (
+                                                            <div key={imgIndex} className="group relative">
+                                                                <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
+                                                                    <img
+                                                                        src={`${API_URL_DOCUMENTS}/${image.image_path}`}
+                                                                        alt={image.file_name}
+                                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                                        onClick={() => window.open(`${API_URL_DOCUMENTS}/${image.image_path}`, '_blank')}
+                                                                    />
+                                                                </div>
+                                                                <p className="text-xs text-slate-600 mt-1 truncate" title={image.file_name}>
+                                                                    {image.file_name}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )
+                                        */}
+                                            {/*
+                                            <div className="px-5 pb-4 flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const url = getDocumentUrl(doc._historicalPath || doc.file_path);
+                                                        window.open(url, '_blank');
+                                                    }}
+                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    Ver Documento
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = getDocumentUrl(doc._historicalPath || doc.file_path);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = doc.file_name;
+                                                        link.target = '_blank';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                    }}
+                                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                    Descargar
+                                                </button>
+                                            </div>*/}
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-12">
-                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m-7 5h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 </div>
                                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                                    ¡Todos los documentos están validados!
+                                    Sin documentos para esta observación
                                 </h3>
-                                <p className="text-slate-600">No hay documentos con observaciones o rechazos.</p>
+                                <p className="text-slate-600">No se encontraron documentos asociados al evento seleccionado.</p>
                             </div>
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -603,7 +1191,7 @@ export default function RequestDetailsPage() {
                                 <span className="text-sm font-medium text-blue-700">{formatDate(applicationData.application_date)}</span>
                             </div>
                             <div className={`px-3 py-2 rounded-lg ${getStatusColor(applicationData.status)}`}>
-                                <span className="font-semibold text-sm capitalize">{getStatusLabel(applicationData.status)}</span>
+                                <span className="font-semibold text-sm">{getStatusLabel(applicationData.status)}</span>
                             </div>
                         </div>
                     </div>
@@ -613,9 +1201,14 @@ export default function RequestDetailsPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <Section title="Información del Proyecto" icon={BookOpen}>
                             <div className="space-y-4">
-                                <InfoRow label="Título" value={applicationData.project_name || "Sin título"} />
-                                <InfoRow label="Facultad" value={applicationData.professional_school || "No especificada"} />
-                                <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Tesis de posgrado'} />
+                                <InfoRow label="Título" value={normalizeTitleForRepo(applicationData.project_name)} />
+                                <InfoRow label="Escuela Profesional" value={applicationData.professional_school || "No especificada"} />
+                                <InfoRow
+                                    label="Facultad"
+                                    value={getFacultyFromCareer(applicationData.professional_school) || "No especificada"}
+                                />
+
+                                <InfoRow label="Tipo de trabajo" value={applicationData.application_type === 'estudiante' ? 'Tesis de pregrado' : 'Informe de investigacion'} />
                                 {applicationData.application_type === 'docente' && (
                                     <InfoRow label="Tipo de financiamiento" value={applicationData.funding_type || "No especificado"} />
                                 )}
@@ -628,28 +1221,25 @@ export default function RequestDetailsPage() {
                                     <table className="w-full text-sm">
                                         <thead className="bg-slate-50">
                                             <tr className="text-left text-slate-600">
-                                                <th className="py-3 px-4 font-semibold">Nombres</th>
-                                                <th className="py-3 px-4 font-semibold">Apellidos</th>
+                                                <th className="py-3 px-4 font-semibold">Nombre Completo</th>
                                                 <th className="py-3 px-4 font-semibold">DNI</th>
                                                 <th className="py-3 px-4 font-semibold">Escuela</th>
-                                                <th className="py-3 px-4 font-semibold">Rol</th>
                                             </tr>
                                         </thead>
+
                                         <tbody className="divide-y divide-slate-200">
                                             {applicationData.authors.map((author, index) => (
                                                 <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">{author.first_name || "N/A"}</td>
-                                                    <td className="py-3 px-4">{author.last_name || "N/A"}</td>
+                                                    <td className="py-3 px-4 ">{toMetadataName(author)}</td>
                                                     <td className="py-3 px-4">{author.dni || "N/A"}</td>
                                                     <td className="py-3 px-4">{author.professional_school || "N/A"}</td>
                                                     <td className="py-3 px-4">
-                                                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                            {author.author_order === 'principal' ? 'Autor Principal' : 'Coautor'}
-                                                        </span>
+
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
+
                                     </table>
                                 </div>
                             ) : (
@@ -664,19 +1254,20 @@ export default function RequestDetailsPage() {
                                         <table className="w-full text-sm">
                                             <thead className="bg-slate-50">
                                                 <tr className="text-left text-slate-600">
-                                                    <th className="py-3 px-4 font-semibold">Nombres</th>
-                                                    <th className="py-3 px-4 font-semibold">Apellidos</th>
-                                                    <th className="py-3 px-4 font-semibold">DNI</th>
-                                                    <th className="py-3 px-4 font-semibold">Correo</th>
+                                                    <th className="py-3 px-4 font-semibold">Nombre Completo</th>
+                                                    <th className="py-3 px-4 font-semibold">Tipo Coautor</th>
+                                                    <th className="py-3 px-4 font-semibold">Ubicacion Coautor</th>
+                                                    <th className="py-3 px-4 font-semibold">ORCID</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-200">
                                                 {applicationData.coauthors.map((coauthor, index) => (
-                                                    <tr key={index} className="hover:bg-slate-50">
-                                                        <td className="py-3 px-4">{coauthor.first_name || "N/A"}</td>
-                                                        <td className="py-3 px-4">{coauthor.last_name || "N/A"}</td>
-                                                        <td className="py-3 px-4">{coauthor.dni || "N/A"}</td>
-                                                        <td className="py-3 px-4">{coauthor.email || "N/A"}</td>
+                                                    <tr key={coauthor.coauthor_id || index} className="hover:bg-slate-50">
+                                                        <td className="py-3 px-4">{toMetadataName(coauthor)}</td>
+                                                        <td className="py-3 px-4">{coauthor.role_type || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.location_type || "N/A"}</td>
+                                                        <td className="py-3 px-4">{coauthor.orcid_url || "N/A"}</td>
+                                                        <td className="py-3 px-4"></td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -687,154 +1278,85 @@ export default function RequestDetailsPage() {
                                 )}
                             </Section>
                         )}
-
-                        <Section title="Asesores" icon={Users}>
-                            {applicationData.advisors && applicationData.advisors.length > 0 ? (
-                                <div className="overflow-hidden rounded-lg border border-slate-200">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-slate-50">
-                                            <tr className="text-left text-slate-600">
-                                                <th className="py-3 px-4 font-semibold">Nombre Completo</th>
-                                                <th className="py-3 px-4 font-semibold">DNI</th>
-                                                <th className="py-3 px-4 font-semibold">ORCID</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-200">
-                                            {applicationData.advisors.map((advisor, index) => (
-                                                <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4">{advisor.full_name || "N/A"}</td>
-                                                    <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
-                                                    <td className="py-3 px-4 font-mono text-xs">{advisor.orcid || "N/A"}</td>
+                        {applicationData.application_type === 'estudiante' && (
+                            <Section title="Asesores" icon={Users}>
+                                {applicationData.advisors && applicationData.advisors.length > 0 ? (
+                                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-slate-50">
+                                                <tr className="text-left text-slate-600">
+                                                    <th className="py-3 px-4 font-semibold">Nombre Completo</th>
+                                                    <th className="py-3 px-4 font-semibold">DNI</th>
+                                                    <th className="py-3 px-4 font-semibold">ORCID</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay asesores registrados</p>
-                            )}
-                        </Section>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200">
+                                                {applicationData.advisors.map((advisor, index) => (
+                                                    <tr key={index} className="hover:bg-slate-50">
+                                                        <td className="py-3 px-4">{toMetadataName(advisor)}</td>
+                                                        <td className="py-3 px-4">{advisor.dni || "N/A"}</td>
+                                                        <td className="py-3 px-4">{advisor.orcid || "N/A"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 text-sm py-4">No hay asesores registrados</p>
+                                )}
+                            </Section>
+                        )}
+                        {applicationData.application_type === 'estudiante' && (
+                            <Section title="Jurado Evaluador" icon={Users}>
+                                {applicationData.jury && applicationData.jury.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {[...applicationData.jury]
+                                            .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
+                                            .map((juryMember, index) => (
+                                                <JuryItem
+                                                    key={juryMember.jury_id ?? index}
+                                                    rol={getJuryRoleLabel(juryMember.jury_role)}
+                                                    nombre={toMetadataFromSingleField(juryMember.full_name) || "No asignado"}
+                                                    badge={juryMember.jury_role === "presidente" ? "Principal" : "Miembro"}
+                                                />
 
-                        <Section title="Jurado Evaluador" icon={Users}>
-                            {applicationData.jury && applicationData.jury.length > 0 ? (
-                                <div className="space-y-3">
-                                    {[...applicationData.jury]
-                                        .sort((a, b) => a.jury_role === 'presidente' ? -1 : b.jury_role === 'presidente' ? 1 : 0)
-                                        .map((juryMember, index) => (
-                                            <JuryItem
-                                                key={index}
-                                                rol={getJuryRoleLabel(juryMember.jury_role)}
-                                                nombre={juryMember.full_name || "No asignado"}
-                                                badge={juryMember.jury_role === 'presidente' ? 'Principal' : 'Miembro'}
-                                            />
-                                        ))}
-                                </div>
-                            ) : (
-                                <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
-                            )}
-                        </Section>
+                                            ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 text-sm py-4">No hay jurado asignado</p>
+                                )}
+                            </Section>
+                        )}
                     </div>
 
-                    <div className="space-y-6">
-                        <Section title="Historial de Estado" icon={AlertCircle}>
-                            {applicationData.history && applicationData.history.length > 0 ? (
-                                <>
-                                    {(() => {
-                                        const sortedHistory = [...applicationData.history]
-                                            .sort((a, b) => new Date(b.change_date || b.date) - new Date(a.change_date || a.date));
+                    <div className="space-y-6 min-w-0">
+                        <GeneralHistorySection
+                            history={applicationData?.history ?? []}
+                            onObservedClick={(item) => {
+                                console.log("🧾 ITEM HISTORIAL (onObservedClick):", item);
+                                openObservedDocsModalIfObserved(item);
+                            }}
+                        />
 
-                                        const visibleHistory = showAllHistory ? sortedHistory : sortedHistory.slice(0, 5);
-                                        const hasMore = sortedHistory.length > 5;
-
-                                        return (
-                                            <>
-                                                <div className="space-y-4">
-                                                    {visibleHistory.map((item, index) => (
-                                                        <TimelineItem
-                                                            key={index}
-                                                            status={item.new_status == 'rechazado' ? 'Obervado' : item.new_status }
-                                                            title={item.new_status == 'rechazado' ? 'Obervado' : item.new_status || "Sin título"}
-                                                            date={formatDate(item.date || item.change_date)}
-                                                            color={
-                                                                item.new_status === "aprobado"
-                                                                    ? "green"
-                                                                    : item.new_status === "publicado"
-                                                                        ? "blue"
-                                                                        : "red"
-                                                            }
-                                                        />
-                                                    ))}
-                                                </div>
-                                                {hasMore && (
-                                                    <button
-                                                        onClick={() => setShowAllHistory(!showAllHistory)}
-                                                        className="mt-4 w-full flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                                                    >
-                                                        {showAllHistory ? (
-                                                            <>
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                                                </svg>
-                                                                Ver menos
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                                </svg>
-                                                                Ver más ({sortedHistory.length - 5} eventos adicionales)
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
-                                            </>
-                                        );
-                                    })()}
-                                </>
-                            ) : (
-                                <div className="space-y-4">
-                                    <TimelineItem
-                                        status="aprobado"
-                                        title="Solicitud enviada"
-                                        date={formatDate(applicationData.created_at)}
-                                        color="green"
-                                    />
-                                    <TimelineItem
-                                        status="En revisión"
-                                        title="En evaluación documentaria"
-                                        date={formatDate(applicationData.updated_at)}
-                                        color="blue"
-                                    />
-                                    <TimelineItem
-                                        status="Pendiente"
-                                        title="Aprobación final"
-                                        date="Por definir"
-                                        color="gray"
-                                    />
-                                </div>
-                            )}
-                        </Section>
-
-                        <div className="lg:col-span-2 mt-6">
+                        <div className="mt-6 min-w-0">
                             <PublicationSection
                                 applicationId={applicationData.application_id}
                                 initialLink={applicationData.published_thesis_link ?? ""}
                                 onSave={async (link) => {
-                                    const response = await fetch(
-                                        `${API_URL}/applications/${applicationData.application_id}/publication-link`
-                                        ,
-                                        {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ publicationLink: link })
-                                        }
+                                    const response = await authFetch(`/applications/${applicationData.application_id}/publication-link`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ publicationLink: link })
+                                    }
                                     );
+                                    const json = await response.json();
+                                    console.log("✅ publication-link response:", json);
 
                                     if (!response.ok) {
                                         throw new Error('Error al guardar');
                                     }
 
-                                    // Actualizar estado local
+                                    
                                     setApplicationData({
                                         ...applicationData,
                                         publication_link: link
@@ -885,7 +1407,7 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const url = getDocumentUrl(doc.file_path);
+                                                            const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                             window.open(url, '_blank');
                                                         }}
                                                         className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
@@ -896,7 +1418,7 @@ export default function RequestDetailsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const url = getDocumentUrl(doc.file_path);
+                                                            const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                             const link = document.createElement('a');
                                                             link.href = url;
                                                             link.download = `${getDocumentTypeLabel(doc.document_type)}.pdf`;
@@ -1117,53 +1639,6 @@ export default function RequestDetailsPage() {
                     <div className="lg:col-span-2 mt-6">
 
                     </div>
-
-                    {/*applicationData.documents && applicationData.documents.some(doc => doc.images && doc.images.length > 0) && (
-                        <div className="mt-6 border-t pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Imágenes Adjuntas a los Documentos
-                            </h3>
-
-                            <div className="space-y-6">
-                                {applicationData.documents.map((doc) => (
-                                    doc.images && doc.images.length > 0 && (
-                                        <div key={doc.document_id} className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-700 mb-3">
-                                                📄 {doc.file_name}
-                                            </h4>
-
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                                {doc.images.map((image) => (
-                                                    <div key={image.image_id} className="group relative">
-                                                        <div className="aspect-square rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                                            <img
-                                                                src={`${API_URL_DOCUMENTS}/${image.image_path}`}
-                                                                alt={image.file_name}
-                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(image.image_path, '_blank')}
-                                                            />
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <p className="text-xs text-gray-600 truncate" title={image.file_name}>
-                                                                {image.file_name}
-                                                            </p>
-                                                            <p className="text-xs text-gray-400">
-                                                                {new Date(image.created_at).toLocaleDateString('es-PE')}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    )*/}
-
                     <div className="lg:col-span-2 mt-6"></div>
 
                     <div className="space-y-4">
@@ -1171,71 +1646,7 @@ export default function RequestDetailsPage() {
                     </div>
 
                 </div>
-                <div className="mt-6">
-                    <Section title="Historial Detallado de la Solicitud" icon={Calendar}>
-                        <div className="mb-4 flex justify-end">
-                            <button
-                                onClick={() => setShowDocumentModal(true)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                            >
-                                <AlertCircle className="w-4 h-4" />
-                                Ver Documentos Observados
-                                {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length > 0 && (
-                                    <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
-                                        {applicationData.documents.filter(d => d.rejection_reason || d.status === 'rechazado' || d.status === 'observado').length}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-                        {applicationData.history && applicationData.history.length > 0 ? (
-                            <div className="overflow-x-auto rounded-lg border border-slate-200">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr className="text-left text-slate-600">
-                                            <th className="py-3 px-4 font-semibold">Fecha</th>
-                                            <th className="py-3 px-4 font-semibold">Estado Anterior</th>
-                                            <th className="py-3 px-4 font-semibold">Estado Nuevo</th>
-                                            <th className="py-3 px-4 font-semibold">Comentario</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        {[...applicationData.history]
-                                            .sort((a, b) => new Date(b.change_date) - new Date(a.change_date))
-                                            .map((item, index) => (
-                                                <tr key={index} className="hover:bg-slate-50">
-                                                    <td className="py-3 px-4 whitespace-nowrap">
-                                                        <div className="text-sm font-medium text-slate-900">
-                                                            {formatDate(item.change_date)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.previous_status)}`}>
-                                                            {getStatusLabel(item.previous_status)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.new_status)}`}>
-                                                            {getStatusLabel(item.new_status)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 max-w-xs">
-                                                        <p className="text-slate-600 text-xs line-clamp-2">
-                                                            {item.comment || item.observations || "—"}
-                                                        </p>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-slate-500">No hay historial registrado</p>
-                            </div>
-                        )}
-                    </Section>
-                </div>
+
                 <DocumentDetailsModal />
             </main>
         </div>

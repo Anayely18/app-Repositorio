@@ -1,23 +1,28 @@
-import ForgotPassword from "@/pages/auth/ForgotPassword"
-import Login from "@/pages/auth/Login"
-import Register from "@/pages/auth/Register"
-import Home from "@/pages/home/Home"
-import ListThesisWorks from "@/pages/list/ListThesisWorks"
-import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRequest"
-import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest"
-import Layout from "@/shared/ui/layout/Layout"
-import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage"; 
-import Profile from "@/pages/auth/Profile"
-import TramiteStatusApp from "@/shared/components/TramiteStatusApp"
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+import Login from "@/pages/auth/Login";
+import Register from "@/pages/auth/Register";
+import Home from "@/pages/home/Home";
+import ListThesisWorks from "@/pages/list/ListThesisWorks";
+import StudentResearchReportRequest from "@/pages/report/StudentResearchReportRequest";
+import TeacherResearchReportRequest from "@/pages/report/TeacherResearchReportRequest";
+import Layout from "@/shared/ui/layout/Layout";
+import RequestDetailsPage from "@/pages/list/details/RequestDetailsPage";
+import Profile from "@/pages/auth/Profile";
+import TramiteStatusApp from "@/shared/components/TramiteStatusApp";
+import ProtectedRoute from "./ProtectedRoute";
 
 export const routes = [
     {
-        path: '/admin',
+        path: '/admi-sigori2025',
         element: <Login />
     },
     {
-        path: '/register',
-        element: <Register />
+        path: "/register",
+        element: (
+            <ProtectedRoute>
+                <Register />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/forgot-password',
@@ -40,20 +45,28 @@ export const routes = [
         element: <TramiteStatusApp />
     },
     {
-        path: '/dashboard',
-        element: <Layout />,
+        path: "/dashboard",
+        element: (
+            <ProtectedRoute>
+                <Layout />
+            </ProtectedRoute>
+        ),
         children: [
             {
                 path: "",
-                element: <ListThesisWorks />
+                element: <ListThesisWorks />,
             },
             {
-            path: "details/:id", 
-            element: <RequestDetailsPage />
+                path: "details/:id",
+                element: (
+                    <ProtectedRoute>
+                        <RequestDetailsPage />
+                    </ProtectedRoute>
+                ),
             },
             {
-            path: "profile", 
-            element: <Profile />
+                path: "profile",
+                element: <Profile />,
             },
         ]
     }

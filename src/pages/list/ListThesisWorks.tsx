@@ -1,4 +1,4 @@
-import { API_URL } from "@/utils/api";
+import { authFetch } from "@/utils/api";
 import { Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -45,8 +45,8 @@ export default function ListThesisWorks() {
 
     const statusOptions = [
         { value: "pendiente", label: "Pendiente" },
-        { value: "aprobado", label: "Aprobado" },
-        { value: "observado", label: "Observado" },
+        { value: "aprobado", label: "aprobado" },
+        { value: "observado", label: "observado" },
         { value: "publicado", label: "publicado" },
     ];
 
@@ -94,7 +94,11 @@ export default function ListThesisWorks() {
                 params.append("professionalSchool", schoolFilter);
             }
 
-            const response = await fetch(`${API_URL}/applications/list?${params.toString()}`);
+            const response = await authFetch(`/applications/list?${params.toString()}`, { method: "GET" });
+            if (!response.ok) {
+                setError("Error al cargar los datos");
+                return;
+            }
             const result = await response.json();
 
             if (result.success) {
@@ -133,12 +137,44 @@ export default function ListThesisWorks() {
     };
 
     const formatDate = (dateString: string): string => {
+        if (!dateString) return "—";
         const date = new Date(dateString);
-        return date.toLocaleDateString("es-PE", {
+        if (Number.isNaN(date.getTime())) return "—";
+
+        return date.toLocaleString("es-PE", {
+            timeZone: "America/Lima",
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
         });
+    };
+
+
+
+    const cleanText = (v: any) => String(v ?? "").trim().replace(/\s+/g, " ");
+
+    const toTitleCase = (value: any) => {
+        const s = cleanText(value).toLowerCase();
+        if (!s) return "—";
+
+        return s
+            .split(" ")
+            .filter(Boolean)
+            .map((word) =>
+                word
+                    .split("-")
+                    .map((part) =>
+                        part
+                            .split("'")
+                            .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : ""))
+                            .join("'")
+                    )
+                    .join("-")
+            )
+            .join(" ");
     };
 
 
@@ -164,7 +200,7 @@ export default function ListThesisWorks() {
         if (s === "pendiente") return "bg-amber-100 text-amber-800 border border-amber-200";
         if (s === "aprobado") return "bg-green-100 text-green-800 border border-green-200";
         if (s === "observado") return "bg-red-100 text-red-800 border border-red-200";
-        if (s === "publicado") return "bg-indigo-100 text-indigo-800 border border-indigo-200";
+        if (s === "publicado") return "bg-purple-100 text-purple-800 border border-purple-200";
 
         return "bg-slate-100 text-slate-700 border border-slate-200";
     };
@@ -381,12 +417,13 @@ export default function ListThesisWorks() {
                                                     <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
                                                         {formatDate(item.createdAt)}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-800 font-medium">
-                                                        {item.name}
+                                                    <td className="px-6 py-4 text-sm text-slate-600">
+                                                        {toTitleCase(item.name)}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-800 font-medium">
-                                                        {item.surname}
+                                                    <td className="px-6 py-4 text-sm text-slate-600">
+                                                        {toTitleCase(item.surname)}
                                                     </td>
+
 
                                                     <td className="px-6 py-4 text-sm text-slate-600">
                                                         {item.professionalSchool}

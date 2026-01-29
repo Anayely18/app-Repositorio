@@ -9,14 +9,14 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
 
     const handleSearch = async () => {
         if (!dni || dni.trim() === '') {
-            setError('Por favor, ingresa un DNI o código válido');
+            setError('Por favor, ingresa un DNI válido');
             return;
         }
         setLoading(true);
         setError('');
 
         try {
-            const API_BASE_URL = 'http://localhost:3000'; 
+            const API_BASE_URL = '';
             const url = `${API_BASE_URL}/api/applications/search?dni=${encodeURIComponent(dni)}&type=${activeTab}`;
 
             console.log('🔍 Buscando en:', url);
@@ -51,6 +51,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                     createdAt: result.data.created_at,
                     projectName: result.data.project_name,
                     applicant: result.data.applicant,
+                    authors: result.data.applicant?.authors ?? [],
                     documents: result.data.documents,
                     publication_link: result.data.publication_link,
                     timeline: result.data.timeline
@@ -140,7 +141,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                         <div className="space-y-6">
                             <div>
                                 <label htmlFor="dni" className="block text-sm font-semibold text-slate-700 mb-2">
-                                    {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Código de Docente (6 dígitos)'}
+                                    {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Número de DNI (8 dígitos)'}
                                 </label>
                                 <input
                                     type="text"
@@ -151,7 +152,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                                         setDni(value);
                                         setError('');
                                     }}
-                                    placeholder={activeTab === 'estudiante' ? 'Ej: 12345678' : 'Ej: 123456'}
+                                    placeholder={activeTab === 'estudiante' ? 'Ej: 12345678' : 'Ej: 12345678'}
                                     className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg"
                                 />
                                 {error && (
@@ -190,14 +191,14 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                                 <div className="text-sm text-slate-700">
                                     <p className="font-semibold mb-2">Nota importante:</p>
                                     <p className="mb-2">
-                                        Ingresa el {activeTab === 'estudiante' ? 'DNI' : 'código'} que utilizaste al momento de realizar tu solicitud.
+                                        Ingresa el {activeTab === 'estudiante' ? 'DNI' : 'DNI'} que utilizaste al momento de realizar tu solicitud.
                                     </p>
                                     <p className="text-slate-600">
                                         Si no encuentras tu trámite, verifica que:
                                     </p>
                                     <ul className="list-disc list-inside mt-2 space-y-1 text-slate-600 ml-2">
                                         <li>Has seleccionado el tipo correcto (Estudiante/Docente)</li>
-                                        <li>El {activeTab === 'estudiante' ? 'DNI' : 'código'} ingresado es correcto</li>
+                                        <li>El {activeTab === 'estudiante' ? 'DNI' : 'DNI'} ingresado es correcto</li>
                                         <li>Tu solicitud ha sido registrada en el sistema</li>
                                     </ul>
                                 </div>

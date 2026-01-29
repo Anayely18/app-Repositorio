@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
+
 type InfoCheckboxProps = {
   icon: LucideIcon
   iconColor: string
