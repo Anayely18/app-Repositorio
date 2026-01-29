@@ -1,7 +1,7 @@
 import { useRegister } from "@/hooks/useRegister";
 import RegisterForm from "@/shared/components/auth/RegisterForm";
 import Logo from "@/shared/ui/Logo";
-
+import registerImg from "@/assets/img/registro.svg";
 
 export default function Register() {
     const { 
@@ -16,7 +16,7 @@ export default function Register() {
         <div className="bg-primary h-svh w-full overflow-hidden">
             <main className="grid grid-cols-1 md:grid-cols-2 h-svh">
                 <div className="hidden md:flex items-center h-full bg-secondary">
-                    <img src="assets/img/registro.svg" alt="" className="h-90 object-contain m-auto w-auto" />
+                    <img src={registerImg} alt="Registro" className="h-90 object-contain m-auto w-auto" />
                 </div>
                 <div className="flex flex-col items-start relative overflow-y-auto md:overflow-y-hidden overflow-x-hidden">
                     <Logo />

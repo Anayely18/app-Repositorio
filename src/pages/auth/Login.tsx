@@ -1,7 +1,7 @@
 import { useLogin } from "@/hooks/useLogin";
 import LoginForm from "@/shared/components/auth/LoginForm";
 import Logo from "@/shared/ui/Logo";
-
+import login from "@/assets/img/login.svg";
 
 export default function Login() {
     const {
@@ -29,7 +29,7 @@ export default function Login() {
                 </div>
                 <div className="hidden md:flex items-center h-full bg-secondary">
                     
-                    <img src="assets/img/login.svg" alt="" className="h-90 object-contain m-auto w-auto" />
+                    <img src={login} alt="Login" className="h-90 object-contain m-auto w-auto" />
                 </div>
             </main>
         </div>
