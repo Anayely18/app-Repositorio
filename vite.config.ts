@@ -5,31 +5,32 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler"]],
-      },
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    base: "/repo/",
+    plugins: [
+        tailwindcss(),
+        react({
+            babel: {
+                plugins: [["babel-plugin-react-compiler"]],
+            },
+        }),
+    ],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./src"),
+        },
     },
-  },
-  server: {
-    host: true,
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:3000",
-        changeOrigin: true,
-      },
-      "/uploads": {
-        target: "http://127.0.0.1:3000",
-        changeOrigin: true,
-      },
+    server: {
+        host: true,
+        port: 5173,
+        proxy: {
+            "/api": {
+                target: "http://127.0.0.1:3000",
+                changeOrigin: true,
+            },
+            "/uploads": {
+                target: "http://127.0.0.1:3000",
+                changeOrigin: true,
+            },
+        },
     },
-  },
 });
