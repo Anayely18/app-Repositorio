@@ -2,7 +2,6 @@ import { useLogin } from "@/hooks/useLogin";
 import LoginForm from "@/shared/components/auth/LoginForm";
 import Logo from "@/shared/ui/Logo";
 
-
 export default function Login() {
     const {
         formData,
