@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "/sigsori/",
+  "homepage": "/repo/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
