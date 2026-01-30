@@ -84,7 +84,7 @@ export const useLogin = () => {
         await toastService.success(res.message || "Inicio de sesión exitoso");
 
         
-        window.location.replace("repo/dashboard");
+        window.location.replace("/dashboard");
       }
     } catch (error: any) {
       console.error("Error en login:", error);
