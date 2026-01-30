@@ -1,4 +1,4 @@
-export const API_URL = "https://vrin.unamba.edu.pe/api/api";
+export const API_URL = "";
 export const API_URL_DOCUMENTS = "";
 // --- helpers seguros (sin importar authService para evitar ciclos) ---
 const TOKEN_KEY = "token";

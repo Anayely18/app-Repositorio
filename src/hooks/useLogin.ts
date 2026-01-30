@@ -84,7 +84,7 @@ export const useLogin = () => {
         await toastService.success(res.message || "Inicio de sesión exitoso");
 
         // ✅ redirige sin recargar historial
-        window.location.replace("/dashboard");
+        window.location.replace("/repo/dashboard");
       }
     } catch (error: any) {
       console.error("Error en login:", error);
