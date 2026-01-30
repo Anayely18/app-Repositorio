@@ -25,7 +25,7 @@ export async function authFetch(path: string, options: AuthFetchOptions = {}) {
   // Si el token caducó o es inválido
   if (res.status === 401) {
     authService.clearSession();
-    window.location.replace("/admi-sigori2025"); // tu login está en /admin
+    window.location.replace("repo/admi-sigori2025"); // tu login está en /admin
   }
 
   return res;
