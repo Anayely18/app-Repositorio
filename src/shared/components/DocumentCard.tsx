@@ -59,7 +59,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                     <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center">
                         <FileText className="w-4 h-4 text-slate-600" />
                     </div>
-                    <h3 className="font-medium text-slate-900">{doc.name}</h3>
+                    <h3 className="font-medium text-slate-900">{doc.document_type}</h3>
                 </div>
                 <span className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 flex items-center gap-2 ${getStatusColor(doc.status)}`}>
                     {getStatusIcon(doc.status)}

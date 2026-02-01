@@ -19,9 +19,7 @@ export const routes = [
     {
         path: "/register",
         element: (
-            <ProtectedRoute>
                 <Register />
-            </ProtectedRoute>
         ),
     },
     {

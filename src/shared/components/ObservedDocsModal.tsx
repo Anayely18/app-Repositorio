@@ -1,4 +1,4 @@
-import { AlertCircle, Download, Eye, FileText } from "lucide-react";
+import { AlertCircle, Download, Eye, FileText, ImageIcon } from "lucide-react";
 import { API_URL_DOCUMENTS } from "@/utils/api";
 
 export function ObservedDocsModal({
@@ -100,6 +100,7 @@ export function ObservedDocsModal({
         })
         .filter(Boolean);
 
+
     return (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
@@ -131,7 +132,10 @@ export function ObservedDocsModal({
                                 const docType = doc.document_type ?? doc.name ?? "";
                                 const docFileName = doc.file_name ?? doc.original_name ?? doc.name ?? "Documento";
                                 const docFilePath = doc.file_path ?? doc.path ?? doc.url ?? "";
-                                const images = doc.images || [];
+                                
+                                // ✅ Obtener imágenes del momento de observación O del documento
+                                const images = doc._obsMoment?.images || doc.images || [];
+                                
                                 return (
                                     <div key={doc.document_id ?? doc.file_name} className="border border-red-200 rounded-xl overflow-hidden bg-red-50">
                                         <div className="bg-white border-b border-red-200 px-5 py-4">
@@ -187,42 +191,96 @@ export function ObservedDocsModal({
                                                 </div>
                                             </div>
                                         </div>
-                                        {/*
+
+                                        {/* ✅ SECCIÓN DE IMÁGENES - Mejorada para manejar tanto strings como objetos */}
                                         {Array.isArray(images) && images.length > 0 && (
                                             <div className="px-5 pb-4">
-                                                <h4 className="font-semibold text-slate-900 text-sm mb-3">
-                                                    Capturas ({images.length})
+                                                <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                                                    <ImageIcon className="w-4 h-4 text-slate-600" />
+                                                    Capturas de pantalla ({images.length})
                                                 </h4>
 
                                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                                     {images.map((img: any, idx: number) => {
-                                                        const url =
-                                                            typeof img === "string"
-                                                                ? img
-                                                                : `${API_URL_DOCUMENTS}/${img.image_path}`;
+                                                        // ✅ Determinar si es string u objeto
+                                                        const isString = typeof img === "string";
+                                                        
+                                                        // ✅ Construir URL correctamente
+                                                        let imageUrl = '';
+                                                        if (isString) {
+                                                            // Si es string y ya es URL completa
+                                                            if (img.startsWith('http://') || img.startsWith('https://')) {
+                                                                imageUrl = img;
+                                                            } else {
+                                                                // Si es string pero ruta relativa
+                                                                imageUrl = `${API_URL_DOCUMENTS}/${img}`;
+                                                            }
+                                                        } else {
+                                                            // Si es objeto
+                                                            const path = img?.image_path || img?.path || img?.url || '';
+                                                            if (path.startsWith('http://') || path.startsWith('https://')) {
+                                                                imageUrl = path;
+                                                            } else {
+                                                                imageUrl = `${API_URL_DOCUMENTS}/${path}`;
+                                                            }
+                                                        }
+                                                        
+                                                        // ✅ Obtener nombre de archivo
+                                                        const fileName = isString 
+                                                            ? imageUrl.split('/').pop() || `captura-${idx + 1}.png`
+                                                            : (img?.file_name || img?.name || `captura-${idx + 1}.png`);
+                                                        
+                                                        console.log(`🖼️ Imagen ${idx}:`, {
+                                                            tipo: isString ? 'string' : 'objeto',
+                                                            original: img,
+                                                            url: imageUrl,
+                                                            fileName
+                                                        });
+                                                        
+                                                        if (!imageUrl) {
+                                                            console.warn('⚠️ URL vacía para imagen:', img);
+                                                            return null;
+                                                        }
+                                                        
                                                         return (
-                                                            <div key={img.image_id ?? `${url}-${idx}`} className="group relative">
+                                                            <div key={img?.image_id ?? `${imageUrl}-${idx}`} className="group relative">
                                                                 <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
                                                                     <img
-                                                                        src={url}
-                                                                        alt={img.file_name ?? `captura-${idx + 1}`}
+                                                                        src={imageUrl}
+                                                                        alt={fileName}
                                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                                        onClick={() => window.open(url, "_blank")}
+                                                                        onClick={() => window.open(imageUrl, "_blank")}
+                                                                        onError={(e) => {
+                                                                            console.error('❌ Error cargando imagen:', imageUrl);
+                                                                            console.error('❌ Datos originales:', img);
+                                                                            // Mostrar placeholder en caso de error
+                                                                            const target = e.currentTarget;
+                                                                            target.style.display = 'none';
+                                                                            const parent = target.parentElement;
+                                                                            if (parent) {
+                                                                                parent.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center bg-red-50"><span class="text-xs text-red-600 mb-1">Error</span><span class="text-[10px] text-red-400">No se pudo cargar</span></div>';
+                                                                            }
+                                                                        }}
                                                                     />
                                                                 </div>
+                                                                <p className="text-xs text-slate-600 mt-1 truncate" title={fileName}>
+                                                                    {fileName}
+                                                                </p>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             </div>
                                         )}
-                                        
-                                        
+
                                         <div className="px-5 pb-4 flex gap-2">
                                             <button
                                                 onClick={() => {
                                                     const url = getDocumentUrl(docFilePath);
-                                                    if (!url) return;
+                                                    if (!url) {
+                                                        console.warn('⚠️ No hay URL de documento');
+                                                        return;
+                                                    }
                                                     window.open(url, "_blank");
                                                 }}
                                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -234,7 +292,10 @@ export function ObservedDocsModal({
                                             <button
                                                 onClick={() => {
                                                     const url = getDocumentUrl(docFilePath);
-                                                    if (!url) return;
+                                                    if (!url) {
+                                                        console.warn('⚠️ No hay URL de documento para descargar');
+                                                        return;
+                                                    }
 
                                                     const link = document.createElement("a");
                                                     link.href = url;
@@ -244,14 +305,12 @@ export function ObservedDocsModal({
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
-
                                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <Download className="w-4 h-4" />
                                                 Descargar
                                             </button>
                                         </div>
-                                        */}
                                     </div>
                                 );
                             })}

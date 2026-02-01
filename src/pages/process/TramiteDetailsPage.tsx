@@ -8,7 +8,7 @@ import { ConstanciaStatus } from '@/shared/components/ConstanciaStatus';
 import { Timeline } from '@/shared/components/Timeline';
 import { useEffect, useState } from 'react';
 import Logo from "@/shared/ui/Logo"
-import { API_URL } from "@/utils/api";
+import { API_URL, API_URL_DOCUMENTS } from "@/utils/api";
 import { Link } from "react-router-dom";
 import {
     Search,
@@ -35,7 +35,8 @@ import {
     FileX,
     History,
     ChevronUp,
-    ChevronDown
+    ChevronDown,
+    Eye
 } from 'lucide-react';
 
 
@@ -61,7 +62,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     useEffect(() => {
         setData(tramiteData);
     }, [tramiteData]);
-
+    console.log("Trámite data:", data);
 
     if (isLoading) {
         return (
@@ -95,7 +96,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
 
     const isPublicado = uiStatus === "publicado";
 
-    console.log("documents[0]:", data?.documents?.[0]);
 
     const openImageModal = (images, startIndex) => {
         setAllImages(images);
@@ -120,8 +120,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     const handleTimelineClick = (historyItem: any) => {
         const st = String(historyItem?.new_status ?? historyItem?.status ?? "").toLowerCase();
 
-        console.log("CLICK timeline item:", historyItem);
-        console.log("STATUS detectado:", st);
 
 
         if (st === "observado" || st === "rechazado") {
@@ -150,7 +148,8 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
             en_revision: 'bg-blue-100 text-blue-800 border-blue-200',
             aprobado: 'bg-green-100 text-green-800 border-green-200',
             observado: 'bg-red-100 text-red-800 border-red-200',
-            requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200'
+            requiere_correccion: 'bg-orange-100 text-orange-800 border-orange-200',
+            publicado: 'bg-purple-100 text-purple-800 border-purple-200'
         };
         return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
@@ -173,6 +172,8 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                 return <Clock className="w-5 h-5 text-blue-600" />;
             case 'requiere_correccion':
                 return <AlertCircle className="w-5 h-5 text-orange-600" />;
+            case 'publicado':
+                return <CheckCircle2 className="w-5 h-5 text-purple-600" />;
             default:
                 return <Clock className="w-5 h-5 text-gray-600" />;
         }
@@ -215,6 +216,8 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         const res = await fetch(url);
         const json = await res.json();
 
+        console.log("Refresh trámite response:", json);
+
         if (!res.ok || !json?.success) {
             throw new Error(json?.message || "No se pudo actualizar el trámite");
         }
@@ -239,7 +242,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
             pendiente: 'Pendiente de revisión',
             en_revision: 'En revisión',
             aprobado: 'Aprobado',
-            observado: 'observado',
+            observado: 'Observado',
             requiere_correccion: 'Requiere correcciones',
             publicado: 'Publicado'
         };
@@ -318,10 +321,54 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
             </div>
         );
     }
+
+    const getDocumentTypeLabel = (type: string) => {
+        const map: Record<string, string> = {
+            tesis_pdf: "Tesis completa",
+            hoja_autorizacion: "Hoja de autorización",
+            constancia_empastado: "Constancia de empastado",
+            constancia_originalidad: "Reporte de originalidad",
+        };
+        return map[type] || type || "Documento";
+    };
+
+    const getDocumentUrl = (filePath: string) => {
+        if (!filePath) return "";
+        if (filePath.startsWith("http")) return filePath;
+        return `${API_URL_DOCUMENTS}/${filePath}`;
+    };
+
+    const parseBackendDate = (dateString: any) => {
+        if (!dateString) return null;
+        let s = String(dateString).trim();
+        if (s.includes(" ")) s = s.replace(" ", "T");
+        s = s.replace(/(\.\d{3})\d+/, "$1");
+        const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(s);
+        if (!hasTZ) s += "Z";
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const formatDate = (dateString: any) => {
+        const d = parseBackendDate(dateString);
+        if (!d) return "Sin fecha";
+        return d.toLocaleString("es-PE", {
+            timeZone: "America/Lima",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
     //modal de documentos observados desde el historial
     const openObservedDocsModalIfObserved = (item) => {
         const st = String(item?.new_status ?? item?.status ?? "").toLowerCase();
-        if (st !== "observado") return;
+        
+        
+        if (st !== "observado" && st !== "rechazado") return;
 
         setSelectedObservedEvent(item);
         setShowObservedDocsModal(true);
@@ -330,7 +377,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
     //diseño del modal de detalles del historial
     const HistoryDetailsModal = () => {
         if (!showHistoryModal || !selectedHistory) return null;
-        console.log(selectedHistory)
         const hasImages = selectedHistory.images && selectedHistory.images.length > 0;
         const hasObservations = selectedHistory.description;
 
@@ -369,10 +415,10 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 <div className="bg-slate-50 rounded-lg p-4">
                                     <p className="text-xs text-slate-500 mb-1">Estado</p>
                                     <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedHistory.status)}`}>
-                                        {getStatusLabel(selectedHistory.status) == "rechazado" ? "Observado" : getStatusLabel(selectedHistory.status)}
+                                        {getStatusLabel(selectedHistory.status)}
                                     </span>
                                 </div>
-                                {selectedHistory.document_type && selectedHistory.document_type && (
+                                {selectedHistory.document_type && (
                                     <div className="bg-blue-50 rounded-lg p-4">
                                         <p className="text-xs text-slate-500 mb-1">Documento</p>
                                         <div className="flex items-center gap-2">
@@ -399,35 +445,6 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     </div>
                                 </div>
                             )}
-                            {/*
-                            {hasImages ? (
-                                <div>
-                                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                                        <ImageIcon className="w-4 h-4 text-blue-600" />
-                                        Capturas de pantalla adjuntas ({selectedHistory.images.length})
-                                    </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        {selectedHistory.images.map((image, idx) => (
-                                            <div key={idx} className="group relative">
-                                                <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                                                    <img
-                                                        src={image}
-                                                        alt={`Captura ${idx + 1}`}
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                        onClick={() => window.open(image, '_blank')}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-slate-50 rounded-lg">
-                                    <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-slate-500 text-sm">No hay capturas adjuntas</p>
-                                </div>
-                            )}
-                            */}
                         </div>
                     </div>
 
@@ -444,6 +461,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
         );
     };
 
+
     return (
         <>
             <div className="h-16 bg-secondary flex items-center px-6">
@@ -458,6 +476,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                         <ArrowLeft className="w-4 h-4" />
                         Realizar nueva búsqueda
                     </button>
+                    
                     <HistoryDetailsModal />
 
                     <ObservedDocsModal
@@ -466,16 +485,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                         documents={data?.documents ?? []}
                         observedEvent={selectedObservedEvent}
                     />
-                    {/*
-                    <ImageModal
-                        show={showImageModal}
-                        images={allImages}
-                        currentIndex={currentImageIndex}
-                        onClose={closeImageModal}
-                        onNext={nextImage}
-                        onPrev={prevImage}
-                    />
-                    */}
+
                     {showResubmitModal && (
                         <ResubmitModal
                             applicationId={data?.applicationId}
@@ -510,10 +520,9 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
 
                             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8">
                                 <div className="flex-1">
-                                    <h1 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">
+                                    <h1 className="md:text-xl font-bold text-gray-900 mb-2">
                                         {data.projectName}
                                     </h1>
-                                    
                                 </div>
                                 <div className={`px-4 py-2 rounded-lg ${getStatusColor(uiStatus)} text-sm font-bold border-2 flex items-center gap-2`}>
                                     {getStatusIcon(uiStatus)}
@@ -527,9 +536,9 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 createdAt={data.created_at || data.createdAt}
                                 hidePhone={activeTab === "docente"}  
                             />
-
                         </div>
-                        {/* BLOQUE: Autores (compacto y suave) */}
+
+                        {/* BLOQUE: Autores */}
                         {authorNames.length > 0 && (
                             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
                                 <div className="flex items-center gap-2 mb-4">
@@ -573,11 +582,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                                         {name}
                                                     </p>
                                                     <p className="text-[11px] text-slate-500">
-                                                        {idx === 0
-                                                            ? authorNames.length > 1
-                                                                ? "Autor"
-                                                                : "Autor "
-                                                            : ""}
+                                                        {idx === 0 ? (authorNames.length > 1 ? "Autor" : "Autor") : ""}
                                                     </p>
                                                 </div>
                                             </div>
@@ -593,7 +598,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     <FileText className="w-6 h-6 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Estado de Documentos</h2>
+                                    <h2 className="md:text-xl font-bold text-gray-900 mb-2">Estado de Documentos</h2>
                                     <p className="text-sm text-slate-600">Revisa el estado de cada documento presentado</p>
                                 </div>
                             </div>
@@ -608,10 +613,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 ))}
                             </div>
                         </div>
-                        <div className='pb-8'>
-                            {/*<HistorialTable timeline={tramiteData.timeline} />*/}
-                            {/*<RejectionHistorySection rejectionHistory={doc.rejection_history} /> */}
-                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                                 <div className="flex items-center gap-3 mb-6">
@@ -619,7 +621,7 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                         <FileText className="w-6 h-6 text-purple-600" />
                                     </div>
                                     <div>
-                                        <h2 className="md:textext-lgt-xl font-bold text-gray-900 mb-2">Constancia</h2>
+                                        <h2 className="md:text-xl font-bold text-gray-900 mb-2">Constancia</h2>
                                         <p className="text-sm text-slate-600">Estado de tu certificado</p>
                                     </div>
                                 </div>
@@ -629,16 +631,12 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                     showResubmitButton={hasObservedDocs}
                                     onOpenResubmit={() => setShowResubmitModal(true)}
                                 />
-
                             </div>
 
-
                             <GeneralHistorySection
-
                                 history={data.timeline ?? []}
                                 onObservedClick={openObservedDocsModalIfObserved}
                             />
-
                         </div>
 
                         {/* Información adicional */}
@@ -650,15 +648,13 @@ export function TramiteDetailsPage({ tramiteData, activeTab, onReset }) {
                                 <div className="text-sm">
                                     <p className="font-bold text-blue-900 mb-3 text-base">Información importante</p>
                                     <ul className="space-y-2 text-blue-800">
-
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
                                             <span>El tiempo de procesamiento es de 5 días hábiles</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="text-blue-500 font-bold mt-1">•</span>
-                                            <span>Si tiene dudas, puede contactar a la Unidad de Investigación: </span>
-                                            <span>repositorio@unamba.edu.pe</span>
+                                            <span>Si tiene dudas, puede contactar a la Unidad de Investigación: repositorio@unamba.edu.pe</span>
                                         </li>
                                     </ul>
                                 </div>

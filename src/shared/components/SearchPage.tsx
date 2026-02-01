@@ -44,23 +44,20 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
             console.log('📦 Datos recibidos:', result);
 
             if (response.ok && result.success) {
-                const transformedData = {
-                    applicationId: result.data.application_id,
-                    applicationType: result.data.application_type,
-                    status: result.data.status,
-                    createdAt: result.data.created_at,
-                    projectName: result.data.project_name,
-                    applicant: result.data.applicant,
-                    authors: result.data.applicant?.authors ?? [],
-                    documents: result.data.documents,
-                    publication_link: result.data.publication_link,
-                    timeline: result.data.timeline
-                };
-
-                console.log('✅ Datos transformados:', transformedData);
-                onSearch(transformedData);
+                // ✅ El backend ya devuelve result.data con toda la estructura correcta
+                console.log('✅ Datos recibidos del backend:', result.data);
+                console.log('📸 Documentos con imágenes:', 
+                    (result.data.documents || []).filter(d => d.images && d.images.length > 0).length
+                );
+                console.log('📝 Eventos en timeline:', (result.data.timeline || []).length);
+                console.log('🖼️ Eventos con imágenes:', 
+                    (result.data.timeline || []).filter(t => t.images && t.images.length > 0).length
+                );
+                
+                // ✅ Pasar directamente result.data ya que viene con la estructura correcta
+                onSearch(result.data);
             } else {
-                setError(result.message || 'No se encontró ningún trámite con ese DNI/código. Verifica que el DNI sea correcto y corresponda al tipo seleccionado.');
+                setError(result.message || 'No se encontró ningún trámite con ese DNI. Verifica que el DNI sea correcto y corresponda al tipo seleccionado.');
             }
         } catch (error) {
             console.error('❌ Error completo:', error);
@@ -87,15 +84,14 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
             <div className="h-16 bg-secondary shadow-lg flex items-center px-6">
                 <Logo />
             </div>
-            <div className="min-h-screen max-w-5xl mx-auto p-6 md:p-8een bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
                 <div className="max-w-7xl mx-auto p-6 md:p-8">
                     <div className="text-center mb-8">
-
                         <h1 className="text-2xl font-bold text-slate-900 mb-3">
                             Consulta el Estado de tu Trámite
                         </h1>
                         <p className="text-1xl text-slate-600">
-                            Selecciona tu tipo de trámite e ingresa tu DNI o código
+                            Selecciona tu tipo de trámite e ingresa tu DNI
                         </p>
                     </div>
 
@@ -122,8 +118,8 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                         </button>
                     </div>
 
-                    <div className=" lg:col-span-2 mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-                        <div className="mb-6 p-4 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                    <div className="lg:col-span-2 mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+                        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                             <p className="text-center">
                                 <span className="font-semibold text-slate-800 text-base">
                                     {activeTab === 'estudiante' ? '🎓 Búsqueda de Tesis' : '👨‍🏫 Búsqueda de Informes'}
@@ -141,7 +137,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                         <div className="space-y-6">
                             <div>
                                 <label htmlFor="dni" className="block text-sm font-semibold text-slate-700 mb-2">
-                                    {activeTab === 'estudiante' ? 'Número de DNI (8 dígitos)' : 'Número de DNI (8 dígitos)'}
+                                    Número de DNI (8 dígitos)
                                 </label>
                                 <input
                                     type="text"
@@ -152,7 +148,7 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                                         setDni(value);
                                         setError('');
                                     }}
-                                    placeholder={activeTab === 'estudiante' ? 'Ej: 12345678' : 'Ej: 12345678'}
+                                    placeholder="Ej: 12345678"
                                     className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg"
                                 />
                                 {error && (
@@ -191,14 +187,14 @@ export function SearchPage({ activeTab, onTabChange, onSearch }) {
                                 <div className="text-sm text-slate-700">
                                     <p className="font-semibold mb-2">Nota importante:</p>
                                     <p className="mb-2">
-                                        Ingresa el {activeTab === 'estudiante' ? 'DNI' : 'DNI'} que utilizaste al momento de realizar tu solicitud.
+                                        Ingresa el DNI que utilizaste al momento de realizar tu solicitud.
                                     </p>
                                     <p className="text-slate-600">
                                         Si no encuentras tu trámite, verifica que:
                                     </p>
                                     <ul className="list-disc list-inside mt-2 space-y-1 text-slate-600 ml-2">
                                         <li>Has seleccionado el tipo correcto (Estudiante/Docente)</li>
-                                        <li>El {activeTab === 'estudiante' ? 'DNI' : 'DNI'} ingresado es correcto</li>
+                                        <li>El DNI ingresado es correcto</li>
                                         <li>Tu solicitud ha sido registrada en el sistema</li>
                                     </ul>
                                 </div>

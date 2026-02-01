@@ -24,7 +24,7 @@ import {
 
 import { API_URL_DOCUMENTS } from "@/utils/api";
 import { authFetch } from "@/utils/authFetch";
-import { data, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Section from "@/shared/components/Section";
 import InfoRow from "@/shared/components/InfoRow";
 import JuryItem from "@/shared/components/JuradoItem";
@@ -57,33 +57,10 @@ export default function RequestDetailsPage() {
                 const applicationId = getApplicationId();
                 const response = await authFetch(`/applications/details/${applicationId}`);
 
-
                 if (!response.ok) {
                     throw new Error('Error al cargar los detalles');
                 }
-
                 const result = await response.json();
-                console.log('📦 Datos completos de la aplicación:', result.data);
-                console.log('📄 Documentos:', result.data.documents);
-                console.log('📊 Estado de aplicación:', result.data.status);
-                console.log('📜 Historial:', result.data.history);
-                console.log("DOC SAMPLE:", result.data.documents?.[0]);
-                console.log("DOCS:", result.data.documents?.map(d => ({
-                    id: d.document_id,
-                    type: d.document_type,
-                    status: d.status,
-                    reason: d.rejection_reason,
-                    hist: d.rejection_history?.length,
-                })));
-
-                console.log("HISTORY:", result.data.history?.map(h => ({
-                    id: h.history_id,
-                    docId: h.document_id,
-                    docType: h.document_type,
-                    status: h.new_status,
-                    date: h.change_date,
-                })));
-                console.log("RAW change_date:", result.data.history?.[0]?.change_date);
                 setApplicationData(result.data);
             } catch (err) {
                 console.error('❌ Error al cargar:', err);
@@ -130,14 +107,14 @@ export default function RequestDetailsPage() {
         const first = toTitleCase(p?.first_name ?? p?.name ?? p?.nombres ?? p?.firstName ?? "");
 
         if (!last && !first) {
-           
+
             const full = toTitleCase(p?.full_name ?? p?.fullName ?? "");
             return full || "—";
         }
 
         if (!last) return first;
         if (!first) return last;
-        return `${last}, ${first}`; 
+        return `${last}, ${first}`;
     };
 
 
@@ -291,7 +268,7 @@ export default function RequestDetailsPage() {
 
     const normalizeStatus = (status: any) => {
         if (typeof status === "string") return status.toLowerCase();
-        return ""; 
+        return "";
     };
 
     const getStatusColor = (status: any) => {
@@ -635,7 +612,7 @@ export default function RequestDetailsPage() {
         const st = String(item?.new_status ?? "").toLowerCase();
         if (st !== "observado") return;
 
-        setSelectedObservedEvent(item);   
+        setSelectedObservedEvent(item);
         setShowDocumentModal(true);
     };
 
@@ -648,7 +625,7 @@ export default function RequestDetailsPage() {
         return Number.isNaN(d.getTime()) ? null : d.getTime();
     };
 
-    const WINDOW_MS = 10 * 60 * 1000; 
+    const WINDOW_MS = 10 * 60 * 1000;
 
     const getObservedDocumentsForEvent = (event: any) => {
         if (!event || !applicationData) return [];
@@ -659,50 +636,47 @@ export default function RequestDetailsPage() {
         const eventTime = toTime(event.change_date);
         if (eventTime === null) return [];
 
+        // ✅ Filtrar registros del historial que son del mismo timestamp y están observados
         const relatedObservedHistory = (applicationData.history ?? []).filter((item: any) => {
             const itemTime = toTime(item.change_date);
-
-        
-            console.log("🔍 Comparando item:", {
-                document_id: item.document_id,
-                itemTime,
-                eventTime,
-                timesMatch: itemTime === eventTime,
-                status: item.new_status,
-                comment: item.comment || item.comentario
-            });
 
             if (!item.document_id || itemTime === null) return false;
             if (itemTime !== eventTime) return false;
             return norm(item.new_status) === "observado";
         });
 
-        console.log("🔍 relatedObservedHistory encontrado:", relatedObservedHistory);
-
         const byDoc = new Map<string, any>();
         for (const h of relatedObservedHistory) {
             if (!byDoc.has(h.document_id)) byDoc.set(h.document_id, h);
         }
 
+        // ✅ Mapear con la información del documento y el archivo histórico
         const result = Array.from(byDoc.values())
             .map((h: any) => {
                 const doc = (applicationData.documents ?? []).find(
                     (d: any) => d.document_id === h.document_id
                 );
 
-                return doc ? {
+                if (!doc) return null;
+
+                return {
                     ...doc,
                     _history: h,
-                    _observationText: h.comment || h.comentario || h.observation
-                } : null;
+                    _observationText: h.comment || h.comentario || h.observation,
+                    // ✅ IMPORTANTE: Usar el archivo histórico del historial, no el actual
+                    _historicalPath: h.file_path_historic || h.file_path_historico,
+                    _historicalName: h.file_name_historic || h.file_name_historico,
+                    // ✅ Buscar imágenes asociadas a este registro de historial
+                    _historicalImages: (doc.images || []).filter((img: any) =>
+                        img.history_id === h.history_id
+                    )
+                };
             })
             .filter(Boolean);
 
         console.log("🔍 Documentos observados finales:", result);
         return result;
-
     };
-
 
 
     const normalizeKey = (v: any) =>
@@ -829,7 +803,7 @@ export default function RequestDetailsPage() {
                     </div>
                 </div>
 
-            
+
                 <div className="flex-1 min-h-0">
                     <div className={`h-full pr-2 space-y-4 ${showAll ? "overflow-y-auto" : ""}`}>
                         {visibleHistory.map((item, index) => {
@@ -899,7 +873,7 @@ export default function RequestDetailsPage() {
                     </div>
                 </div>
 
-                
+
                 {hasMore && (
                     <button
                         type="button"
@@ -965,7 +939,15 @@ export default function RequestDetailsPage() {
         if (!showDocumentModal) return null;
 
         const rejectedDocs = getObservedDocumentsForEvent(selectedObservedEvent);
-
+        rejectedDocs.forEach((doc, idx) => {
+            console.log(`📄 Doc ${idx}:`, {
+                document_id: doc.document_id,
+                document_type: doc.document_type,
+                _historicalImages: doc._historicalImages,
+                _history: doc._history,
+                historyImages: doc._history?.images
+            });
+        });
         console.log("📋 DocumentDetailsModal - rejectedDocs:", rejectedDocs);
 
         const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1005,9 +987,7 @@ export default function RequestDetailsPage() {
                             onClick={() => setShowDocumentModal(false)}
                             className="text-white hover:text-secondary hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <X className="w-6 h-6" />
                         </button>
                     </div>
 
@@ -1019,7 +999,9 @@ export default function RequestDetailsPage() {
                                         document_id: doc.document_id,
                                         _history: doc._history,
                                         _observationText: doc._observationText,
-                                        pickResult: pickDocObservation(doc)
+                                        _historicalPath: doc._historicalPath,
+                                        _historicalName: doc._historicalName,
+                                        _historicalImages: doc._historicalImages || []
                                     });
 
                                     return (
@@ -1034,13 +1016,16 @@ export default function RequestDetailsPage() {
                                                             <h3 className="font-semibold text-slate-900 text-lg">
                                                                 {getDocumentTypeLabel(doc.document_type)}
                                                             </h3>
-                                                            <p className="text-sm text-slate-600 mt-1">{doc.file_name}</p>
+                                                            {/* ✅ Mostrar el nombre del archivo histórico */}
+                                                            <p className="text-sm text-slate-600 mt-1">
+                                                                {doc._historicalName || doc.file_name}
+                                                            </p>
                                                             <div className="flex items-center gap-3 mt-2">
                                                                 <span className="text-xs text-slate-500">
                                                                     📦 {doc.size_kb} KB
                                                                 </span>
                                                                 <span className="text-xs text-slate-500">
-                                                                    📅 {formatDate(doc.upload_date)}
+                                                                    📅 {formatDate(doc._history?.change_date || doc.upload_date)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -1054,7 +1039,6 @@ export default function RequestDetailsPage() {
                                                         {getStatusLabel(doc._history?.new_status || doc.status)}
                                                     </span>
                                                 </div>
-
                                             </div>
 
                                             <div className="px-5 py-4">
@@ -1083,24 +1067,20 @@ export default function RequestDetailsPage() {
                                                                     return stripObservationPrefix(rawObs, doc);
                                                                 })()}
                                                             </div>
-
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
-
-                                            {/*
-                                            doc.images && doc.images.length > 0 && (
+                                            {/* ✅ Mostrar imágenes históricas asociadas a este registro */}
+                                            {doc._historicalImages && doc._historicalImages.length > 0 && (
                                                 <div className="px-5 pb-4">
                                                     <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                                                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                        </svg>
-                                                        Capturas de pantalla ({doc.images.length})
+                                                        <ImageIcon className="w-4 h-4 text-slate-600" />
+                                                        Capturas de pantalla ({doc._historicalImages.length})
                                                     </h4>
                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                                        {doc.images.map((image, imgIndex) => (
+                                                        {doc._historicalImages.map((image, imgIndex) => (
                                                             <div key={imgIndex} className="group relative">
                                                                 <div className="aspect-square rounded-lg overflow-hidden bg-white border-2 border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
                                                                     <img
@@ -1117,9 +1097,9 @@ export default function RequestDetailsPage() {
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )
-                                        */}
-                                            {/*
+                                            )}
+
+                                            {/* ✅ Botones para ver/descargar el archivo HISTÓRICO */}
                                             <div className="px-5 pb-4 flex gap-2">
                                                 <button
                                                     onClick={() => {
@@ -1129,14 +1109,14 @@ export default function RequestDetailsPage() {
                                                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <Eye className="w-4 h-4" />
-                                                    Ver Documento
+                                                    Ver Documento Observado
                                                 </button>
                                                 <button
                                                     onClick={() => {
                                                         const url = getDocumentUrl(doc._historicalPath || doc.file_path);
                                                         const link = document.createElement('a');
                                                         link.href = url;
-                                                        link.download = doc.file_name;
+                                                        link.download = doc._historicalName || doc.file_name;
                                                         link.target = '_blank';
                                                         document.body.appendChild(link);
                                                         link.click();
@@ -1147,18 +1127,15 @@ export default function RequestDetailsPage() {
                                                     <Download className="w-4 h-4" />
                                                     Descargar
                                                 </button>
-                                            </div>*/}
+                                            </div>
                                         </div>
                                     );
-
                                 })}
                             </div>
                         ) : (
                             <div className="text-center py-12">
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m-7 5h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                                    <FileText className="w-8 h-8 text-slate-500" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
                                     Sin documentos para esta observación
@@ -1168,7 +1145,7 @@ export default function RequestDetailsPage() {
                         )}
                     </div>
                 </div>
-            </div >
+            </div>
         );
     };
 
@@ -1356,7 +1333,7 @@ export default function RequestDetailsPage() {
                                         throw new Error('Error al guardar');
                                     }
 
-                                    
+
                                     setApplicationData({
                                         ...applicationData,
                                         publication_link: link
