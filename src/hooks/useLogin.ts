@@ -1,11 +1,14 @@
 import { ILoginErrors, ILoginForm, ILoginResponse } from "@/common/interfaces/login.interface";
 import { authService } from "@/services/authService";
 import { toastService } from "@/services/toastService";
+import { Navigate, useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 
 export const useLogin = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<ILoginForm>({
+    
     email: "",
     password: ""
   });
@@ -84,7 +87,8 @@ export const useLogin = () => {
         await toastService.success(res.message || "Inicio de sesión exitoso");
 
         
-        window.location.replace("/dashboard");
+        navigate("/dashboard", { replace: true });
+      
       }
     } catch (error: any) {
       console.error("Error en login:", error);
