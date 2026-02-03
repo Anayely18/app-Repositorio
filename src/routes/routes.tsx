@@ -43,7 +43,7 @@ export const routes = [
         element: <TramiteStatusApp />
     },
     {
-        path: "/repo/dashboard",
+        path: "/dashboard",
         element: (
             <ProtectedRoute>
                 <Layout />
