@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children }: Props) {
 
   if (!token) {
     // tu login está en /admin
-    return <Navigate to="/admi-sigori2025" replace state={{ from: location }} />;
+    return <Navigate to="/rootrepo" replace state={{ from: location }} />;
   }
 
   // si lo usas como wrapper -> renderiza children

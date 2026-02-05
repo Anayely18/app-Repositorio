@@ -2,7 +2,7 @@ import { API_URL } from "@/utils/api";
 import { authService } from "@/services/authService";
 
 type AuthFetchOptions = RequestInit & {
-  json?: any; // si mandas json, se serializa y agrega Content-Type
+  json?: any; 
 };
 
 export async function authFetch(path: string, options: AuthFetchOptions = {}) {
@@ -22,10 +22,10 @@ export async function authFetch(path: string, options: AuthFetchOptions = {}) {
 
   const res = await fetch(url, { ...options, headers, body });
 
-  // Si el token caducó o es inválido
+
   if (res.status === 401) {
     authService.clearSession();
-    window.location.replace("repo/admi-sigori2025"); // tu login está en /admin
+    window.location.replace("repo/rootrepo");
   }
 
   return res;

@@ -2,7 +2,7 @@ export const API_URL = "http://192.168.1.48:3000/api";
 export const API_URL_DOCUMENTS = "";
 // --- helpers seguros (sin importar authService para evitar ciclos) ---
 const TOKEN_KEY = "token";
-const LOGIN_ROUTE = "/admi-sigori2025";
+const LOGIN_ROUTE = "/rootrepo";
 
 function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);

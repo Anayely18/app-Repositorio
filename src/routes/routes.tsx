@@ -13,7 +13,7 @@ import ProtectedRoute from "./ProtectedRoute";
 
 export const routes = [
     {
-        path: '/admi-sigori2025',
+        path: '/rootrepo',
         element: <Login />
     },
     {

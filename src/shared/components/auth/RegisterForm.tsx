@@ -159,7 +159,7 @@ export default function RegisterForm({
 
                 <span className="block text-end text-xs">
                     ¿Ya tienes una cuenta?{" "}
-                    <Link to="/admi-sigori2025" className="text-secondary underline">
+                    <Link to="/rootrepo" className="text-secondary underline">
                         click aquí
                     </Link>
                 </span>
