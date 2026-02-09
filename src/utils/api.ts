@@ -1,5 +1,5 @@
-export const API_URL = "http://192.168.1.48:3000/api";
-export const API_URL_DOCUMENTS = "";
+export const API_URL = "/api";
+export const API_URL_DOCUMENTS = "https://vrin.unamba.edu.pe/api";
 // --- helpers seguros (sin importar authService para evitar ciclos) ---
 const TOKEN_KEY = "token";
 const LOGIN_ROUTE = "/rootrepo";
