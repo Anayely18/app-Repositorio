@@ -636,18 +636,37 @@ export default function RequestDetailsPage() {
         const eventTime = toTime(event.change_date);
         if (eventTime === null) return [];
 
+        // ✅ CAMBIO: Usar ventana de tiempo en lugar de igualdad exacta
+        const WINDOW_MS = 10 * 60 * 1000; // 10 minutos
+
         // ✅ Filtrar registros del historial que son del mismo timestamp y están observados
         const relatedObservedHistory = (applicationData.history ?? []).filter((item: any) => {
             const itemTime = toTime(item.change_date);
 
             if (!item.document_id || itemTime === null) return false;
-            if (itemTime !== eventTime) return false;
+            
+            // ✅ CAMBIO: Comparar con ventana de tiempo
+            const timeDiff = Math.abs(itemTime - eventTime);
+            if (timeDiff > WINDOW_MS) return false;
+            
             return norm(item.new_status) === "observado";
         });
 
+        console.log("🔍 Registros observados relacionados:", relatedObservedHistory);
+
         const byDoc = new Map<string, any>();
         for (const h of relatedObservedHistory) {
-            if (!byDoc.has(h.document_id)) byDoc.set(h.document_id, h);
+            // ✅ Guardar el más cercano en tiempo si hay múltiples
+            const existing = byDoc.get(h.document_id);
+            if (!existing) {
+                byDoc.set(h.document_id, h);
+            } else {
+                const existingTime = toTime(existing.change_date);
+                const newTime = toTime(h.change_date);
+                if (Math.abs(newTime - eventTime) < Math.abs(existingTime - eventTime)) {
+                    byDoc.set(h.document_id, h);
+                }
+            }
         }
 
         // ✅ Mapear con la información del documento y el archivo histórico
@@ -657,7 +676,16 @@ export default function RequestDetailsPage() {
                     (d: any) => d.document_id === h.document_id
                 );
 
-                if (!doc) return null;
+                if (!doc) {
+                    console.warn(`⚠️ Documento ${h.document_id} no encontrado en documents[]`);
+                    return null;
+                }
+
+                console.log(`✅ Documento encontrado:`, {
+                    document_id: doc.document_id,
+                    document_type: doc.document_type,
+                    history_record: h
+                });
 
                 return {
                     ...doc,
@@ -667,14 +695,14 @@ export default function RequestDetailsPage() {
                     _historicalPath: h.file_path_historic || h.file_path_historico,
                     _historicalName: h.file_name_historic || h.file_name_historico,
                     // ✅ Buscar imágenes asociadas a este registro de historial
-                    _historicalImages: (doc.images || []).filter((img: any) =>
-                        img.history_id === h.history_id
-                    )
+                    _historicalImages: h.images || []
                 };
             })
             .filter(Boolean);
 
-        console.log("🔍 Documentos observados finales:", result);
+        console.log("✅ Documentos observados finales:", result);
+        console.log("📊 Total documentos encontrados:", result.length);
+        
         return result;
     };
 
