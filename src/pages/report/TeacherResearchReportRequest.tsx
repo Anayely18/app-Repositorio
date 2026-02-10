@@ -5,7 +5,7 @@ import { FormInput } from "@/shared/components/forms/FormInput";
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox";
 import Logo from "@/shared/ui/Logo";
 import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, Loader, X, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom"
+import { Link, useNavigate  } from "react-router-dom"
 import { useState } from "react";
 import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
@@ -18,6 +18,7 @@ type TopErr = { projectTitle?: string; terms?: string; truthful?: string; fundin
 export default function TeacherResearchReportRequest() {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
@@ -376,26 +377,26 @@ export default function TeacherResearchReportRequest() {
 
             <div className="flex gap-3 mb-3">
               <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  window.location.href = "/process";
-                }}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
-              >
-                Ir a seguimiento
-              </button>
+              onClick={() => {
+                setIsModalOpen(false);
+                navigate("/process");
+              }}
+            >
+              Ir a seguimiento
+            </button>
+
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  window.location.href = "/";
-                }}
-                className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
-              >
-                Entendido
-              </button>
+              onClick={() => {
+                setIsModalOpen(false);
+                navigate("/");
+              }}
+            >
+              Entendido
+            </button>
+
 
             </div>
           </div>

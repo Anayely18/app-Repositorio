@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Clock, FileText, ImageIcon, XCircle, ZoomIn } from "lucide-react";
-
+import { API_URL_DOCUMENTS } from "@/utils/api";
 export function DocumentCard({ doc, onOpenImage }) {
     const getStatusColor = (status) => {
         const colors = {
@@ -48,6 +48,39 @@ export function DocumentCard({ doc, onOpenImage }) {
         return labels[status] || status;
     };
 
+    const buildImgUrl = (img) => {
+        const p = typeof img === "string" ? img : img?.image_path;
+        if (!p) return "";
+
+        if (/^https?:\/\//i.test(p)) return p;
+
+        const base = String(API_URL_DOCUMENTS ?? "").replace(/\/+$/, "");
+        const clean = String(p).replace(/^\/+/, "");
+        return `${base}/${clean}`;
+    };
+
+    const FALLBACK_SVG =
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300">
+      <rect width="100%" height="100%" fill="#f1f5f9"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+            font-family="Arial" font-size="16" fill="#64748b">
+        Sin imagen
+      </text>
+    </svg>
+  `);
+
+const imgSrc = (img) => {
+  if (!img) return "";
+  if (typeof img === "string") return img;
+  // si viene como objeto desde tu API:
+  if (img.image_id) return `/api/applications/images/${img.image_id}`; // recomendado (sin extensión)
+  if (img.image_path) return `/api/${img.image_path}`; // fallback si aún usas /api/uploads/...
+  return "";
+};
+
+
     const shouldShowObservations = doc.status === 'observado' ||
         doc.status === 'rechazado' ||
         doc.status === 'requiere_correccion';
@@ -78,7 +111,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                             </p>
                         </div>
                     </div>
-                    
+
                     {doc.images && doc.images.length > 0 && (
                         <div className="border-t-2 border-orange-200 pt-4">
                             <div className="flex items-center gap-2 mb-3">
@@ -87,31 +120,46 @@ export function DocumentCard({ doc, onOpenImage }) {
                                     Evidencia adjunta ({doc.images.length} {doc.images.length === 1 ? 'imagen' : 'imágenes'})
                                 </p>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                {doc.images.map((img, imgIndex) => (
-                                    <div
-                                        key={imgIndex}
-                                        className="relative group cursor-pointer aspect-square"
-                                        onClick={() => onOpenImage(doc.images, imgIndex)}
-                                    >
-                                        <div className="w-full h-full rounded-lg overflow-hidden border-2 border-orange-200 hover:border-orange-400 transition-all shadow-sm hover:shadow-md">
-                                            <img
-                                                src={img}
-                                                alt={`Evidencia ${imgIndex + 1}`}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                            />
-                                        </div>
-                                        <div className="absolute inset-0 bg-black/50 bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
-                                            <div className="bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                                                <ZoomIn className="w-5 h-5 text-slate-800" />
+                                {(doc.images ?? []).map((imgObj, imgIndex) => {
+                                    const url = buildImgUrl(imgObj);
+                                    return (
+                                        <div
+                                            key={imgIndex}
+                                            className="relative group cursor-pointer aspect-square"
+                                            onClick={() => onOpenImage((doc.images ?? []).map(buildImgUrl), imgIndex)}
+                                        >
+                                            <div className="w-full h-full rounded-lg overflow-hidden border-2 border-orange-200 hover:border-orange-400 transition-all shadow-sm hover:shadow-md">
+                                               <img
+  src={imgSrc(img)}
+  alt={`Evidencia ${imgIndex + 1}`}
+  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+  onError={(e) => {
+    const el = e.currentTarget;
+
+    // ✅ corta bucles sí o sí
+    if (el.dataset.fallback === "1") return;
+    el.dataset.fallback = "1";
+    el.onerror = null;
+
+    // ✅ no hace request, no puede fallar por rutas
+    el.src = FALLBACK_SVG;
+  }}
+/>
+
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/50 bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
+                                                <div className="bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                                    <ZoomIn className="w-5 h-5 text-slate-800" />
+                                                </div>
+                                            </div>
+                                            <div className="absolute bottom-1.5 right-1.5 bg-black/70 bg-opacity-70 text-white text-xs px-2 py-0.5 rounded font-mono">
+                                                {imgIndex + 1}/{doc.images.length}
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 right-1.5 bg-black/70 bg-opacity-70 text-white text-xs px-2 py-0.5 rounded font-mono">
-                                            {imgIndex + 1}/{doc.images.length}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <p className="text-xs text-orange-700 mt-3 flex items-center gap-1.5">
                                 <ZoomIn className="w-3.5 h-3.5" />
@@ -119,7 +167,7 @@ export function DocumentCard({ doc, onOpenImage }) {
                             </p>
                         </div>
                     )}
-                    
+
                 </div>
             )}
 

@@ -5,14 +5,14 @@ import { FormInput } from "@/shared/components/forms/FormInput"
 import { InfoCheckbox } from "@/shared/components/forms/InfoCheckbox"
 import Logo from "@/shared/ui/Logo"
 import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X, IdCard, ArrowLeft } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link,useNavigate } from "react-router-dom"
 import { useState, useRef } from "react"
 import { useEffect } from "react"
-import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 export default function StudentResearchReportRequest() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
     const [checkboxes, setCheckboxes] = useState({
         agreement: false,
         format: false,
@@ -579,26 +579,26 @@ export default function StudentResearchReportRequest() {
 
                         <div className="flex gap-3 mb-3">
                             <button
-                                onClick={() => {
-                                    setIsModalOpen(false);
-                                    window.location.href = '/process';
-                                }}
-                                className="flex-1 px-6 py-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                navigate("/process");
+                            }}
                             >
-                                Ir a seguimiento
+                            Ir a seguimiento
                             </button>
+
                         </div>
 
                         <div className="flex gap-3">
                             <button
-                                onClick={() => {
-                                    setIsModalOpen(false);
-                                    window.location.href = "/";
-                                }}
-                                className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                navigate("/");
+                            }}
                             >
-                                Entendido
+                            Entendido
                             </button>
+
 
                         </div>
                     </div>
