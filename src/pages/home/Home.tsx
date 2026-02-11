@@ -36,7 +36,7 @@ export default function Home() {
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-secondary transition-colors">
               <BookOpen className="w-12 h-12 text-secondary group-hover:text-white transition-colors" />
             </div>
-            <h3 className="text-xl font-bold text-secondary transition-colors">Informe de Docentes</h3>
+            <h3 className="text-xl font-bold text-secondary transition-colors">Informe Final de Docentes</h3>
             <p className="text-gray-600 text-center text-sm">Presenta tu informe académico</p>
           </Link>
         </div>

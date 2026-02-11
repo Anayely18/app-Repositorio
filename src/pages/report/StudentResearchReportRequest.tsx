@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, FileText, User, Users, Plus, X, IdCard, Arro
 import { Link,useNavigate } from "react-router-dom"
 import { useState, useRef } from "react"
 import { useEffect } from "react"
+import { toastService } from "@/services/toastService";
 import { API_URL } from "@/utils/api";
 export default function StudentResearchReportRequest() {
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -583,6 +584,7 @@ export default function StudentResearchReportRequest() {
                                 setIsModalOpen(false);
                                 navigate("/process");
                             }}
+                            className="flex-1 px-6 py-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
                             >
                             Ir a seguimiento
                             </button>
@@ -595,6 +597,7 @@ export default function StudentResearchReportRequest() {
                                 setIsModalOpen(false);
                                 navigate("/");
                             }}
+                            className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
                             >
                             Entendido
                             </button>

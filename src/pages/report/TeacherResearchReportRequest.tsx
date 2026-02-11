@@ -381,6 +381,7 @@ export default function TeacherResearchReportRequest() {
                 setIsModalOpen(false);
                 navigate("/process");
               }}
+              className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
             >
               Ir a seguimiento
             </button>
@@ -393,6 +394,7 @@ export default function TeacherResearchReportRequest() {
                 setIsModalOpen(false);
                 navigate("/");
               }}
+              className="flex-1 px-6 py-3 border font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl"
             >
               Entendido
             </button>

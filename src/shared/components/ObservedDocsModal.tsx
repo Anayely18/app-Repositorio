@@ -272,7 +272,7 @@ export function ObservedDocsModal({
                                                 </div>
                                             </div>
                                         )}
-
+                                        {/*
                                         <div className="px-5 pb-4 flex gap-2">
                                             <button
                                                 onClick={() => {
@@ -311,6 +311,7 @@ export function ObservedDocsModal({
                                                 Descargar
                                             </button>
                                         </div>
+                                        */}
                                     </div>
                                 );
                             })}
